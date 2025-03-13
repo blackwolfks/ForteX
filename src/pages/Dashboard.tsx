@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,10 +20,12 @@ import {
   Settings, 
   Users, 
   BarChart,
-  PlusCircle
+  PlusCircle,
+  Globe
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useLocation } from "react-router-dom";
+import WebsiteBuilderView from "@/components/website-builder/WebsiteBuilderView";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -89,6 +90,14 @@ const Dashboard = () => {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Website-Builder" isActive={activeTab === "website-builder"}>
+                  <a onClick={() => navigateTo("website-builder")}>
+                    <Globe />
+                    <span>Website-Builder</span>
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Einstellungen" isActive={activeTab === "settings"}>
                   <a onClick={() => navigateTo("settings")}>
                     <Settings />
@@ -117,6 +126,7 @@ const Dashboard = () => {
                     {activeTab === "payments" && "Zahlungen"}
                     {activeTab === "customers" && "Kunden"}
                     {activeTab === "analytics" && "Statistiken"}
+                    {activeTab === "website-builder" && "Website-Builder"}
                     {activeTab === "settings" && "Einstellungen"}
                   </h1>
                 </div>
@@ -125,6 +135,12 @@ const Dashboard = () => {
                     <Button>
                       <PlusCircle className="mr-2 h-4 w-4" />
                       Produkt hinzufügen
+                    </Button>
+                  )}
+                  {activeTab === "website-builder" && (
+                    <Button>
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Neue Website erstellen
                     </Button>
                   )}
                 </div>
@@ -137,6 +153,7 @@ const Dashboard = () => {
               {activeTab === "payments" && <PaymentsView />}
               {activeTab === "customers" && <CustomersView />}
               {activeTab === "analytics" && <AnalyticsView />}
+              {activeTab === "website-builder" && <WebsiteBuilderView />}
               {activeTab === "settings" && <SettingsView />}
             </div>
           </div>
@@ -509,3 +526,4 @@ const SettingsView = () => {
 };
 
 export default Dashboard;
+
