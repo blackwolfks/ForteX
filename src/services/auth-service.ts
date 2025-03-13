@@ -14,10 +14,20 @@ let currentUser: {
 
 let isEmailVerified = false;
 
-// Google OAuth Konfiguration
+// OAuth Konfiguration
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID"; // Umgebungsvariable oder Fallback
 const GOOGLE_REDIRECT_URI = `${window.location.origin}/auth/google-callback`;
 const GOOGLE_SCOPE = "email profile"; // Berechtigungen, die wir von Google anfordern
+
+// Discord OAuth Konfiguration
+const DISCORD_CLIENT_ID = import.meta.env.VITE_DISCORD_CLIENT_ID || "YOUR_DISCORD_CLIENT_ID";
+const DISCORD_REDIRECT_URI = `${window.location.origin}/auth/discord-callback`;
+const DISCORD_SCOPE = "identify email"; // Berechtigungen, die wir von Discord anfordern
+
+// CFX OAuth Konfiguration
+const CFX_CLIENT_ID = import.meta.env.VITE_CFX_CLIENT_ID || "YOUR_CFX_CLIENT_ID";
+const CFX_REDIRECT_URI = `${window.location.origin}/auth/cfx-callback`;
+const CFX_SCOPE = "profile email"; // Berechtigungen, die wir von CFX anfordern
 
 // Mock-Daten für schnelle Tests
 const MOCK_USERS = [
@@ -99,6 +109,76 @@ export const authService = {
     };
     
     localStorage.setItem("auth_token", "mock_google_jwt_token");
+    
+    return currentUser;
+  },
+
+  // Anmeldung mit Discord
+  signInWithDiscord: async () => {
+    // Discord OAuth Redirect URL erstellen
+    const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(DISCORD_REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(DISCORD_SCOPE)}`;
+    
+    // Zu Discord Auth-Seite umleiten
+    window.location.href = discordAuthUrl;
+    
+    // Diese Funktion kehrt nicht zurück, da wir umleiten
+    return new Promise<any>(() => {});
+  },
+  
+  // Discord OAuth Callback verarbeiten
+  handleDiscordCallback: async (code: string) => {
+    // In einer echten App würden Sie den Code gegen ein Token austauschen
+    // und dann mit diesem Token Benutzerinformationen abrufen
+    
+    // Simulierte API-Verzögerung
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Simulierter erfolgreicher Login nach OAuth-Callback
+    currentUser = {
+      id: "discord_user_id",
+      name: "Discord User",
+      email: "discord_user@example.com",
+      twoFactorEnabled: false,
+      twoFactorMethod: null,
+      phoneNumber: null,
+    };
+    
+    localStorage.setItem("auth_token", "mock_discord_jwt_token");
+    
+    return currentUser;
+  },
+
+  // Anmeldung mit CFX
+  signInWithCFX: async () => {
+    // CFX OAuth Redirect URL erstellen
+    const cfxAuthUrl = `https://cfx.re/oauth/authorize?client_id=${CFX_CLIENT_ID}&redirect_uri=${encodeURIComponent(CFX_REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(CFX_SCOPE)}`;
+    
+    // Zu CFX Auth-Seite umleiten
+    window.location.href = cfxAuthUrl;
+    
+    // Diese Funktion kehrt nicht zurück, da wir umleiten
+    return new Promise<any>(() => {});
+  },
+  
+  // CFX OAuth Callback verarbeiten
+  handleCFXCallback: async (code: string) => {
+    // In einer echten App würden Sie den Code gegen ein Token austauschen
+    // und dann mit diesem Token Benutzerinformationen abrufen
+    
+    // Simulierte API-Verzögerung
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Simulierter erfolgreicher Login nach OAuth-Callback
+    currentUser = {
+      id: "cfx_user_id",
+      name: "CFX User",
+      email: "cfx_user@example.com",
+      twoFactorEnabled: false,
+      twoFactorMethod: null,
+      phoneNumber: null,
+    };
+    
+    localStorage.setItem("auth_token", "mock_cfx_jwt_token");
     
     return currentUser;
   },
