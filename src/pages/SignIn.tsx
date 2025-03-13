@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { z } from "zod";
@@ -13,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Mail, Lock, Smartphone, ArrowRight, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { authService } from "@/services/auth-service";
+import OTPInput from "@/components/OTPInput";
 
 const signInSchema = z.object({
   email: z.string().email({
@@ -44,7 +44,6 @@ const SignIn = () => {
     setError(null);
     
     try {
-      // Simulierte Anmeldung - hier würden Sie Ihre tatsächliche Auth-Logik implementieren
       const result = await authService.signIn(values.email, values.password);
       
       if (result.requiresTwoFactor) {
