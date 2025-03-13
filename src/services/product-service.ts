@@ -18,10 +18,18 @@ export interface CreateProductInput {
 class ProductService {
   async createProduct(productData: CreateProductInput): Promise<Product> {
     try {
-      // Benutzer-ID aus dem Auth-State abrufen oder einen Fallback verwenden
+      // Benutzer-ID aus dem Auth-State abrufen
       const { data: userData } = await supabase.auth.getUser();
-      const userId = userData?.user?.id || 'anonymous';
-
+      
+      // Wenn kein Benutzer eingeloggt ist, einen temporären Eintrag im localStorage erstellen
+      if (!userData?.user) {
+        console.log('Kein Benutzer eingeloggt, speichere Produkt im localStorage');
+        return this.saveProductToLocalStorage(productData);
+      }
+      
+      // Wenn ein Benutzer eingeloggt ist, in Supabase speichern
+      const userId = userData.user.id;
+      
       const newProduct: Omit<Product, 'id' | 'created_at'> = {
         name: productData.name,
         description: productData.description,
@@ -43,120 +51,129 @@ class ProductService {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Fehler beim Speichern in Supabase:', error);
+        throw error;
+      }
 
       return data as Product;
     } catch (error) {
       console.error('Fehler beim Erstellen des Produkts:', error);
       
       // Fallback: In localStorage speichern, wenn die DB-Verbindung fehlschlägt
-      const productId = uuidv4();
-      const product = {
-        id: productId,
-        ...productData,
-        created_at: new Date().toISOString(),
-        user_id: 'anonymous',
-      };
-
-      const existingProducts = JSON.parse(localStorage.getItem('products') || '[]');
-      localStorage.setItem('products', JSON.stringify([...existingProducts, product]));
-      
-      // Wir wandeln hier das Format um, um der Datenbankstruktur zu entsprechen
-      return {
-        id: product.id,
-        name: product.name,
-        description: product.description,
-        short_description: product.shortDescription,
-        price: product.price,
-        category: product.category,
-        is_subscription: product.isSubscription,
-        subscription_interval: product.subscriptionInterval,
-        cfx_resource_id: product.cfxResourceId,
-        cfx_imported: product.cfxImported,
-        image: product.image,
-        created_at: product.created_at,
-        user_id: product.user_id,
-      };
+      return this.saveProductToLocalStorage(productData);
     }
+  }
+
+  // Hilfsfunktion zum Speichern im localStorage
+  private saveProductToLocalStorage(productData: CreateProductInput): Product {
+    const productId = uuidv4();
+    const now = new Date().toISOString();
+    
+    const product: Product = {
+      id: productId,
+      name: productData.name,
+      description: productData.description,
+      short_description: productData.shortDescription,
+      price: productData.price,
+      category: productData.category,
+      is_subscription: productData.isSubscription,
+      subscription_interval: productData.subscriptionInterval,
+      cfx_resource_id: productData.cfxResourceId,
+      cfx_imported: productData.cfxImported,
+      image: productData.image,
+      created_at: now,
+      user_id: 'local-' + uuidv4(), // Lokaler Platzhalter für user_id
+    };
+
+    const existingProducts = JSON.parse(localStorage.getItem('products') || '[]');
+    localStorage.setItem('products', JSON.stringify([...existingProducts, product]));
+    
+    return product;
   }
 
   async getProducts(): Promise<Product[]> {
     try {
-      // Produkte aus der Datenbank abrufen
+      // Versuche zuerst, Produkte aus der Datenbank zu laden
       const { data, error } = await supabase
         .from('products')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-
-      return data || [];
+      
+      // Füge lokale Produkte hinzu, wenn welche vorhanden sind
+      const localProducts = this.getLocalProducts();
+      
+      return [...(data || []), ...localProducts];
     } catch (error) {
       console.error('Fehler beim Abrufen der Produkte:', error);
       
-      // Fallback: Aus localStorage laden, wenn die DB-Verbindung fehlschlägt
-      const localProducts = JSON.parse(localStorage.getItem('products') || '[]');
-      
-      // Format der lokalen Produkte anpassen, um mit der DB-Struktur übereinzustimmen
-      return localProducts.map((product: any) => ({
-        id: product.id,
-        name: product.name,
-        description: product.description,
-        short_description: product.shortDescription || '',
-        price: product.price,
-        category: product.category,
-        is_subscription: product.isSubscription || false,
-        subscription_interval: product.subscriptionInterval,
-        cfx_resource_id: product.cfxResourceId,
-        cfx_imported: product.cfxImported || false,
-        image: product.image,
-        created_at: product.createdAt || product.created_at || new Date().toISOString(),
-        user_id: product.userId || product.user_id || 'anonymous',
-      }));
+      // Fallback: Aus localStorage laden
+      return this.getLocalProducts();
     }
+  }
+
+  // Hilfsfunktion zum Abrufen aus localStorage
+  private getLocalProducts(): Product[] {
+    const localProducts = JSON.parse(localStorage.getItem('products') || '[]');
+    return localProducts;
   }
 
   async getProductById(productId: string): Promise<Product | null> {
     try {
+      // Prüfe zuerst in der Datenbank
       const { data, error } = await supabase
         .from('products')
         .select('*')
         .eq('id', productId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       
-      return data;
+      if (data) return data;
+      
+      // Wenn nicht in der Datenbank, prüfe localStorage
+      const localProducts = this.getLocalProducts();
+      return localProducts.find(p => p.id === productId) || null;
     } catch (error) {
       console.error('Fehler beim Abrufen des Produkts:', error);
       
       // Fallback: Aus localStorage laden
-      const localProducts = JSON.parse(localStorage.getItem('products') || '[]');
-      const product = localProducts.find((p: any) => p.id === productId);
-      
-      if (!product) return null;
-      
-      return {
-        id: product.id,
-        name: product.name,
-        description: product.description,
-        short_description: product.shortDescription || '',
-        price: product.price,
-        category: product.category,
-        is_subscription: product.isSubscription || false,
-        subscription_interval: product.subscriptionInterval,
-        cfx_resource_id: product.cfxResourceId,
-        cfx_imported: product.cfxImported || false,
-        image: product.image,
-        created_at: product.createdAt || product.created_at || new Date().toISOString(),
-        user_id: product.userId || product.user_id || 'anonymous',
-      };
+      const localProducts = this.getLocalProducts();
+      return localProducts.find(p => p.id === productId) || null;
     }
   }
 
   async updateProduct(productId: string, productData: Partial<CreateProductInput>): Promise<Product | null> {
     try {
-      // Produkt in der Datenbank aktualisieren
+      // Prüfe zuerst, ob es ein lokales Produkt ist
+      const localProducts = this.getLocalProducts();
+      const localProductIndex = localProducts.findIndex(p => p.id === productId);
+      
+      if (localProductIndex >= 0) {
+        // Update das lokale Produkt
+        const updatedProduct = {
+          ...localProducts[localProductIndex],
+          name: productData.name || localProducts[localProductIndex].name,
+          description: productData.description || localProducts[localProductIndex].description,
+          short_description: productData.shortDescription || localProducts[localProductIndex].short_description,
+          price: productData.price || localProducts[localProductIndex].price,
+          category: productData.category || localProducts[localProductIndex].category,
+          is_subscription: productData.isSubscription !== undefined ? productData.isSubscription : localProducts[localProductIndex].is_subscription,
+          subscription_interval: productData.subscriptionInterval,
+          cfx_resource_id: productData.cfxResourceId,
+          cfx_imported: productData.cfxImported !== undefined ? productData.cfxImported : localProducts[localProductIndex].cfx_imported,
+          image: productData.image || localProducts[localProductIndex].image,
+        };
+        
+        localProducts[localProductIndex] = updatedProduct;
+        localStorage.setItem('products', JSON.stringify(localProducts));
+        
+        return updatedProduct;
+      }
+      
+      // Wenn es kein lokales Produkt ist, update in der Datenbank
       const { data, error } = await supabase
         .from('products')
         .update({
@@ -173,49 +190,31 @@ class ProductService {
         })
         .eq('id', productId)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       
       return data;
     } catch (error) {
       console.error('Fehler beim Aktualisieren des Produkts:', error);
-      
-      // Fallback: In localStorage aktualisieren
-      const localProducts = JSON.parse(localStorage.getItem('products') || '[]');
-      const productIndex = localProducts.findIndex((p: any) => p.id === productId);
-      
-      if (productIndex === -1) return null;
-      
-      const updatedProduct = {
-        ...localProducts[productIndex],
-        ...productData,
-      };
-      
-      localProducts[productIndex] = updatedProduct;
-      localStorage.setItem('products', JSON.stringify(localProducts));
-      
-      return {
-        id: updatedProduct.id,
-        name: updatedProduct.name,
-        description: updatedProduct.description,
-        short_description: updatedProduct.shortDescription || '',
-        price: updatedProduct.price,
-        category: updatedProduct.category,
-        is_subscription: updatedProduct.isSubscription || false,
-        subscription_interval: updatedProduct.subscriptionInterval,
-        cfx_resource_id: updatedProduct.cfxResourceId,
-        cfx_imported: updatedProduct.cfxImported || false,
-        image: updatedProduct.image,
-        created_at: updatedProduct.createdAt || updatedProduct.created_at || new Date().toISOString(),
-        user_id: updatedProduct.userId || updatedProduct.user_id || 'anonymous',
-      };
+      return null;
     }
   }
 
   async deleteProduct(productId: string): Promise<boolean> {
     try {
-      // Produkt aus der Datenbank löschen
+      // Prüfe zuerst, ob es ein lokales Produkt ist
+      const localProducts = this.getLocalProducts();
+      const localProductIndex = localProducts.findIndex(p => p.id === productId);
+      
+      if (localProductIndex >= 0) {
+        // Lösche das lokale Produkt
+        localProducts.splice(localProductIndex, 1);
+        localStorage.setItem('products', JSON.stringify(localProducts));
+        return true;
+      }
+      
+      // Wenn es kein lokales Produkt ist, lösche in der Datenbank
       const { error } = await supabase
         .from('products')
         .delete()
@@ -226,13 +225,7 @@ class ProductService {
       return true;
     } catch (error) {
       console.error('Fehler beim Löschen des Produkts:', error);
-      
-      // Fallback: Aus localStorage löschen
-      const localProducts = JSON.parse(localStorage.getItem('products') || '[]');
-      const filteredProducts = localProducts.filter((p: any) => p.id !== productId);
-      localStorage.setItem('products', JSON.stringify(filteredProducts));
-      
-      return true;
+      return false;
     }
   }
 
@@ -256,8 +249,7 @@ class ProductService {
           { 
             product_id: productId, 
             key: key, 
-            is_used: false, 
-            created_at: new Date().toISOString() 
+            is_used: false
           }
         ]);
         
