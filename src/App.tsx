@@ -8,6 +8,12 @@ import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import Navbar from "./components/Navbar";
+import SignIn from "./pages/SignIn";
+import SignUp from "./pages/SignUp";
+import ForgotPassword from "./pages/ForgotPassword";
+import Verification from "./pages/Verification";
+import TwoFactorSetup from "./pages/TwoFactorSetup";
+import AuthGuard from "./components/AuthGuard";
 
 const queryClient = new QueryClient();
 
@@ -24,8 +30,41 @@ const App = () => (
               <Index />
             </>
           } />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/dashboard/:tab" element={<Dashboard />} />
+          
+          {/* Authentifizierungsrouten */}
+          <Route path="/sign-in" element={
+            <AuthGuard requireAuth={false} redirectTo="/dashboard">
+              <SignIn />
+            </AuthGuard>
+          } />
+          <Route path="/sign-up" element={
+            <AuthGuard requireAuth={false} redirectTo="/dashboard">
+              <SignUp />
+            </AuthGuard>
+          } />
+          <Route path="/forgot-password" element={
+            <AuthGuard requireAuth={false} redirectTo="/dashboard">
+              <ForgotPassword />
+            </AuthGuard>
+          } />
+          <Route path="/verification" element={<Verification />} />
+          <Route path="/two-factor-setup" element={
+            <AuthGuard requireAuth={true}>
+              <TwoFactorSetup />
+            </AuthGuard>
+          } />
+          
+          {/* Geschützte Routen */}
+          <Route path="/dashboard" element={
+            <AuthGuard requireAuth={true}>
+              <Dashboard />
+            </AuthGuard>
+          } />
+          <Route path="/dashboard/:tab" element={
+            <AuthGuard requireAuth={true}>
+              <Dashboard />
+            </AuthGuard>
+          } />
           
           {/* Redirect from old dashboard path to new dashboard path */}
           <Route path="/dashboard/*" element={<Navigate to="/dashboard" replace />} />

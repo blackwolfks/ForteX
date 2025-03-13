@@ -1,11 +1,25 @@
 
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu } from "lucide-react";
+import { Menu, UserCircle } from "lucide-react";
 import { useState } from "react";
+import { authService } from "@/services/auth-service";
+import { useToast } from "@/hooks/use-toast";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { toast } = useToast();
+  const isAuthenticated = authService.isAuthenticated();
+  const currentUser = authService.getCurrentUser();
+  
+  const handleSignOut = async () => {
+    await authService.signOut();
+    toast({
+      title: "Abgemeldet",
+      description: "Sie wurden erfolgreich abgemeldet.",
+    });
+    window.location.href = "/";
+  };
   
   return (
     <nav className="bg-background shadow-sm border-b border-border sticky top-0 z-50">
@@ -31,12 +45,28 @@ const Navbar = () => {
           </div>
           
           <div className="hidden md:flex items-center space-x-4">
-            <Button asChild variant="outline" className="border-primary/20 hover:border-primary/30">
-              <Link to="/login">Anmelden</Link>
-            </Button>
-            <Button asChild className="shadow-soft">
-              <Link to="/dashboard">Dashboard</Link>
-            </Button>
+            {isAuthenticated ? (
+              <>
+                <Button asChild variant="outline" className="border-primary/20 hover:border-primary/30">
+                  <Link to="/dashboard">
+                    <UserCircle className="mr-2 h-4 w-4" />
+                    {currentUser?.name || "Mein Konto"}
+                  </Link>
+                </Button>
+                <Button variant="ghost" onClick={handleSignOut}>
+                  Abmelden
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button asChild variant="outline" className="border-primary/20 hover:border-primary/30">
+                  <Link to="/sign-in">Anmelden</Link>
+                </Button>
+                <Button asChild className="shadow-soft">
+                  <Link to="/sign-up">Registrieren</Link>
+                </Button>
+              </>
+            )}
           </div>
           
           <div className="md:hidden">
@@ -67,14 +97,26 @@ const Navbar = () => {
               <Button asChild variant="ghost" className="justify-start">
                 <Link to="/#testimonials">Testimonials</Link>
               </Button>
-              <div className="flex space-x-2 pt-2">
-                <Button asChild variant="outline" className="flex-1">
-                  <Link to="/login">Anmelden</Link>
-                </Button>
-                <Button asChild className="flex-1">
-                  <Link to="/dashboard">Dashboard</Link>
-                </Button>
-              </div>
+              
+              {isAuthenticated ? (
+                <>
+                  <Button asChild variant="ghost" className="justify-start">
+                    <Link to="/dashboard">Mein Konto</Link>
+                  </Button>
+                  <Button variant="ghost" className="justify-start" onClick={handleSignOut}>
+                    Abmelden
+                  </Button>
+                </>
+              ) : (
+                <div className="flex space-x-2 pt-2">
+                  <Button asChild variant="outline" className="flex-1">
+                    <Link to="/sign-in">Anmelden</Link>
+                  </Button>
+                  <Button asChild className="flex-1">
+                    <Link to="/sign-up">Registrieren</Link>
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         )}
