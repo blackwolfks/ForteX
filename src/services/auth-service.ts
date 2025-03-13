@@ -15,7 +15,7 @@ let currentUser: {
 let isEmailVerified = false;
 
 // Google OAuth Konfiguration
-const GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID"; // In einer echten App müsste dies konfiguriert werden
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID"; // Umgebungsvariable oder Fallback
 const GOOGLE_REDIRECT_URI = `${window.location.origin}/auth/google-callback`;
 const GOOGLE_SCOPE = "email profile"; // Berechtigungen, die wir von Google anfordern
 
