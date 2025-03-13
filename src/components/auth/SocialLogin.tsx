@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { authService } from "@/services/auth-service";
+import { useToast } from "@/hooks/use-toast";
 
 interface SocialLoginProps {
   setError: (error: string | null) => void;
@@ -12,6 +13,7 @@ interface SocialLoginProps {
 
 const SocialLogin = ({ setError, redirectUrl = '/dashboard', plan = null }: SocialLoginProps) => {
   const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);
@@ -20,8 +22,13 @@ const SocialLogin = ({ setError, redirectUrl = '/dashboard', plan = null }: Soci
     try {
       await authService.signInWithGoogle();
     } catch (err) {
-      setError("Fehler bei der Anmeldung mit Google. Bitte versuchen Sie es erneut.");
-      console.error(err);
+      console.error("Google Auth Error:", err);
+      toast({
+        title: "Authentifizierungsfehler",
+        description: "Google-Anmeldung ist nicht konfiguriert. Bitte kontaktiere den Administrator.",
+        variant: "destructive"
+      });
+      setError("Fehler bei der Anmeldung mit Google. Der Provider ist nicht aktiviert.");
       setIsLoading(false);
     }
   };
@@ -33,8 +40,13 @@ const SocialLogin = ({ setError, redirectUrl = '/dashboard', plan = null }: Soci
     try {
       await authService.signInWithDiscord();
     } catch (err) {
-      setError("Fehler bei der Anmeldung mit Discord. Bitte versuchen Sie es erneut.");
-      console.error(err);
+      console.error("Discord Auth Error:", err);
+      toast({
+        title: "Authentifizierungsfehler",
+        description: "Discord-Anmeldung ist nicht konfiguriert. Bitte kontaktiere den Administrator.",
+        variant: "destructive"
+      });
+      setError("Fehler bei der Anmeldung mit Discord. Der Provider ist nicht aktiviert.");
       setIsLoading(false);
     }
   };
@@ -46,8 +58,13 @@ const SocialLogin = ({ setError, redirectUrl = '/dashboard', plan = null }: Soci
     try {
       await authService.signInWithCFX();
     } catch (err) {
-      setError("Fehler bei der Anmeldung mit CFX. Bitte versuchen Sie es erneut.");
-      console.error(err);
+      console.error("CFX Auth Error:", err);
+      toast({
+        title: "Authentifizierungsfehler",
+        description: "CFX-Anmeldung ist nicht konfiguriert. Bitte kontaktiere den Administrator.",
+        variant: "destructive"
+      });
+      setError("Fehler bei der Anmeldung mit CFX. Der Provider ist nicht aktiviert.");
       setIsLoading(false);
     }
   };
