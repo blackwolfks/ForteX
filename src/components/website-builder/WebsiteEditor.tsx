@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Save, Eye, Layout, Type, Image, List, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
 import { TextConfigSection } from "./TextConfigSection";
+import { websiteService, WebsiteContent, WebsiteSection } from "@/services/website-service";
+import { useNavigate } from "react-router-dom";
 
 interface WebsiteEditorProps {
   websiteId: string;
@@ -79,95 +82,100 @@ const WEBSHOP_TEMPLATES = {
   }
 };
 
-// Function to get website data with better error handling
-const getWebsiteById = (id: string) => {
-  try {
-    // First check if we have saved data in localStorage
-    const savedData = localStorage.getItem(`website_${id}`);
-    if (savedData) {
-      return JSON.parse(savedData);
-    }
-    
-    // Otherwise return the default data
-    return {
-      id,
-      name: id === "web1" ? "Mein Online-Shop" : "Portfolio",
-      url: id === "web1" ? "mein-shop.example.com" : "portfolio.example.com",
-      template: id === "web1" ? "E-Commerce" : "Portfolio",
-      shopTemplate: "default",
-      content: {
-        title: id === "web1" ? "Willkommen in meinem Shop" : "Mein Portfolio",
-        subtitle: id === "web1" ? "Entdecken Sie unsere Produkte" : "Meine Arbeiten",
-        description: id === "web1" 
-          ? "Hier finden Sie die besten Produkte zu günstigen Preisen."
-          : "Hier finden Sie eine Auswahl meiner besten Arbeiten und Projekte.",
-        sections: []
-      }
-    };
-  } catch (error) {
-    console.error("Error loading website data:", error);
-    return {
-      id,
-      name: "Neue Website",
-      url: "example.com",
-      template: "E-Commerce",
-      shopTemplate: "default",
-      content: {
-        title: "Neue Website",
-        subtitle: "Subtitle",
-        description: "Beschreibung",
-        sections: []
-      }
-    };
-  }
-};
-
 export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
-  const websiteData = getWebsiteById(websiteId);
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("edit");
-  const [content, setContent] = useState(websiteData.content);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [content, setContent] = useState<WebsiteContent>({
+    title: "",
+    subtitle: "",
+    description: "",
+    sections: []
+  });
   const [selectedElement, setSelectedElement] = useState<string | null>(null);
-  const [websiteName, setWebsiteName] = useState(websiteData.name);
-  const [websiteUrl, setWebsiteUrl] = useState(websiteData.url);
-  const [shopTemplate, setShopTemplate] = useState(websiteData.shopTemplate || "default");
+  const [websiteName, setWebsiteName] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [websiteTemplate, setWebsiteTemplate] = useState("");
+  const [shopTemplate, setShopTemplate] = useState("default");
   const [editingTextSection, setEditingTextSection] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [lastSaved, setLastSaved] = useState<string | null>(null);
+  
+  useEffect(() => {
+    const loadWebsiteData = async () => {
+      setIsLoading(true);
+      try {
+        const result = await websiteService.getWebsiteById(websiteId);
+        
+        if (result) {
+          const { website, content } = result;
+          setWebsiteName(website.name);
+          setWebsiteUrl(website.url || "");
+          setWebsiteTemplate(website.template);
+          setShopTemplate(website.shop_template || "default");
+          setContent(content);
+          setLastSaved(website.last_saved || null);
+          setIsInitialized(true);
+        } else {
+          toast.error("Website konnte nicht geladen werden");
+          onBack();
+        }
+      } catch (error) {
+        console.error("Error loading website:", error);
+        toast.error("Fehler beim Laden der Website");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadWebsiteData();
+  }, [websiteId, onBack]);
   
   // Improved save function with error handling
-  const saveWebsiteData = () => {
+  const saveWebsiteData = async () => {
+    if (!websiteId || isSaving) return false;
+    
+    setIsSaving(true);
     try {
-      const dataToSave = {
-        ...websiteData,
-        name: websiteName,
-        url: websiteUrl,
-        content: content,
-        shopTemplate: shopTemplate,
-        lastSaved: new Date().toISOString()
-      };
+      const success = await websiteService.updateWebsite(
+        websiteId,
+        {
+          name: websiteName,
+          url: websiteUrl,
+          shop_template: shopTemplate
+        },
+        content
+      );
       
-      // Stringify with proper error handling
-      const dataString = JSON.stringify(dataToSave);
-      localStorage.setItem(`website_${websiteId}`, dataString);
-      
-      setHasChanges(false);
-      console.log("Website data saved successfully:", dataToSave);
-      toast.success("Änderungen wurden gespeichert");
-      return true;
+      if (success) {
+        setHasChanges(false);
+        setLastSaved(new Date().toISOString());
+        console.log("Website data saved successfully");
+        toast.success("Änderungen wurden gespeichert");
+        return true;
+      } else {
+        toast.error("Fehler beim Speichern der Änderungen");
+        return false;
+      }
     } catch (error) {
       console.error("Error saving website data:", error);
       toast.error("Fehler beim Speichern der Änderungen");
       return false;
+    } finally {
+      setIsSaving(false);
     }
   };
   
-  const handleSave = () => {
-    saveWebsiteData();
+  const handleSave = async () => {
+    await saveWebsiteData();
   };
   
-  const handlePreview = () => {
+  const handlePreview = async () => {
     // Save before preview to ensure latest changes are reflected
     if (hasChanges) {
-      const saved = saveWebsiteData();
+      const saved = await saveWebsiteData();
       if (saved) {
         setActiveTab("preview");
       }
@@ -185,7 +193,7 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
       title: template.hero.title,
       subtitle: template.hero.subtitle,
       description: template.hero.description,
-      sections: template.sections,
+      sections: template.sections as WebsiteSection[],
       header: template.header
     });
     
@@ -195,17 +203,21 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
 
   // Track changes to content and other website properties
   useEffect(() => {
-    setHasChanges(true);
-  }, [content, websiteName, websiteUrl]);
+    if (isInitialized) {
+      setHasChanges(true);
+    }
+  }, [content, websiteName, websiteUrl, shopTemplate, isInitialized]);
 
   // Apply template when it changes
   useEffect(() => {
-    applyTemplate(shopTemplate);
-  }, [shopTemplate]);
+    if (isInitialized) {
+      applyTemplate(shopTemplate);
+    }
+  }, [shopTemplate, isInitialized]);
 
   // Improved auto-save functionality
   useEffect(() => {
-    if (!hasChanges) return;
+    if (!hasChanges || !isInitialized) return;
     
     // Save immediately after 5 seconds of inactivity
     const saveTimeout = setTimeout(() => {
@@ -237,14 +249,22 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
       clearInterval(autoSaveInterval);
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [hasChanges, content, websiteName, websiteUrl, shopTemplate]);
+  }, [hasChanges, isInitialized]);
 
   // Save on tab change
   useEffect(() => {
-    if (hasChanges && activeTab !== "edit") {
+    if (hasChanges && activeTab !== "edit" && isInitialized) {
       saveWebsiteData();
     }
   }, [activeTab]);
+  
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-[300px]">
+        <p>Website wird geladen...</p>
+      </div>
+    );
+  }
   
   return (
     <div className="space-y-4">
@@ -256,9 +276,10 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
             onClick={() => {
               // Save before navigating back if there are changes
               if (hasChanges) {
-                saveWebsiteData();
+                saveWebsiteData().then(() => onBack());
+              } else {
+                onBack();
               }
-              onBack();
             }}
           >
             <ArrowLeft className="h-4 w-4 mr-1" />
@@ -274,10 +295,10 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
           <Button 
             size="sm" 
             onClick={handleSave}
-            disabled={!hasChanges}
+            disabled={!hasChanges || isSaving}
           >
             <Save className="h-4 w-4 mr-1" />
-            {hasChanges ? "Speichern" : "Gespeichert"}
+            {isSaving ? "Wird gespeichert..." : hasChanges ? "Speichern" : "Gespeichert"}
           </Button>
         </div>
       </div>
@@ -385,7 +406,7 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
                       <p>{content.description}</p>
                     </div>
                     
-                    {content.sections && content.sections.map((section: any, index: number) => (
+                    {content.sections && content.sections.map((section: WebsiteSection, index: number) => (
                       <div key={section.id} className="mt-6 border-t pt-4">
                         <h2 className="text-xl font-semibold mb-2">{section.title}</h2>
                         <p className="text-muted-foreground mb-4">{section.description}</p>
@@ -519,10 +540,10 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
                         size="sm" 
                         className="w-full"
                         onClick={handleSave}
-                        disabled={!hasChanges}
+                        disabled={!hasChanges || isSaving}
                       >
                         <Save className="h-4 w-4 mr-1" />
-                        {hasChanges ? "Änderungen speichern" : "Gespeichert"}
+                        {isSaving ? "Wird gespeichert..." : hasChanges ? "Änderungen speichern" : "Gespeichert"}
                       </Button>
                     </div>
                   </div>
@@ -546,7 +567,7 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
                     <p className="text-lg">{content.description}</p>
                   </div>
                   
-                  {content.sections && content.sections.map((section: any) => (
+                  {content.sections && content.sections.map((section: WebsiteSection) => (
                     <div key={section.id} className="mb-12">
                       <h2 className="text-2xl font-bold mb-2">{section.title}</h2>
                       <p className="text-lg text-muted-foreground mb-6">{section.description}</p>
@@ -616,7 +637,7 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
                 </div>
                 <div className="space-y-2">
                   <Label>Template</Label>
-                  <Input defaultValue={websiteData.template} readOnly />
+                  <Input defaultValue={websiteTemplate} readOnly />
                 </div>
                 <div className="space-y-2">
                   <Label>Shop-Design</Label>
@@ -634,15 +655,15 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
                 <div className="space-y-2">
                   <Label>Letzter Speichervorgang</Label>
                   <Input 
-                    value={websiteData.lastSaved ? new Date(websiteData.lastSaved).toLocaleString() : "Noch nicht gespeichert"} 
+                    value={lastSaved ? new Date(lastSaved).toLocaleString() : "Noch nicht gespeichert"} 
                     readOnly 
                   />
                 </div>
                 <Button 
                   onClick={handleSave}
-                  disabled={!hasChanges}
+                  disabled={!hasChanges || isSaving}
                 >
-                  {hasChanges ? "Einstellungen speichern" : "Einstellungen gespeichert"}
+                  {isSaving ? "Wird gespeichert..." : hasChanges ? "Einstellungen speichern" : "Einstellungen gespeichert"}
                 </Button>
               </div>
             </CardContent>
