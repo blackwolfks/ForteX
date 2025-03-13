@@ -10,26 +10,42 @@ const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ name?: string } | null>(null);
   const { toast } = useToast();
-  const isAuthenticated = authService.isAuthenticated();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   useEffect(() => {
-    const loadUser = async () => {
-      if (isAuthenticated) {
+    const checkAuth = async () => {
+      const authStatus = await authService.isAuthenticated();
+      setIsAuthenticated(authStatus);
+      
+      if (authStatus) {
         const user = await authService.getCurrentUser();
         setCurrentUser(user);
       }
     };
     
-    loadUser();
-  }, [isAuthenticated]);
+    checkAuth();
+  }, []);
   
   const handleSignOut = async () => {
-    await authService.signOut();
-    toast({
-      title: "Abgemeldet",
-      description: "Sie wurden erfolgreich abgemeldet.",
-    });
-    window.location.href = "/";
+    try {
+      const result = await authService.signOut();
+      if (result.success) {
+        setCurrentUser(null);
+        setIsAuthenticated(false);
+        toast({
+          title: "Abgemeldet",
+          description: "Sie wurden erfolgreich abgemeldet.",
+        });
+        window.location.href = "/";
+      }
+    } catch (error) {
+      console.error("Abmelden fehlgeschlagen:", error);
+      toast({
+        title: "Fehler",
+        description: "Abmelden fehlgeschlagen. Bitte versuchen Sie es erneut.",
+        variant: "destructive",
+      });
+    }
   };
   
   return (
