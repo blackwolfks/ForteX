@@ -6,7 +6,7 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Hero Section */}
-      <header className="bg-gradient-to-r from-primary/90 to-primary px-4 py-16 md:py-24">
+      <header className="bg-gradient-to-r from-blue-600 to-indigo-700 px-4 py-24 md:py-32">
         <div className="container mx-auto max-w-5xl">
           <div className="text-center">
             <h1 className="text-4xl md:text-6xl font-bold text-white mb-6">
@@ -15,10 +15,10 @@ const Index = () => {
             <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
               Verwalten Sie Produkte, empfangen Sie Zahlungen und analysieren Sie Ihre Verkäufe an einem Ort.
             </p>
-            <Button asChild size="lg" className="mr-4">
+            <Button asChild size="lg" className="mr-4 bg-white text-blue-600 hover:bg-gray-100">
               <Link to="/dashboard">Dashboard öffnen</Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="bg-white/10 text-white hover:bg-white/20">
+            <Button asChild variant="outline" size="lg" className="bg-transparent border-white text-white hover:bg-white/10">
               <Link to="/dashboard">Mehr erfahren</Link>
             </Button>
           </div>
@@ -26,33 +26,134 @@ const Index = () => {
       </header>
 
       {/* Features Section */}
-      <section className="py-16 bg-background">
+      <section className="py-24 bg-white">
         <div className="container mx-auto max-w-6xl px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">Alles was Sie brauchen</h2>
+          <h2 className="text-3xl font-bold text-center mb-16">Alles was Sie brauchen</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-card rounded-lg p-6 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+            <div className="bg-white rounded-xl p-8 shadow-lg border border-gray-100">
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-5">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                </svg>
+              </div>
               <h3 className="text-xl font-semibold mb-3">Produktverwaltung</h3>
-              <p className="text-muted-foreground">Erstellen und verwalten Sie Ihre Produkte einfach über das Dashboard.</p>
+              <p className="text-gray-600">Erstellen und verwalten Sie Ihre Produkte einfach über das Dashboard.</p>
             </div>
             
-            <div className="bg-card rounded-lg p-6 shadow-sm">
+            <div className="bg-white rounded-xl p-8 shadow-lg border border-gray-100">
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-5">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                </svg>
+              </div>
               <h3 className="text-xl font-semibold mb-3">Zahlungsabwicklung</h3>
-              <p className="text-muted-foreground">Akzeptieren Sie verschiedene Zahlungsmethoden und behalten Sie den Überblick.</p>
+              <p className="text-gray-600">Akzeptieren Sie verschiedene Zahlungsmethoden und behalten Sie den Überblick.</p>
             </div>
             
-            <div className="bg-card rounded-lg p-6 shadow-sm">
+            <div className="bg-white rounded-xl p-8 shadow-lg border border-gray-100">
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-5">
+                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                </svg>
+              </div>
               <h3 className="text-xl font-semibold mb-3">Website-Builder</h3>
-              <p className="text-muted-foreground">Gestalten Sie Ihre Website mit unserem einfachen Drag-and-Drop-Builder.</p>
+              <p className="text-gray-600">Gestalten Sie Ihre Website mit unserem einfachen Drag-and-Drop-Builder.</p>
             </div>
           </div>
         </div>
       </section>
 
+      {/* Testimonials Section */}
+      <section className="py-24 bg-gray-50">
+        <div className="container mx-auto max-w-6xl px-4">
+          <h2 className="text-3xl font-bold text-center mb-16">Was unsere Kunden sagen</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white p-8 rounded-xl shadow-md">
+                <div className="flex items-center mb-4">
+                  <div className="w-12 h-12 bg-gray-200 rounded-full mr-4"></div>
+                  <div>
+                    <h4 className="font-semibold">Kunde {i}</h4>
+                    <p className="text-sm text-gray-500">Unternehmen {i}</p>
+                  </div>
+                </div>
+                <p className="text-gray-600">
+                  "Diese Plattform hat unseren Online-Verkauf revolutioniert. Einfach zu bedienen und sehr leistungsstark!"
+                </p>
+                <div className="flex mt-4">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <svg 
+                      key={star} 
+                      className="w-5 h-5 text-yellow-400" 
+                      fill="currentColor" 
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-24 bg-blue-600">
+        <div className="container mx-auto max-w-4xl px-4 text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
+            Bereit, Ihren Online-Shop zu starten?
+          </h2>
+          <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
+            Registrieren Sie sich jetzt und beginnen Sie mit dem Verkauf Ihrer Produkte online.
+          </p>
+          <Button asChild size="lg" className="bg-white text-blue-600 hover:bg-gray-100">
+            <Link to="/dashboard">Kostenlos starten</Link>
+          </Button>
+        </div>
+      </section>
+
       {/* Footer */}
-      <footer className="mt-auto bg-muted py-8">
-        <div className="container mx-auto text-center">
-          <p className="text-muted-foreground">© 2023 E-Commerce Platform. Alle Rechte vorbehalten.</p>
+      <footer className="mt-auto bg-gray-900 text-white py-12">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div>
+              <h3 className="text-lg font-semibold mb-4">E-Commerce</h3>
+              <p className="text-gray-400">Ihre All-in-One-Lösung für den Online-Handel.</p>
+            </div>
+            <div>
+              <h4 className="text-base font-medium mb-4">Produkt</h4>
+              <ul className="space-y-2">
+                <li><a href="#" className="text-gray-400 hover:text-white">Features</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white">Preise</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white">Testimonials</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white">FAQ</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-base font-medium mb-4">Ressourcen</h4>
+              <ul className="space-y-2">
+                <li><a href="#" className="text-gray-400 hover:text-white">Blog</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white">Dokumentation</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white">Entwickler</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white">Support</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-base font-medium mb-4">Unternehmen</h4>
+              <ul className="space-y-2">
+                <li><a href="#" className="text-gray-400 hover:text-white">Über uns</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white">Kontakt</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white">Karriere</a></li>
+                <li><a href="#" className="text-gray-400 hover:text-white">Datenschutz</a></li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-400">
+            <p>© 2023 E-Commerce Platform. Alle Rechte vorbehalten.</p>
+          </div>
         </div>
       </footer>
     </div>
