@@ -2,8 +2,21 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { CheckIcon } from "lucide-react";
+import { authService } from "@/services/auth-service";
+import { useNavigate } from "react-router-dom";
 
 const Index = () => {
+  const navigate = useNavigate();
+  const isAuthenticated = authService.isAuthenticated();
+
+  const handlePackageSelect = (plan: string) => {
+    if (isAuthenticated) {
+      navigate(`/checkout?plan=${plan}`);
+    } else {
+      navigate(`/sign-in?redirect=/checkout&plan=${plan}`);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Hero Section */}
@@ -82,8 +95,12 @@ const Index = () => {
                   <span className="text-4xl font-extrabold">0€</span>
                   <span className="text-gray-500 ml-1">/monat</span>
                 </div>
-                <Button asChild className="w-full" variant="outline">
-                  <Link to="/sign-up">Kostenlos starten</Link>
+                <Button 
+                  className="w-full" 
+                  variant="outline"
+                  onClick={() => handlePackageSelect("free")}
+                >
+                  Kostenlos starten
                 </Button>
               </div>
               <div className="p-8 pt-4 bg-gray-50">
@@ -115,8 +132,11 @@ const Index = () => {
                   <span className="text-4xl font-extrabold">19,99€</span>
                   <span className="text-gray-500 ml-1">/monat</span>
                 </div>
-                <Button asChild className="w-full">
-                  <Link to="/sign-up?plan=basic">Jetzt auswählen</Link>
+                <Button 
+                  className="w-full"
+                  onClick={() => handlePackageSelect("basic")}
+                >
+                  Jetzt auswählen
                 </Button>
               </div>
               <div className="p-8 pt-4 bg-gray-50">
@@ -149,8 +169,12 @@ const Index = () => {
                   <span className="text-4xl font-extrabold">49,99€</span>
                   <span className="text-gray-500 ml-1">/monat</span>
                 </div>
-                <Button asChild className="w-full" variant="outline">
-                  <Link to="/sign-up?plan=pro">Jetzt auswählen</Link>
+                <Button 
+                  className="w-full" 
+                  variant="outline"
+                  onClick={() => handlePackageSelect("pro")}
+                >
+                  Jetzt auswählen
                 </Button>
               </div>
               <div className="p-8 pt-4 bg-gray-50">

@@ -1,71 +1,114 @@
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { authService } from "@/services/auth-service";
 import OTPInput from "@/components/OTPInput";
+import { authService } from "@/services/auth-service";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 interface OTPVerificationProps {
   otpMethod: "email" | "phone" | null;
   onBack: () => void;
   error: string | null;
   setError: (error: string | null) => void;
+  onSuccess?: () => void;
 }
 
-const OTPVerification = ({ otpMethod, onBack, error, setError }: OTPVerificationProps) => {
+const OTPVerification = ({ 
+  otpMethod, 
+  onBack, 
+  error, 
+  setError,
+  onSuccess 
+}: OTPVerificationProps) => {
+  const [otp, setOTP] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
 
-  const handleVerifyOTP = async (otp: string) => {
-    setIsLoading(true);
+  const handleVerify = async () => {
+    if (otp.length < 6) {
+      setError("Bitte geben Sie einen gültigen 6-stelligen Code ein.");
+      return;
+    }
+
+    setIsVerifying(true);
     setError(null);
-    
+
     try {
-      await authService.verifyOTP(otp, otpMethod || "email");
+      await authService.verifyTwoFactor(otp);
       toast({
-        title: "Erfolgreich angemeldet",
-        description: "Willkommen zurück!",
+        title: "Erfolgreich verifiziert",
+        description: "Sie sind jetzt angemeldet.",
       });
-      navigate("/dashboard");
+      
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        navigate("/dashboard");
+      }
     } catch (err) {
-      setError("Ungültiger Code. Bitte versuchen Sie es erneut.");
+      setError("Der eingegebene Code ist ungültig oder abgelaufen. Bitte versuchen Sie es erneut.");
       console.error(err);
     } finally {
-      setIsLoading(false);
+      setIsVerifying(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setIsResending(true);
+    setError(null);
+
+    try {
+      await authService.resendTwoFactorCode(otpMethod || "email");
+      toast({
+        title: "Code erneut gesendet",
+        description: `Wir haben einen neuen Code an Ihre ${
+          otpMethod === "email" ? "E-Mail-Adresse" : "Telefonnummer"
+        } gesendet.`,
+      });
+    } catch (err) {
+      setError(
+        "Fehler beim erneuten Senden des Codes. Bitte versuchen Sie es später noch einmal."
+      );
+      console.error(err);
+    } finally {
+      setIsResending(false);
     }
   };
 
   return (
     <div className="space-y-4">
-      {error && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-      <div className="space-y-4">
-        <OTPInput digits={6} onComplete={handleVerifyOTP} />
-        <Button
-          variant="link"
-          onClick={() => authService.resendOTP(otpMethod || "email")}
-          className="p-0 h-auto text-sm"
-          disabled={isLoading}
-        >
-          Code erneut senden
+      <OTPInput
+        value={otp}
+        onChange={setOTP}
+        numInputs={6}
+        isInputNum={true}
+        shouldAutoFocus={true}
+      />
+
+      <div className="flex flex-col gap-2 mt-4">
+        <Button onClick={handleVerify} disabled={isVerifying || otp.length < 6}>
+          {isVerifying ? "Verifiziere..." : "Verifizieren"}
         </Button>
+        <div className="flex justify-between mt-2">
+          <Button
+            variant="outline"
+            onClick={onBack}
+            disabled={isVerifying || isResending}
+          >
+            Zurück
+          </Button>
+          <Button
+            variant="link"
+            onClick={handleResend}
+            disabled={isResending || isVerifying}
+          >
+            {isResending ? "Wird gesendet..." : "Code erneut senden"}
+          </Button>
+        </div>
       </div>
-      <Button
-        variant="outline"
-        className="w-full"
-        onClick={onBack}
-        disabled={isLoading}
-      >
-        Zurück zur Anmeldung
-      </Button>
     </div>
   );
 };

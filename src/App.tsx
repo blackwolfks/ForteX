@@ -14,6 +14,9 @@ import ForgotPassword from "./pages/ForgotPassword";
 import Verification from "./pages/Verification";
 import TwoFactorSetup from "./pages/TwoFactorSetup";
 import GoogleCallback from "./pages/GoogleCallback";
+import DiscordCallback from "./pages/DiscordCallback";
+import CFXCallback from "./pages/CFXCallback";
+import Checkout from "./pages/Checkout";
 import AuthGuard from "./components/AuthGuard";
 
 const queryClient = new QueryClient();
@@ -50,9 +53,18 @@ const App = () => (
           } />
           <Route path="/verification" element={<Verification />} />
           <Route path="/auth/google-callback" element={<GoogleCallback />} />
+          <Route path="/auth/discord-callback" element={<DiscordCallback />} />
+          <Route path="/auth/cfx-callback" element={<CFXCallback />} />
           <Route path="/two-factor-setup" element={
             <AuthGuard requireAuth={true}>
               <TwoFactorSetup />
+            </AuthGuard>
+          } />
+          
+          {/* Checkout Route */}
+          <Route path="/checkout" element={
+            <AuthGuard requireAuth={true}>
+              <Checkout />
             </AuthGuard>
           } />
           

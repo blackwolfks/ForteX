@@ -1,6 +1,6 @@
 
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import LoginForm from "@/components/auth/LoginForm";
 import OTPVerification from "@/components/auth/OTPVerification";
@@ -10,10 +10,25 @@ const SignIn = () => {
   const [error, setError] = useState<string | null>(null);
   const [showOTP, setShowOTP] = useState(false);
   const [otpMethod, setOtpMethod] = useState<"email" | "phone" | null>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Get redirect URL and plan from query parameters
+  const queryParams = new URLSearchParams(location.search);
+  const redirectUrl = queryParams.get('redirect') || '/dashboard';
+  const plan = queryParams.get('plan') || null;
 
   const handleOTPRequired = (method: "email" | "phone" | null) => {
     setShowOTP(true);
     setOtpMethod(method);
+  };
+
+  const handleSuccessfulLogin = () => {
+    if (redirectUrl === '/checkout' && plan) {
+      navigate(`${redirectUrl}?plan=${plan}`);
+    } else {
+      navigate(redirectUrl);
+    }
   };
 
   return (
@@ -33,6 +48,7 @@ const SignIn = () => {
                 onBack={() => setShowOTP(false)}
                 error={error}
                 setError={setError}
+                onSuccess={handleSuccessfulLogin}
               />
             </CardContent>
           </>
@@ -49,14 +65,19 @@ const SignIn = () => {
                 onOTPRequired={handleOTPRequired}
                 error={error}
                 setError={setError}
+                onSuccess={handleSuccessfulLogin}
               />
-              <SocialLogin setError={setError} />
+              <SocialLogin 
+                setError={setError} 
+                redirectUrl={redirectUrl}
+                plan={plan}
+              />
             </CardContent>
             <CardFooter>
               <div className="text-sm text-muted-foreground text-center w-full">
                 Noch kein Konto?{" "}
                 <Link
-                  to="/sign-up"
+                  to={`/sign-up${location.search}`}
                   className="font-medium text-primary underline-offset-4 hover:underline"
                 >
                   Registrieren

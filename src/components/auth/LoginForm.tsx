@@ -28,9 +28,10 @@ interface LoginFormProps {
   onOTPRequired: (method: "email" | "phone" | null) => void;
   setError: (error: string | null) => void;
   error: string | null;
+  onSuccess?: () => void;
 }
 
-const LoginForm = ({ onOTPRequired, setError, error }: LoginFormProps) => {
+const LoginForm = ({ onOTPRequired, setError, error, onSuccess }: LoginFormProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
@@ -57,7 +58,12 @@ const LoginForm = ({ onOTPRequired, setError, error }: LoginFormProps) => {
           title: "Erfolgreich angemeldet",
           description: "Willkommen zurück!",
         });
-        navigate("/dashboard");
+        
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          navigate("/dashboard");
+        }
       }
     } catch (err) {
       setError("E-Mail oder Passwort ist falsch. Bitte versuchen Sie es erneut.");
