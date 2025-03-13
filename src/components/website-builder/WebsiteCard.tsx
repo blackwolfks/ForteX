@@ -18,9 +18,10 @@ interface Website {
 interface WebsiteCardProps {
   website: Website;
   onDelete: () => void;
+  onEdit: (id: string) => void;
 }
 
-export const WebsiteCard = ({ website, onDelete }: WebsiteCardProps) => {
+export const WebsiteCard = ({ website, onDelete, onEdit }: WebsiteCardProps) => {
   const formattedDate = formatDistanceToNow(new Date(website.lastEdited), { 
     addSuffix: true,
     locale: de
@@ -65,7 +66,7 @@ export const WebsiteCard = ({ website, onDelete }: WebsiteCardProps) => {
         </div>
       </CardContent>
       <CardFooter className="flex justify-between">
-        <Button variant="outline" size="sm" className="w-full mr-1">
+        <Button variant="outline" size="sm" className="w-full mr-1" onClick={() => onEdit(website.id)}>
           <Edit className="h-4 w-4 mr-1" />
           Bearbeiten
         </Button>

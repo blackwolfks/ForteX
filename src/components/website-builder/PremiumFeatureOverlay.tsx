@@ -2,15 +2,21 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Crown, ArrowRight } from "lucide-react";
+import { toast } from "sonner";
 
 interface PremiumFeatureOverlayProps {
   feature: string;
 }
 
 export const PremiumFeatureOverlay = ({ feature }: PremiumFeatureOverlayProps) => {
+  const handleUpgrade = () => {
+    toast.info("Upgrade-Prozess wird gestartet...");
+    // Hier würde man normalerweise zur Bezahlseite weiterleiten
+  };
+
   return (
     <div className="space-y-6">
-      <Card className="border-dashed border-2 border-amber-400">
+      <Card className="border-dashed border-2 border-amber-400 max-w-md mx-auto">
         <CardHeader className="text-center pb-2">
           <div className="mx-auto bg-amber-100 rounded-full w-12 h-12 flex items-center justify-center mb-2">
             <Crown className="h-6 w-6 text-amber-500" />
@@ -44,7 +50,11 @@ export const PremiumFeatureOverlay = ({ feature }: PremiumFeatureOverlayProps) =
           </div>
           
           <div className="space-y-2">
-            <Button className="bg-gradient-to-r from-amber-500 to-amber-600 w-full">
+            <Button 
+              className="bg-gradient-to-r from-amber-500 to-amber-600 w-full text-white hover:from-amber-600 hover:to-amber-700 font-medium"
+              onClick={handleUpgrade}
+            >
+              <Crown className="h-4 w-4 mr-1" />
               Upgrade auf Pro
             </Button>
             <p className="text-xs text-muted-foreground">

@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { WebsiteCard } from "./WebsiteCard";
 import { PremiumFeatureOverlay } from "./PremiumFeatureOverlay";
+import { WebsiteEditor } from "./WebsiteEditor";
 
 // Beispielwebsites für Demo-Zwecke
 const DEMO_WEBSITES = [
@@ -42,6 +43,7 @@ const WebsiteBuilderView = () => {
   const [newWebsiteName, setNewWebsiteName] = useState("");
   const [activeTab, setActiveTab] = useState("websites");
   const [selectedTemplate, setSelectedTemplate] = useState("e-commerce");
+  const [editingWebsiteId, setEditingWebsiteId] = useState<string | null>(null);
   const isPro = checkProStatus();
 
   const handleCreateWebsite = () => {
@@ -73,9 +75,23 @@ const WebsiteBuilderView = () => {
     toast.success("Website wurde gelöscht");
   };
 
+  const handleEditWebsite = (id: string) => {
+    setEditingWebsiteId(id);
+  };
+
   // Wenn der Benutzer kein Pro-Kunde ist, zeigt eine Overlay-Komponente
   if (!isPro) {
     return <PremiumFeatureOverlay feature="Website-Builder" />;
+  }
+
+  // Wenn ein Website zur Bearbeitung ausgewählt ist, zeige den Editor an
+  if (editingWebsiteId) {
+    return (
+      <WebsiteEditor 
+        websiteId={editingWebsiteId} 
+        onBack={() => setEditingWebsiteId(null)} 
+      />
+    );
   }
 
   return (
@@ -106,6 +122,7 @@ const WebsiteBuilderView = () => {
                       key={website.id} 
                       website={website} 
                       onDelete={() => handleDeleteWebsite(website.id)} 
+                      onEdit={handleEditWebsite}
                     />
                   ))}
                 </div>
