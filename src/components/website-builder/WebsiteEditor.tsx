@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -16,6 +15,13 @@ interface WebsiteEditorProps {
 
 // Mock function to get website data
 const getWebsiteById = (id: string) => {
+  // First check if we have saved data in localStorage
+  const savedData = localStorage.getItem(`website_${id}`);
+  if (savedData) {
+    return JSON.parse(savedData);
+  }
+  
+  // Otherwise return the default data
   return {
     id,
     name: id === "web1" ? "Mein Online-Shop" : "Portfolio",
@@ -36,15 +42,39 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
   const [activeTab, setActiveTab] = useState("edit");
   const [content, setContent] = useState(websiteData.content);
   const [selectedElement, setSelectedElement] = useState<string | null>(null);
+  const [websiteName, setWebsiteName] = useState(websiteData.name);
+  const [websiteUrl, setWebsiteUrl] = useState(websiteData.url);
+  
+  // Save website data to localStorage
+  const saveWebsiteData = () => {
+    const dataToSave = {
+      ...websiteData,
+      name: websiteName,
+      url: websiteUrl,
+      content: content,
+      lastSaved: new Date().toISOString()
+    };
+    
+    localStorage.setItem(`website_${websiteId}`, JSON.stringify(dataToSave));
+    toast.success("Änderungen wurden gespeichert");
+  };
   
   const handleSave = () => {
-    // In a real app, this would save to a database
-    toast.success("Änderungen wurden gespeichert");
+    saveWebsiteData();
   };
   
   const handlePreview = () => {
     setActiveTab("preview");
   };
+
+  // Auto-save every 30 seconds if changes are made
+  useEffect(() => {
+    const autoSaveInterval = setInterval(() => {
+      saveWebsiteData();
+    }, 30000); // 30 seconds
+    
+    return () => clearInterval(autoSaveInterval);
+  }, [content, websiteName, websiteUrl]);
   
   return (
     <div className="space-y-4">
@@ -54,7 +84,7 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
             <ArrowLeft className="h-4 w-4 mr-1" />
             Zurück
           </Button>
-          <h2 className="text-xl font-bold">{websiteData.name} bearbeiten</h2>
+          <h2 className="text-xl font-bold">{websiteName} bearbeiten</h2>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handlePreview}>
@@ -220,15 +250,28 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>Website-Name</Label>
-                  <Input defaultValue={websiteData.name} />
+                  <Input 
+                    value={websiteName} 
+                    onChange={(e) => setWebsiteName(e.target.value)} 
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Domain</Label>
-                  <Input defaultValue={websiteData.url} />
+                  <Input 
+                    value={websiteUrl} 
+                    onChange={(e) => setWebsiteUrl(e.target.value)} 
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Template</Label>
                   <Input defaultValue={websiteData.template} readOnly />
+                </div>
+                <div className="space-y-2">
+                  <Label>Letzter Speichervorgang</Label>
+                  <Input 
+                    value={websiteData.lastSaved ? new Date(websiteData.lastSaved).toLocaleString() : "Noch nicht gespeichert"} 
+                    readOnly 
+                  />
                 </div>
                 <Button onClick={handleSave}>Einstellungen speichern</Button>
               </div>
