@@ -1,6 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { CheckIcon } from "lucide-react";
 
 const Index = () => {
   return (
@@ -19,7 +20,7 @@ const Index = () => {
               <Link to="/dashboard">Dashboard öffnen</Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="bg-transparent border-white text-white hover:bg-white/10">
-              <Link to="/dashboard">Mehr erfahren</Link>
+              <Link to="#pricing">Preise ansehen</Link>
             </Button>
           </div>
         </div>
@@ -64,8 +65,125 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Pricing Section */}
+      <section id="pricing" className="py-24 bg-gray-50">
+        <div className="container mx-auto max-w-6xl px-4">
+          <h2 className="text-3xl font-bold text-center mb-4">Preispläne</h2>
+          <p className="text-lg text-center text-gray-600 mb-16 max-w-2xl mx-auto">
+            Wählen Sie den Plan, der am besten zu Ihren Bedürfnissen passt. Alle Pläne beinhalten Zugang zu unserem Dashboard.
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Free Plan */}
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden transition-all hover:shadow-xl">
+              <div className="p-8 pb-6">
+                <h3 className="text-xl font-bold mb-4">Kostenlos</h3>
+                <div className="flex items-baseline mb-6">
+                  <span className="text-4xl font-extrabold">0€</span>
+                  <span className="text-gray-500 ml-1">/monat</span>
+                </div>
+                <Button asChild className="w-full" variant="outline">
+                  <Link to="/sign-up">Kostenlos starten</Link>
+                </Button>
+              </div>
+              <div className="p-8 pt-4 bg-gray-50">
+                <ul className="space-y-3">
+                  <li className="flex items-start">
+                    <CheckIcon className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
+                    <span>Auswahl von vorgegebenen Website-Templates</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckIcon className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
+                    <span>Subdomain-Format: websitename.plattform.com</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckIcon className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
+                    <span>Grundlegende E-Commerce-Funktionen</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            
+            {/* Basic Plan */}
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden transition-all hover:shadow-xl relative">
+              <div className="absolute top-0 inset-x-0 bg-blue-500 text-white text-center text-sm py-1">
+                Beliebt
+              </div>
+              <div className="p-8 pb-6 pt-10">
+                <h3 className="text-xl font-bold mb-4">Basic</h3>
+                <div className="flex items-baseline mb-6">
+                  <span className="text-4xl font-extrabold">19,99€</span>
+                  <span className="text-gray-500 ml-1">/monat</span>
+                </div>
+                <Button asChild className="w-full">
+                  <Link to="/sign-up?plan=basic">Jetzt auswählen</Link>
+                </Button>
+              </div>
+              <div className="p-8 pt-4 bg-gray-50">
+                <ul className="space-y-3">
+                  <li className="flex items-start">
+                    <CheckIcon className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
+                    <span>Eigene Domain</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckIcon className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
+                    <span>Anpassung von Farben und Schriftarten über Dashboard</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckIcon className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
+                    <span>Erweiterte E-Commerce-Funktionen</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckIcon className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
+                    <span>Premium Support</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            
+            {/* Pro Plan */}
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden transition-all hover:shadow-xl">
+              <div className="p-8 pb-6">
+                <h3 className="text-xl font-bold mb-4">Pro</h3>
+                <div className="flex items-baseline mb-6">
+                  <span className="text-4xl font-extrabold">49,99€</span>
+                  <span className="text-gray-500 ml-1">/monat</span>
+                </div>
+                <Button asChild className="w-full" variant="outline">
+                  <Link to="/sign-up?plan=pro">Jetzt auswählen</Link>
+                </Button>
+              </div>
+              <div className="p-8 pt-4 bg-gray-50">
+                <ul className="space-y-3">
+                  <li className="flex items-start">
+                    <CheckIcon className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
+                    <span>Eigene Domain</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckIcon className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
+                    <span>Voller Zugriff auf einen Website-Builder zum Erstellen eigener Designs</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckIcon className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
+                    <span>Möglichkeit, eigene Websites zu importieren</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckIcon className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
+                    <span>Unbegrenzte Produkte</span>
+                  </li>
+                  <li className="flex items-start">
+                    <CheckIcon className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
+                    <span>Prioritäts-Support</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Testimonials Section */}
-      <section className="py-24 bg-gray-50">
+      <section className="py-24 bg-white">
         <div className="container mx-auto max-w-6xl px-4">
           <h2 className="text-3xl font-bold text-center mb-16">Was unsere Kunden sagen</h2>
           
@@ -127,7 +245,7 @@ const Index = () => {
               <h4 className="text-base font-medium mb-4">Produkt</h4>
               <ul className="space-y-2">
                 <li><a href="#" className="text-gray-400 hover:text-white">Features</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-white">Preise</a></li>
+                <li><a href="#pricing" className="text-gray-400 hover:text-white">Preise</a></li>
                 <li><a href="#" className="text-gray-400 hover:text-white">Testimonials</a></li>
                 <li><a href="#" className="text-gray-400 hover:text-white">FAQ</a></li>
               </ul>
