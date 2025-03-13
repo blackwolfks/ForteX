@@ -25,6 +25,7 @@ export interface PaymentResult {
   success: boolean;
   paymentId: string;
   message?: string;
+  redirectUrl?: string;
 }
 
 // Simulate payment processing
@@ -34,12 +35,22 @@ class PaymentService {
     console.log("Processing credit card payment", details);
     
     // In a real application, this would call a payment gateway API
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Simulate redirect to payment gateway
+    const redirectUrl = `https://secure-payment-gateway.example.com/cc-payment?amount=${details.amount}&currency=${details.currency}&reference=${Math.random().toString(36).substring(2, 10)}`;
+    
+    // Open payment gateway in a new window/tab
+    window.open(redirectUrl, '_blank');
+    
+    // Wait for the "payment" to complete (in a real app this would use webhooks)
+    await new Promise(resolve => setTimeout(resolve, 3000));
     
     // Simulate success
     return {
       success: true,
       paymentId: `cc-${Math.random().toString(36).substring(2, 10)}`,
+      redirectUrl
     };
   }
   
@@ -48,12 +59,19 @@ class PaymentService {
     console.log("Processing PayPal payment", details);
     
     // In a real application, this would redirect to PayPal
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    const redirectUrl = `https://www.paypal.com/checkout?business=merchant@example.com&amount=${details.amount}&currency=${details.currency}&item_name=Subscription%20Plan&reference=${Math.random().toString(36).substring(2, 10)}`;
+    
+    // Open PayPal in a new window/tab
+    window.open(redirectUrl, '_blank');
+    
+    // Wait for the "payment" to complete (in a real app this would use webhooks)
+    await new Promise(resolve => setTimeout(resolve, 3000));
     
     // Simulate success
     return {
       success: true,
       paymentId: `pp-${Math.random().toString(36).substring(2, 10)}`,
+      redirectUrl
     };
   }
   
@@ -61,13 +79,31 @@ class PaymentService {
   async processBankTransferPayment(details: PaymentDetails): Promise<PaymentResult> {
     console.log("Processing bank transfer payment", details);
     
-    // In a real application, this would generate bank transfer details
+    // Generate bank transfer details
+    const bankDetails = {
+      accountHolder: "Example GmbH",
+      iban: "DE89 3704 0044 0532 0130 00",
+      bic: "COBADEFFXXX",
+      reference: `ORDER-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+      amount: details.amount,
+      currency: details.currency
+    };
+    
+    // Simulate showing banking details in a modal or new window
+    const redirectUrl = `https://banking.example.com/transfer?to=${bankDetails.accountHolder}&iban=${bankDetails.iban}&bic=${bankDetails.bic}&amount=${details.amount}&reference=${bankDetails.reference}`;
+    
+    // Open bank transfer details in a new window/tab
+    window.open(redirectUrl, '_blank');
+    
+    // In a real application, bank transfers would be manually confirmed or verified via API
     await new Promise(resolve => setTimeout(resolve, 1500));
     
     // Simulate success
     return {
       success: true,
       paymentId: `bt-${Math.random().toString(36).substring(2, 10)}`,
+      redirectUrl,
+      message: `Bitte überweisen Sie ${details.amount} ${details.currency} an ${bankDetails.accountHolder}, IBAN: ${bankDetails.iban}, BIC: ${bankDetails.bic}, mit dem Verwendungszweck: ${bankDetails.reference}`
     };
   }
   
@@ -76,12 +112,19 @@ class PaymentService {
     console.log("Processing Sofort payment", details);
     
     // In a real application, this would redirect to Sofort
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    const redirectUrl = `https://www.sofort.com/payment?user_id=merchant_id&project_id=project_id&amount=${details.amount}&currency=${details.currency}&reason=Subscription&user_variable_0=${Math.random().toString(36).substring(2, 10)}`;
+    
+    // Open Sofort in a new window/tab
+    window.open(redirectUrl, '_blank');
+    
+    // Wait for the "payment" to complete (in a real app this would use webhooks)
+    await new Promise(resolve => setTimeout(resolve, 3000));
     
     // Simulate success
     return {
       success: true,
       paymentId: `sf-${Math.random().toString(36).substring(2, 10)}`,
+      redirectUrl
     };
   }
   
