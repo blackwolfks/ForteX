@@ -1,4 +1,3 @@
-
 import { supabase, Product } from '@/lib/supabase';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -21,14 +20,8 @@ class ProductService {
       // Benutzer-ID aus dem Auth-State abrufen
       const { data: userData } = await supabase.auth.getUser();
       
-      // Wenn kein Benutzer eingeloggt ist, einen temporären Eintrag im localStorage erstellen
-      if (!userData?.user) {
-        console.log('Kein Benutzer eingeloggt, speichere Produkt im localStorage');
-        return this.saveProductToLocalStorage(productData);
-      }
-      
-      // Wenn ein Benutzer eingeloggt ist, in Supabase speichern
-      const userId = userData.user.id;
+      // Eine temporäre Benutzer-ID generieren, falls kein Benutzer eingeloggt ist
+      const userId = userData?.user?.id || `temp-${uuidv4()}`;
       
       const newProduct: Omit<Product, 'id' | 'created_at'> = {
         name: productData.name,
@@ -49,11 +42,12 @@ class ProductService {
         .from('products')
         .insert([newProduct])
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Fehler beim Speichern in Supabase:', error);
-        throw error;
+        // Fallback: Im localStorage speichern, wenn die DB-Verbindung fehlschlägt
+        return this.saveProductToLocalStorage(productData);
       }
 
       return data as Product;
