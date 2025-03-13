@@ -42,8 +42,11 @@ import {
   Key,
   Upload
 } from "lucide-react";
+import { toast } from "sonner";
+import { productService, CreateProductInput } from "@/services/product-service";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-// Define the product schema
+// Produktschema definieren
 const productSchema = z.object({
   name: z.string().min(3, "Name muss mindestens 3 Zeichen lang sein"),
   description: z.string().min(10, "Beschreibung muss mindestens 10 Zeichen lang sein"),
@@ -63,6 +66,7 @@ const ProductCreator = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [cfxResourceName, setCfxResourceName] = useState<string>("");
+  const queryClient = useQueryClient();
   
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
@@ -80,6 +84,20 @@ const ProductCreator = () => {
   });
   
   const isSubscription = form.watch("isSubscription");
+  
+  // Mutation zum Erstellen eines Produkts
+  const createProductMutation = useMutation({
+    mutationFn: (data: CreateProductInput) => productService.createProduct(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast.success("Produkt erfolgreich erstellt");
+      resetForm();
+    },
+    onError: (error) => {
+      toast.error("Fehler beim Erstellen des Produkts");
+      console.error(error);
+    }
+  });
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -101,46 +119,35 @@ const ProductCreator = () => {
     const cfxId = form.getValues("cfxResourceId");
     if (!cfxId) return;
     
-    // Simulate API call to CFX
-    console.log("Importing from CFX ID:", cfxId);
+    toast.info("CFX-Daten werden importiert...");
     
-    // Mock data as if we got it from CFX API
+    // Simulierte API-Abfrage zu CFX
     setTimeout(() => {
       setCfxResourceName("Example CFX Script");
       form.setValue("name", "Example CFX Script");
       form.setValue("shortDescription", "Imported from CFX.re marketplace");
       form.setValue("description", "This script was automatically imported from CFX.re marketplace. Edit this description to provide more details about the product.");
       form.setValue("cfxImported", true);
+      
+      toast.success("CFX-Daten erfolgreich importiert");
     }, 1000);
   };
   
-  const onSubmit = (data: ProductFormValues) => {
-    // Include the image data
-    const productData = {
-      ...data,
-      image: previewImage,
-    };
-    
-    console.log("Submitting product:", productData);
-    
-    // Save to local storage for now
-    const existingProducts = JSON.parse(localStorage.getItem("products") || "[]");
-    const newProduct = {
-      ...productData,
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-    };
-    
-    localStorage.setItem("products", JSON.stringify([...existingProducts, newProduct]));
-    
-    // Reset form
+  const resetForm = () => {
     form.reset();
     setSelectedImage(null);
     setPreviewImage(null);
     setCfxResourceName("");
+  };
+  
+  const onSubmit = (data: ProductFormValues) => {
+    // Produktdaten mit Bild erstellen
+    const productData: CreateProductInput = {
+      ...data,
+      image: previewImage || undefined,
+    };
     
-    // Show success message
-    alert("Produkt erfolgreich erstellt!");
+    createProductMutation.mutate(productData);
   };
 
   return (
@@ -397,9 +404,15 @@ const ProductCreator = () => {
               </TabsContent>
 
               <div className="flex justify-end pt-4">
-                <Button type="submit">
-                  <Save className="h-4 w-4 mr-2" />
-                  Produkt speichern
+                <Button type="submit" disabled={createProductMutation.isPending}>
+                  {createProductMutation.isPending ? (
+                    <>Wird gespeichert...</>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Produkt speichern
+                    </>
+                  )}
                 </Button>
               </div>
             </form>

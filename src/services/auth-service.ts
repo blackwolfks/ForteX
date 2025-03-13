@@ -1,8 +1,9 @@
+// Auth-Service für die Integration mit Supabase Auth
+// Fallback zu simuliertem Auth-Verhalten, wenn keine Verbindung zur Datenbank besteht
 
-// Simulierter Authentifizierungsdienst
-// In einer realen Anwendung würde dies gegen eine echte Backend-API oder einen Auth-Dienst wie Firebase, Auth0, etc. kommunizieren
+import { supabase } from '@/lib/supabase';
 
-// Simulierter User-Store
+// Simulierter User-Store für lokalen Betrieb
 let currentUser: { 
   id: string; 
   name: string; 
@@ -15,19 +16,19 @@ let currentUser: {
 let isEmailVerified = false;
 
 // OAuth Konfiguration
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID"; // Umgebungsvariable oder Fallback
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID";
 const GOOGLE_REDIRECT_URI = `${window.location.origin}/auth/google-callback`;
-const GOOGLE_SCOPE = "email profile"; // Berechtigungen, die wir von Google anfordern
+const GOOGLE_SCOPE = "email profile";
 
 // Discord OAuth Konfiguration
 const DISCORD_CLIENT_ID = import.meta.env.VITE_DISCORD_CLIENT_ID || "YOUR_DISCORD_CLIENT_ID";
 const DISCORD_REDIRECT_URI = `${window.location.origin}/auth/discord-callback`;
-const DISCORD_SCOPE = "identify email"; // Berechtigungen, die wir von Discord anfordern
+const DISCORD_SCOPE = "identify email";
 
 // CFX OAuth Konfiguration
 const CFX_CLIENT_ID = import.meta.env.VITE_CFX_CLIENT_ID || "YOUR_CFX_CLIENT_ID";
 const CFX_REDIRECT_URI = `${window.location.origin}/auth/cfx-callback`;
-const CFX_SCOPE = "profile email"; // Berechtigungen, die wir von CFX anfordern
+const CFX_SCOPE = "profile email";
 
 // Mock-Daten für schnelle Tests
 const MOCK_USERS = [
@@ -54,109 +55,220 @@ const MOCK_USERS = [
 export const authService = {
   // Anmeldung mit E-Mail und Passwort
   signIn: async (email: string, password: string) => {
-    // Simulierte API-Verzögerung
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const user = MOCK_USERS.find(u => u.email === email);
-    
-    if (!user || user.password !== password) {
-      throw new Error("E-Mail oder Passwort ist falsch");
-    }
-    
-    currentUser = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      twoFactorEnabled: user.twoFactorEnabled,
-      twoFactorMethod: user.twoFactorMethod,
-      phoneNumber: user.phoneNumber,
-    };
-    
-    if (user.twoFactorEnabled) {
-      // Code für 2FA senden (simuliert)
-      await new Promise(resolve => setTimeout(resolve, 500));
-      return { 
-        requiresTwoFactor: true,
-        twoFactorMethod: user.twoFactorMethod
+    try {
+      // Versuche Anmeldung mit Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (error) throw error;
+      
+      // Benutzer erfolgreich angemeldet
+      // Prüfen auf 2FA, würde in einer echten App über Metadaten erfolgen
+      const user = data.user;
+      const twoFactorEnabled = user.user_metadata?.twoFactorEnabled || false;
+      const twoFactorMethod = user.user_metadata?.twoFactorMethod || null;
+      
+      if (twoFactorEnabled) {
+        // Code für 2FA senden (würde in einer echten App über Supabase Edge Functions erfolgen)
+        return { 
+          requiresTwoFactor: true,
+          twoFactorMethod: twoFactorMethod
+        };
+      }
+      
+      return { requiresTwoFactor: false };
+    } catch (error) {
+      console.log('Supabase Auth-Fehler, Fallback zu Mock-Auth:', error);
+      
+      // Fallback zu Mock-Auth
+      // Simulierte API-Verzögerung
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const user = MOCK_USERS.find(u => u.email === email);
+      
+      if (!user || user.password !== password) {
+        throw new Error("E-Mail oder Passwort ist falsch");
+      }
+      
+      currentUser = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        twoFactorEnabled: user.twoFactorEnabled,
+        twoFactorMethod: user.twoFactorMethod,
+        phoneNumber: user.phoneNumber,
       };
+      
+      if (user.twoFactorEnabled) {
+        // Code für 2FA senden (simuliert)
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return { 
+          requiresTwoFactor: true,
+          twoFactorMethod: user.twoFactorMethod
+        };
+      }
+      
+      // User erfolgreich angemeldet
+      localStorage.setItem("auth_token", "mock_jwt_token");
+      
+      return { requiresTwoFactor: false };
     }
-    
-    // User erfolgreich angemeldet
-    localStorage.setItem("auth_token", "mock_jwt_token");
-    
-    return { requiresTwoFactor: false };
   },
   
   // Anmeldung mit Google
   signInWithGoogle: async () => {
-    // Google OAuth Redirect URL erstellen
-    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(GOOGLE_REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(GOOGLE_SCOPE)}&access_type=offline&prompt=select_account`;
-    
-    // Zu Google Auth-Seite umleiten
-    window.location.href = googleAuthUrl;
-    
-    // Diese Funktion kehrt nicht zurück, da wir umleiten
-    return new Promise<any>(() => {});
+    try {
+      // Mit Supabase Google OAuth durchführen
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: GOOGLE_REDIRECT_URI
+        }
+      });
+      
+      if (error) throw error;
+      
+      // Benutzer wird zu Google-Auth-Seite umgeleitet
+      window.location.href = data.url;
+      
+      // Diese Funktion kehrt nicht zurück, da wir umleiten
+      return new Promise<any>(() => {});
+    } catch (error) {
+      console.log('Supabase OAuth-Fehler, Fallback zu Mock-OAuth:', error);
+      
+      // Fallback zu Mock-OAuth
+      // Google OAuth Redirect URL erstellen
+      const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(GOOGLE_REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(GOOGLE_SCOPE)}&access_type=offline&prompt=select_account`;
+      
+      // Zu Google Auth-Seite umleiten
+      window.location.href = googleAuthUrl;
+      
+      // Diese Funktion kehrt nicht zurück, da wir umleiten
+      return new Promise<any>(() => {});
+    }
   },
   
   // Google OAuth Callback verarbeiten
   handleGoogleCallback: async (code: string) => {
-    // In einer echten App würden Sie den Code gegen ein Token austauschen
-    // und dann mit diesem Token Benutzerinformationen abrufen
-    
-    // Simulierte API-Verzögerung
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Simulierter erfolgreicher Login nach OAuth-Callback
-    currentUser = {
-      id: "google_user_id",
-      name: "Google User",
-      email: "google_user@example.com",
-      twoFactorEnabled: false,
-      twoFactorMethod: null,
-      phoneNumber: null,
-    };
-    
-    localStorage.setItem("auth_token", "mock_google_jwt_token");
-    
-    return currentUser;
+    try {
+      // In einer echten Supabase-App müssten wir hier nichts tun, da Supabase den Callback verarbeitet
+      // Wir prüfen hier einfach, ob wir einen Benutzer haben
+      const { data, error } = await supabase.auth.getSession();
+      
+      if (error) throw error;
+      
+      if (!data.session) {
+        throw new Error("Keine gültige Sitzung nach OAuth-Anmeldung");
+      }
+      
+      const user = data.session.user;
+      
+      return {
+        id: user.id,
+        name: user.user_metadata?.full_name || "Google User",
+        email: user.email,
+      };
+    } catch (error) {
+      console.log('Supabase Session-Fehler, Fallback zu Mock-Auth:', error);
+      
+      // Fallback zu Mock-Auth
+      // Simulierte API-Verzögerung
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Simulierter erfolgreicher Login nach OAuth-Callback
+      currentUser = {
+        id: "google_user_id",
+        name: "Google User",
+        email: "google_user@example.com",
+        twoFactorEnabled: false,
+        twoFactorMethod: null,
+        phoneNumber: null,
+      };
+      
+      localStorage.setItem("auth_token", "mock_google_jwt_token");
+      
+      return currentUser;
+    }
   },
-
+  
   // Anmeldung mit Discord
   signInWithDiscord: async () => {
-    // Discord OAuth Redirect URL erstellen
-    const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(DISCORD_REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(DISCORD_SCOPE)}`;
-    
-    // Zu Discord Auth-Seite umleiten
-    window.location.href = discordAuthUrl;
-    
-    // Diese Funktion kehrt nicht zurück, da wir umleiten
-    return new Promise<any>(() => {});
+    try {
+      // Mit Supabase Discord OAuth durchführen
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'discord',
+        options: {
+          redirectTo: DISCORD_REDIRECT_URI
+        }
+      });
+      
+      if (error) throw error;
+      
+      // Benutzer wird zu Discord-Auth-Seite umgeleitet
+      window.location.href = data.url;
+      
+      // Diese Funktion kehrt nicht zurück, da wir umleiten
+      return new Promise<any>(() => {});
+    } catch (error) {
+      console.log('Supabase OAuth-Fehler, Fallback zu Mock-OAuth:', error);
+      
+      // Fallback zu Mock-OAuth
+      // Discord OAuth Redirect URL erstellen
+      const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(DISCORD_REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(DISCORD_SCOPE)}`;
+      
+      // Zu Discord Auth-Seite umleiten
+      window.location.href = discordAuthUrl;
+      
+      // Diese Funktion kehrt nicht zurück, da wir umleiten
+      return new Promise<any>(() => {});
+    }
   },
   
   // Discord OAuth Callback verarbeiten
   handleDiscordCallback: async (code: string) => {
-    // In einer echten App würden Sie den Code gegen ein Token austauschen
-    // und dann mit diesem Token Benutzerinformationen abrufen
-    
-    // Simulierte API-Verzögerung
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Simulierter erfolgreicher Login nach OAuth-Callback
-    currentUser = {
-      id: "discord_user_id",
-      name: "Discord User",
-      email: "discord_user@example.com",
-      twoFactorEnabled: false,
-      twoFactorMethod: null,
-      phoneNumber: null,
-    };
-    
-    localStorage.setItem("auth_token", "mock_discord_jwt_token");
-    
-    return currentUser;
+    try {
+      // In einer echten Supabase-App müssten wir hier nichts tun, da Supabase den Callback verarbeitet
+      // Wir prüfen hier einfach, ob wir einen Benutzer haben
+      const { data, error } = await supabase.auth.getSession();
+      
+      if (error) throw error;
+      
+      if (!data.session) {
+        throw new Error("Keine gültige Sitzung nach OAuth-Anmeldung");
+      }
+      
+      const user = data.session.user;
+      
+      return {
+        id: user.id,
+        name: user.user_metadata?.full_name || "Discord User",
+        email: user.email,
+      };
+    } catch (error) {
+      console.log('Supabase Session-Fehler, Fallback zu Mock-Auth:', error);
+      
+      // Fallback zu Mock-Auth
+      // Simulierte API-Verzögerung
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Simulierter erfolgreicher Login nach OAuth-Callback
+      currentUser = {
+        id: "discord_user_id",
+        name: "Discord User",
+        email: "discord_user@example.com",
+        twoFactorEnabled: false,
+        twoFactorMethod: null,
+        phoneNumber: null,
+      };
+      
+      localStorage.setItem("auth_token", "mock_discord_jwt_token");
+      
+      return currentUser;
+    }
   },
-
+  
   // Anmeldung mit CFX
   signInWithCFX: async () => {
     // CFX OAuth Redirect URL erstellen
@@ -194,31 +306,54 @@ export const authService = {
   
   // Registrierung
   signUp: async (name: string, email: string, password: string) => {
-    // Simulierte API-Verzögerung
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Überprüfen, ob ein Benutzer mit dieser E-Mail bereits existiert
-    if (MOCK_USERS.some(u => u.email === email)) {
-      throw new Error("Ein Benutzer mit dieser E-Mail-Adresse existiert bereits");
+    try {
+      // Supabase-Registrierung
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name,
+            twoFactorEnabled: false,
+            twoFactorMethod: null,
+            phoneNumber: null,
+          }
+        }
+      });
+      
+      if (error) throw error;
+      
+      return { success: true };
+    } catch (error) {
+      console.log('Supabase Auth-Fehler, Fallback zu Mock-Auth:', error);
+      
+      // Fallback zu Mock-Auth
+      // Simulierte API-Verzögerung
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Überprüfen, ob ein Benutzer mit dieser E-Mail bereits existiert
+      if (MOCK_USERS.some(u => u.email === email)) {
+        throw new Error("Ein Benutzer mit dieser E-Mail-Adresse existiert bereits");
+      }
+      
+      // Neuen Benutzer erstellen
+      const newUser = {
+        id: `user_${Date.now()}`,
+        name,
+        email,
+        password,
+        twoFactorEnabled: false,
+        twoFactorMethod: null as "email" | "phone" | "authenticator" | null,
+        phoneNumber: null,
+      };
+      
+      MOCK_USERS.push(newUser);
+      
+      // E-Mail-Bestätigung simulieren
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      return { success: true };
     }
-    
-    // Neuen Benutzer erstellen
-    const newUser = {
-      id: `user_${Date.now()}`,
-      name,
-      email,
-      password,
-      twoFactorEnabled: false,
-      twoFactorMethod: null as "email" | "phone" | "authenticator" | null,
-      phoneNumber: null,
-    };
-    
-    MOCK_USERS.push(newUser);
-    
-    // E-Mail-Bestätigung simulieren
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    return { success: true };
   },
   
   // OTP verifizieren
@@ -247,18 +382,32 @@ export const authService = {
   
   // Passwort vergessen
   forgotPassword: async (email: string) => {
-    // Simulierte API-Verzögerung
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Überprüfen, ob ein Benutzer mit dieser E-Mail existiert
-    const user = MOCK_USERS.find(u => u.email === email);
-    
-    if (!user) {
-      // Wir geben keinen Fehler zurück, um nicht preiszugeben, ob ein Benutzer existiert
-      // In einer echten App würde dennoch eine E-Mail gesendet werden
+    try {
+      // Supabase Passwort-Reset-E-Mail senden
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      
+      if (error) throw error;
+      
+      return { success: true };
+    } catch (error) {
+      console.log('Supabase Auth-Fehler, Fallback zu Mock-Auth:', error);
+      
+      // Fallback zu Mock-Auth
+      // Simulierte API-Verzögerung
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Überprüfen, ob ein Benutzer mit dieser E-Mail existiert
+      const user = MOCK_USERS.find(u => u.email === email);
+      
+      if (!user) {
+        // Wir geben keinen Fehler zurück, um nicht preiszugeben, ob ein Benutzer existiert
+        // In einer echten App würde dennoch eine E-Mail gesendet werden
+      }
+      
+      return { success: true };
     }
-    
-    return { success: true };
   },
   
   // Bestätigungs-E-Mail erneut senden
@@ -343,30 +492,77 @@ export const authService = {
   
   // Abmelden
   signOut: async () => {
-    // Token löschen
-    localStorage.removeItem("auth_token");
-    currentUser = null;
-    
-    return { success: true };
+    try {
+      // Supabase-Abmeldung
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) throw error;
+      
+      return { success: true };
+    } catch (error) {
+      console.log('Supabase Auth-Fehler, Fallback zu Mock-Auth:', error);
+      
+      // Fallback zu Mock-Auth
+      // Token löschen
+      localStorage.removeItem("auth_token");
+      currentUser = null;
+      
+      return { success: true };
+    }
   },
   
   // Aktuellen Benutzer abrufen
-  getCurrentUser: () => {
-    // Überprüfen, ob Token vorhanden ist
-    const token = localStorage.getItem("auth_token");
-    
-    if (!token) {
-      return null;
+  getCurrentUser: async () => {
+    try {
+      // Supabase-Benutzer abrufen
+      const { data, error } = await supabase.auth.getUser();
+      
+      if (error) throw error;
+      
+      if (!data.user) return null;
+      
+      const user = data.user;
+      
+      return {
+        id: user.id,
+        name: user.user_metadata?.full_name || "User",
+        email: user.email || "",
+        twoFactorEnabled: user.user_metadata?.twoFactorEnabled || false,
+        twoFactorMethod: user.user_metadata?.twoFactorMethod || null,
+        phoneNumber: user.user_metadata?.phoneNumber || null,
+      };
+    } catch (error) {
+      console.log('Supabase Auth-Fehler, Fallback zu Mock-Auth:', error);
+      
+      // Fallback zu Mock-Auth
+      // Überprüfen, ob Token vorhanden ist
+      const token = localStorage.getItem("auth_token");
+      
+      if (!token) {
+        return null;
+      }
+      
+      return currentUser || null;
     }
-    
-    return currentUser || null;
   },
   
   // Überprüfen, ob Benutzer angemeldet ist
-  isAuthenticated: () => {
-    return !!localStorage.getItem("auth_token");
+  isAuthenticated: async () => {
+    try {
+      // Supabase-Sitzung abrufen
+      const { data, error } = await supabase.auth.getSession();
+      
+      if (error) throw error;
+      
+      return !!data.session;
+    } catch (error) {
+      console.log('Supabase Auth-Fehler, Fallback zu Mock-Auth:', error);
+      
+      // Fallback zu Mock-Auth
+      return !!localStorage.getItem("auth_token");
+    }
   },
-
+  
   // E-Mail verifizieren
   verifyEmail: async (token: string) => {
     // Simulierte API-Verzögerung

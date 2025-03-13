@@ -34,34 +34,37 @@ import {
   ShoppingBag,
   Tag
 } from "lucide-react";
-
-type Product = {
-  id: string;
-  name: string;
-  description: string;
-  shortDescription: string;
-  price: number;
-  category: string;
-  isSubscription: boolean;
-  subscriptionInterval?: string;
-  cfxResourceId?: string;
-  cfxImported: boolean;
-  image?: string;
-  createdAt: string;
-};
+import { Toast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
+import { productService } from "@/services/product-service";
+import { Product } from "@/lib/supabase";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 const ProductsList = () => {
-  const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   
-  // Load products from localStorage
-  useEffect(() => {
-    const loadedProducts = JSON.parse(localStorage.getItem("products") || "[]");
-    setProducts(loadedProducts);
-  }, []);
+  // Produkte mit React Query laden
+  const { data: products = [], isLoading, error } = useQuery({
+    queryKey: ['products'],
+    queryFn: () => productService.getProducts(),
+  });
   
-  // Filter products based on search query and selected category
+  // Mutation zum Löschen eines Produkts
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => productService.deleteProduct(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast.success("Produkt erfolgreich gelöscht");
+    },
+    onError: (error) => {
+      toast.error("Fehler beim Löschen des Produkts");
+      console.error(error);
+    }
+  });
+  
+  // Produkte filtern basierend auf Suchbegriff und Kategorie
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          product.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -71,36 +74,35 @@ const ProductsList = () => {
     return matchesSearch && matchesCategory;
   });
   
-  // Get all unique categories
+  // Alle eindeutigen Kategorien abrufen
   const categories = Array.from(new Set(products.map(product => product.category))).filter(Boolean);
   
-  // Delete a product
+  // Produkt löschen
   const handleDelete = (id: string) => {
     if (window.confirm("Möchtest du dieses Produkt wirklich löschen?")) {
-      const updatedProducts = products.filter(product => product.id !== id);
-      setProducts(updatedProducts);
-      localStorage.setItem("products", JSON.stringify(updatedProducts));
+      deleteMutation.mutate(id);
     }
   };
   
-  // Function to generate a product key
+  // Mutation zum Generieren eines Produktschlüssels
+  const generateKeyMutation = useMutation({
+    mutationFn: (id: string) => productService.generateProductKey(id),
+    onSuccess: (key) => {
+      toast.success(`Schlüssel wurde generiert`);
+      alert(`Produktschlüssel: ${key}`);
+    },
+    onError: (error) => {
+      toast.error("Fehler beim Generieren des Schlüssels");
+      console.error(error);
+    }
+  });
+  
+  // Funktion zum Generieren eines Produktschlüssels
   const generateKey = (id: string) => {
-    // Generate a key in format XXXX-XXXX-XXXX-XXXX
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let key = '';
-    
-    for (let i = 0; i < 4; i++) {
-      for (let j = 0; j < 4; j++) {
-        key += characters.charAt(Math.floor(Math.random() * characters.length));
-      }
-      if (i < 3) key += '-';
-    }
-    
-    // In a real application, you would save this key to the database
-    alert(`Schlüssel für ${id}: ${key}`);
+    generateKeyMutation.mutate(id);
   };
   
-  // Format price
+  // Preis formatieren
   const formatPrice = (price: number, isSubscription: boolean, interval?: string) => {
     const formattedPrice = `${price.toFixed(2)} €`;
     
@@ -119,7 +121,7 @@ const ProductsList = () => {
     return formattedPrice;
   };
   
-  // Format category
+  // Kategorie formatieren
   const getCategoryLabel = (category: string) => {
     const categoryMap: Record<string, string> = {
       scripts: 'Scripts',
@@ -132,7 +134,7 @@ const ProductsList = () => {
     return categoryMap[category] || category;
   };
   
-  // Format date
+  // Datum formatieren
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('de-DE', { 
@@ -141,6 +143,40 @@ const ProductsList = () => {
       day: '2-digit' 
     });
   };
+
+  // Ladezustand anzeigen
+  if (isLoading) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Produktübersicht</CardTitle>
+          <CardDescription>Verwalte deine vorhandenen Produkte</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex justify-center py-8">
+            <p>Produkte werden geladen...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Fehler anzeigen
+  if (error) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Produktübersicht</CardTitle>
+          <CardDescription>Verwalte deine vorhandenen Produkte</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex justify-center py-8 text-red-500">
+            <p>Fehler beim Laden der Produkte: {(error as Error).message}</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full">
@@ -209,7 +245,7 @@ const ProductsList = () => {
                       )}
                       <div>
                         <div>{product.name}</div>
-                        <div className="text-sm text-muted-foreground">{product.shortDescription}</div>
+                        <div className="text-sm text-muted-foreground">{product.short_description}</div>
                       </div>
                     </div>
                   </TableCell>
@@ -220,11 +256,11 @@ const ProductsList = () => {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {formatPrice(product.price, product.isSubscription, product.subscriptionInterval)}
+                    {formatPrice(product.price, product.is_subscription, product.subscription_interval)}
                   </TableCell>
-                  <TableCell>{formatDate(product.createdAt)}</TableCell>
+                  <TableCell>{formatDate(product.created_at)}</TableCell>
                   <TableCell>
-                    {product.cfxImported ? (
+                    {product.cfx_imported ? (
                       <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200">
                         CFX Import
                       </Badge>

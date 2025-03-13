@@ -1,9 +1,6 @@
 
-// Order service to handle order creation and management
-// In a real application, this would store orders in a database and handle invoice generation
-
-// User orders stored in local storage for demo purposes
-const ORDERS_STORAGE_KEY = "user_orders";
+import { supabase, Order, Invoice } from '@/lib/supabase';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface OrderDetails {
   planId: string;
@@ -15,7 +12,7 @@ export interface OrderDetails {
   status: "pending" | "completed" | "cancelled" | "refunded";
 }
 
-export interface Invoice {
+export interface InvoiceDetails {
   orderId: string;
   customerName: string;
   customerEmail: string;
@@ -29,44 +26,64 @@ export interface Invoice {
   amount: number;
   currency: string;
   paymentMethod: string;
-  invoiceNumber?: string;
-  invoiceDate?: string;
-  invoiceUrl?: string;
-}
-
-export interface Order extends OrderDetails {
-  id: string;
-  userId: string;
-  createdAt: string;
-  updatedAt: string;
-  invoice?: Invoice;
 }
 
 class OrderService {
-  // Create a new order
+  // Neue Bestellung erstellen
   async createOrder(orderDetails: OrderDetails): Promise<Order> {
-    const userId = localStorage.getItem("userId") || "guest";
-    
-    const order: Order = {
-      id: `order-${Math.random().toString(36).substring(2, 10)}`,
-      userId,
-      ...orderDetails,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    
-    // Store order in local storage
-    const existingOrders = this.getUserOrders();
-    existingOrders.push(order);
-    localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(existingOrders));
-    
-    return order;
+    try {
+      // Benutzer-ID aus dem Auth-State abrufen oder einen Fallback verwenden
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id || 'anonymous';
+
+      const newOrder = {
+        user_id: userId,
+        plan_id: orderDetails.planId,
+        plan_name: orderDetails.planName,
+        amount: orderDetails.amount,
+        currency: orderDetails.currency,
+        payment_method: orderDetails.paymentMethod,
+        payment_id: orderDetails.paymentId,
+        status: orderDetails.status,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      // Bestellung in die Datenbank einfügen
+      const { data, error } = await supabase
+        .from('orders')
+        .insert([newOrder])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return data as Order;
+    } catch (error) {
+      console.error('Fehler beim Erstellen der Bestellung:', error);
+      
+      // Fallback: In localStorage speichern, wenn die DB-Verbindung fehlschlägt
+      const orderId = uuidv4();
+      const order = {
+        id: orderId,
+        ...orderDetails,
+        user_id: localStorage.getItem("userId") || "guest",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      
+      const existingOrders = this.getUserOrdersFromLocalStorage();
+      existingOrders.push(order as unknown as Order);
+      localStorage.setItem("user_orders", JSON.stringify(existingOrders));
+      
+      return order as Order;
+    }
   }
   
-  // Get user orders
-  getUserOrders(): Order[] {
+  // Hilfsfunktion zum Laden von Bestellungen aus localStorage
+  private getUserOrdersFromLocalStorage(): Order[] {
     const userId = localStorage.getItem("userId") || "guest";
-    const ordersJson = localStorage.getItem(ORDERS_STORAGE_KEY);
+    const ordersJson = localStorage.getItem("user_orders");
     
     if (!ordersJson) {
       return [];
@@ -74,73 +91,192 @@ class OrderService {
     
     try {
       const allOrders = JSON.parse(ordersJson) as Order[];
-      return allOrders.filter(order => order.userId === userId);
+      return allOrders.filter(order => order.user_id === userId);
     } catch (err) {
-      console.error("Error parsing orders from local storage", err);
+      console.error("Fehler beim Parsen der Bestellungen aus dem localStorage", err);
       return [];
     }
   }
   
-  // Get order by ID
-  getOrderById(orderId: string): Order | null {
-    const orders = this.getUserOrders();
-    return orders.find(order => order.id === orderId) || null;
-  }
-  
-  // Update order status
-  async updateOrderStatus(orderId: string, status: Order["status"]): Promise<Order | null> {
-    const orders = this.getUserOrders();
-    const orderIndex = orders.findIndex(order => order.id === orderId);
-    
-    if (orderIndex === -1) {
-      return null;
+  // Benutzerbestellungen abrufen
+  async getUserOrders(): Promise<Order[]> {
+    try {
+      // Benutzer-ID aus dem Auth-State abrufen oder einen Fallback verwenden
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id || 'anonymous';
+
+      // Bestellungen aus der Datenbank abrufen
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      return data as Order[];
+    } catch (error) {
+      console.error('Fehler beim Abrufen der Bestellungen:', error);
+      
+      // Fallback: Aus localStorage laden, wenn die DB-Verbindung fehlschlägt
+      return this.getUserOrdersFromLocalStorage();
     }
-    
-    orders[orderIndex].status = status;
-    orders[orderIndex].updatedAt = new Date().toISOString();
-    
-    localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
-    
-    return orders[orderIndex];
   }
   
-  // Generate invoice for an order
-  async generateInvoice(invoice: Invoice): Promise<string> {
-    // In a real application, this would generate a PDF invoice
-    console.log("Generating invoice", invoice);
-    
-    const invoiceNumber = `INV-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-    const invoiceDate = new Date().toISOString();
-    
-    // Update the order with invoice information
-    const orders = this.getUserOrders();
-    const orderIndex = orders.findIndex(order => order.id === invoice.orderId);
-    
-    if (orderIndex !== -1) {
-      orders[orderIndex].invoice = {
-        ...invoice,
-        invoiceNumber,
-        invoiceDate,
-        invoiceUrl: `/invoices/${invoiceNumber}.pdf`
+  // Bestellung nach ID abrufen
+  async getOrderById(orderId: string): Promise<Order | null> {
+    try {
+      // Bestellung aus der Datenbank abrufen
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('id', orderId)
+        .single();
+
+      if (error) throw error;
+
+      return data as Order;
+    } catch (error) {
+      console.error('Fehler beim Abrufen der Bestellung:', error);
+      
+      // Fallback: Aus localStorage laden
+      const orders = this.getUserOrdersFromLocalStorage();
+      return orders.find(order => order.id === orderId) || null;
+    }
+  }
+  
+  // Bestellstatus aktualisieren
+  async updateOrderStatus(orderId: string, status: Order["status"]): Promise<Order | null> {
+    try {
+      // Bestellung in der Datenbank aktualisieren
+      const { data, error } = await supabase
+        .from('orders')
+        .update({ 
+          status, 
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', orderId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return data as Order;
+    } catch (error) {
+      console.error('Fehler beim Aktualisieren der Bestellung:', error);
+      
+      // Fallback: In localStorage aktualisieren
+      const orders = this.getUserOrdersFromLocalStorage();
+      const orderIndex = orders.findIndex(order => order.id === orderId);
+      
+      if (orderIndex === -1) {
+        return null;
+      }
+      
+      orders[orderIndex].status = status;
+      orders[orderIndex].updated_at = new Date().toISOString();
+      
+      localStorage.setItem("user_orders", JSON.stringify(orders));
+      
+      return orders[orderIndex];
+    }
+  }
+  
+  // Rechnung für eine Bestellung generieren
+  async generateInvoice(invoiceDetails: InvoiceDetails): Promise<string> {
+    try {
+      const invoiceNumber = `INV-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      const invoiceDate = new Date().toISOString();
+      const invoiceUrl = `/invoices/${invoiceNumber}.pdf`;
+      
+      const newInvoice = {
+        order_id: invoiceDetails.orderId,
+        customer_name: invoiceDetails.customerName,
+        customer_email: invoiceDetails.customerEmail,
+        billing_address: invoiceDetails.billingAddress,
+        plan_name: invoiceDetails.planName,
+        amount: invoiceDetails.amount,
+        currency: invoiceDetails.currency,
+        payment_method: invoiceDetails.paymentMethod,
+        invoice_number: invoiceNumber,
+        invoice_date: invoiceDate,
+        invoice_url: invoiceUrl,
       };
       
-      localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
+      // Rechnung in die Datenbank einfügen
+      const { error } = await supabase
+        .from('invoices')
+        .insert([newInvoice]);
+        
+      if (error) throw error;
+      
+      return invoiceUrl;
+    } catch (error) {
+      console.error('Fehler beim Generieren der Rechnung:', error);
+      
+      // Fallback: Simulierte Rechnung ohne Speicherung
+      const invoiceNumber = `INV-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      
+      // Update der lokalen Bestellung mit Rechnungsinformationen
+      const orders = this.getUserOrdersFromLocalStorage();
+      const orderIndex = orders.findIndex(order => order.id === invoiceDetails.orderId);
+      
+      if (orderIndex !== -1) {
+        const invoiceUrl = `/invoices/${invoiceNumber}.pdf`;
+        orders[orderIndex].invoice = {
+          id: uuidv4(),
+          order_id: invoiceDetails.orderId,
+          customer_name: invoiceDetails.customerName,
+          customer_email: invoiceDetails.customerEmail,
+          billing_address: invoiceDetails.billingAddress,
+          plan_name: invoiceDetails.planName,
+          amount: invoiceDetails.amount,
+          currency: invoiceDetails.currency,
+          payment_method: invoiceDetails.paymentMethod,
+          invoice_number: invoiceNumber,
+          invoice_date: new Date().toISOString(),
+          invoice_url: invoiceUrl,
+        };
+        
+        localStorage.setItem("user_orders", JSON.stringify(orders));
+      }
+      
+      return `/invoices/${invoiceNumber}.pdf`;
     }
-    
-    // Return simulated invoice URL
-    return `/invoices/${invoiceNumber}.pdf`;
   }
   
-  // Get user's active subscription
-  getActiveSubscription(): Order | null {
-    const orders = this.getUserOrders();
-    // Filter completed orders and sort by date (newest first)
-    const completedOrders = orders
-      .filter(order => order.status === "completed")
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    
-    // Return the most recent completed order as the active subscription
-    return completedOrders.length > 0 ? completedOrders[0] : null;
+  // Aktives Abonnement des Benutzers abrufen
+  async getActiveSubscription(): Promise<Order | null> {
+    try {
+      // Benutzer-ID aus dem Auth-State abrufen oder einen Fallback verwenden
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id || 'anonymous';
+
+      // Abgeschlossene Bestellungen aus der Datenbank abrufen und nach Datum sortieren
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error) throw error;
+
+      return data && data.length > 0 ? data[0] as Order : null;
+    } catch (error) {
+      console.error('Fehler beim Abrufen des aktiven Abonnements:', error);
+      
+      // Fallback: Aus localStorage laden
+      const orders = this.getUserOrdersFromLocalStorage();
+      // Filter abgeschlossene Bestellungen und sortiere nach Datum (neueste zuerst)
+      const completedOrders = orders
+        .filter(order => order.status === "completed")
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      
+      // Gib die neueste abgeschlossene Bestellung als aktives Abonnement zurück
+      return completedOrders.length > 0 ? completedOrders[0] : null;
+    }
   }
 }
 
