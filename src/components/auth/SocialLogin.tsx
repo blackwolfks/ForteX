@@ -18,11 +18,7 @@ const SocialLogin = ({ setError, redirectUrl = '/dashboard', plan = null }: Soci
     setError(null);
     
     try {
-      const params = new URLSearchParams();
-      if (redirectUrl) params.append('redirect', redirectUrl);
-      if (plan) params.append('plan', plan);
-      
-      await authService.signInWithGoogle(params.toString());
+      await authService.signInWithGoogle();
     } catch (err) {
       setError("Fehler bei der Anmeldung mit Google. Bitte versuchen Sie es erneut.");
       console.error(err);
@@ -35,11 +31,7 @@ const SocialLogin = ({ setError, redirectUrl = '/dashboard', plan = null }: Soci
     setError(null);
     
     try {
-      const params = new URLSearchParams();
-      if (redirectUrl) params.append('redirect', redirectUrl);
-      if (plan) params.append('plan', plan);
-      
-      await authService.signInWithDiscord(params.toString());
+      await authService.signInWithDiscord();
     } catch (err) {
       setError("Fehler bei der Anmeldung mit Discord. Bitte versuchen Sie es erneut.");
       console.error(err);
@@ -52,11 +44,7 @@ const SocialLogin = ({ setError, redirectUrl = '/dashboard', plan = null }: Soci
     setError(null);
     
     try {
-      const params = new URLSearchParams();
-      if (redirectUrl) params.append('redirect', redirectUrl);
-      if (plan) params.append('plan', plan);
-      
-      await authService.signInWithCFX(params.toString());
+      await authService.signInWithCFX();
     } catch (err) {
       setError("Fehler bei der Anmeldung mit CFX. Bitte versuchen Sie es erneut.");
       console.error(err);

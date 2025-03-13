@@ -1,4 +1,3 @@
-
 // Simulierter Authentifizierungsdienst
 // In einer realen Anwendung würde dies gegen eine echte Backend-API oder einen Auth-Dienst wie Firebase, Auth0, etc. kommunizieren
 

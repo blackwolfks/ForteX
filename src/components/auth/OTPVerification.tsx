@@ -37,7 +37,7 @@ const OTPVerification = ({
     setError(null);
 
     try {
-      await authService.verifyTwoFactor(otp);
+      await authService.verifyOTP(otp, otpMethod || "email");
       toast({
         title: "Erfolgreich verifiziert",
         description: "Sie sind jetzt angemeldet.",
@@ -61,7 +61,7 @@ const OTPVerification = ({
     setError(null);
 
     try {
-      await authService.resendTwoFactorCode(otpMethod || "email");
+      await authService.resendOTP(otpMethod || "email");
       toast({
         title: "Code erneut gesendet",
         description: `Wir haben einen neuen Code an Ihre ${
@@ -78,14 +78,18 @@ const OTPVerification = ({
     }
   };
 
+  const handleOTPComplete = (code: string) => {
+    setOTP(code);
+    if (code.length === 6) {
+      handleVerify();
+    }
+  };
+
   return (
     <div className="space-y-4">
       <OTPInput
-        value={otp}
-        onChange={setOTP}
-        numInputs={6}
-        isInputNum={true}
-        shouldAutoFocus={true}
+        digits={6}
+        onComplete={handleOTPComplete}
       />
 
       <div className="flex flex-col gap-2 mt-4">

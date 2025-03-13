@@ -1,5 +1,4 @@
 
-import { useState, useRef, useEffect } from "react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
 interface OTPInputProps {
@@ -8,23 +7,13 @@ interface OTPInputProps {
 }
 
 const OTPInput = ({ digits, onComplete }: OTPInputProps) => {
-  const [value, setValue] = useState("");
-  
-  const handleComplete = (value: string) => {
-    if (value.length === digits) {
-      onComplete(value);
-    }
-  };
-  
   return (
     <div className="flex justify-center">
       <InputOTP
         maxLength={digits}
-        value={value}
         onChange={(value) => {
-          setValue(value);
           if (value.length === digits) {
-            handleComplete(value);
+            onComplete(value);
           }
         }}
         render={({ slots }) => (
