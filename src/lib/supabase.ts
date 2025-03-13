@@ -1,13 +1,9 @@
 
 import { createClient } from '@supabase/supabase-js';
+import { supabase as supabaseClient } from '@/integrations/supabase/client';
 
-// Ersetze diese Werte mit deinen eigenen Supabase-Anmeldedaten
-// In einer Produktionsumgebung sollten diese in Umgebungsvariablen gespeichert werden
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://your-supabase-url.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key';
-
-// Supabase-Client erstellen
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Für ältere Code-Stellen, die noch den direkten Import verwenden
+export const supabase = supabaseClient;
 
 // Typdefinitionen für Datenbanktabellen
 export type Product = {
