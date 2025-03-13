@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { z } from "zod";
@@ -165,7 +164,7 @@ const Checkout = () => {
             billingAddress: {
               address: values.address,
               city: values.city,
-              postal_code: values.postalCode,
+              postalCode: values.postalCode,
               country: values.country
             }
           });
@@ -180,7 +179,7 @@ const Checkout = () => {
             billingAddress: {
               address: values.address,
               city: values.city,
-              postal_code: values.postalCode,
+              postalCode: values.postalCode,
               country: values.country
             }
           });
@@ -195,7 +194,7 @@ const Checkout = () => {
             billingAddress: {
               address: values.address,
               city: values.city,
-              postal_code: values.postalCode,
+              postalCode: values.postalCode,
               country: values.country
             }
           });
@@ -210,7 +209,7 @@ const Checkout = () => {
             billingAddress: {
               address: values.address,
               city: values.city,
-              postal_code: values.postalCode,
+              postalCode: values.postalCode,
               country: values.country
             }
           });
@@ -242,7 +241,7 @@ const Checkout = () => {
           billingAddress: {
             address: values.address,
             city: values.city,
-            postal_code: values.postalCode,
+            postalCode: values.postalCode,
             country: values.country
           },
           planName: selectedPlan.name,
