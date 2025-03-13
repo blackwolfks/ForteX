@@ -115,6 +115,7 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
   const [websiteUrl, setWebsiteUrl] = useState(websiteData.url);
   const [shopTemplate, setShopTemplate] = useState(websiteData.shopTemplate || "default");
   const [editingTextSection, setEditingTextSection] = useState<string | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
   
   // Apply template to content
   const applyTemplate = (templateName: string) => {
@@ -129,22 +130,32 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
       header: template.header
     });
     
+    setHasChanges(true);
     toast.success("Template wurde angewendet");
   };
   
   // Save website data to localStorage
   const saveWebsiteData = () => {
-    const dataToSave = {
-      ...websiteData,
-      name: websiteName,
-      url: websiteUrl,
-      content: content,
-      shopTemplate: shopTemplate,
-      lastSaved: new Date().toISOString()
-    };
-    
-    localStorage.setItem(`website_${websiteId}`, JSON.stringify(dataToSave));
-    toast.success("Änderungen wurden gespeichert");
+    try {
+      const dataToSave = {
+        ...websiteData,
+        name: websiteName,
+        url: websiteUrl,
+        content: content,
+        shopTemplate: shopTemplate,
+        lastSaved: new Date().toISOString()
+      };
+      
+      localStorage.setItem(`website_${websiteId}`, JSON.stringify(dataToSave));
+      setHasChanges(false);
+      console.log("Website data saved successfully:", dataToSave);
+      toast.success("Änderungen wurden gespeichert");
+      return true;
+    } catch (error) {
+      console.error("Error saving website data:", error);
+      toast.error("Fehler beim Speichern der Änderungen");
+      return false;
+    }
   };
   
   const handleSave = () => {
@@ -152,8 +163,21 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
   };
   
   const handlePreview = () => {
-    setActiveTab("preview");
+    // Save before preview to ensure latest changes are reflected
+    if (hasChanges) {
+      const saved = saveWebsiteData();
+      if (saved) {
+        setActiveTab("preview");
+      }
+    } else {
+      setActiveTab("preview");
+    }
   };
+
+  // Track changes to content and other website properties
+  useEffect(() => {
+    setHasChanges(true);
+  }, [content, websiteName, websiteUrl]);
 
   // Apply template when it changes
   useEffect(() => {
@@ -162,18 +186,54 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
 
   // Auto-save every 30 seconds if changes are made
   useEffect(() => {
+    if (!hasChanges) return;
+    
     const autoSaveInterval = setInterval(() => {
-      saveWebsiteData();
+      if (hasChanges) {
+        console.log("Auto-saving website changes...");
+        saveWebsiteData();
+      }
     }, 30000); // 30 seconds
     
-    return () => clearInterval(autoSaveInterval);
-  }, [content, websiteName, websiteUrl, shopTemplate]);
+    // Prompt user before leaving page with unsaved changes
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasChanges) {
+        e.preventDefault();
+        e.returnValue = ""; // Chrome requires returnValue to be set
+        return ""; // This message is not actually shown in modern browsers
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      clearInterval(autoSaveInterval);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [hasChanges]);
+
+  // Save on tab change
+  useEffect(() => {
+    if (hasChanges && activeTab !== "edit") {
+      saveWebsiteData();
+    }
+  }, [activeTab]);
   
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={onBack}>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => {
+              // Save before navigating back if there are changes
+              if (hasChanges) {
+                saveWebsiteData();
+              }
+              onBack();
+            }}
+          >
             <ArrowLeft className="h-4 w-4 mr-1" />
             Zurück
           </Button>
@@ -184,9 +244,13 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
             <Eye className="h-4 w-4 mr-1" />
             Vorschau
           </Button>
-          <Button size="sm" onClick={handleSave}>
+          <Button 
+            size="sm" 
+            onClick={handleSave}
+            disabled={!hasChanges}
+          >
             <Save className="h-4 w-4 mr-1" />
-            Speichern
+            {hasChanges ? "Speichern" : "Gespeichert"}
           </Button>
         </div>
       </div>
@@ -428,9 +492,10 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
                         size="sm" 
                         className="w-full"
                         onClick={handleSave}
+                        disabled={!hasChanges}
                       >
                         <Save className="h-4 w-4 mr-1" />
-                        Änderungen speichern
+                        {hasChanges ? "Änderungen speichern" : "Gespeichert"}
                       </Button>
                     </div>
                   </div>
@@ -546,7 +611,12 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
                     readOnly 
                   />
                 </div>
-                <Button onClick={handleSave}>Einstellungen speichern</Button>
+                <Button 
+                  onClick={handleSave}
+                  disabled={!hasChanges}
+                >
+                  {hasChanges ? "Einstellungen speichern" : "Einstellungen gespeichert"}
+                </Button>
               </div>
             </CardContent>
           </Card>
