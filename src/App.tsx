@@ -13,6 +13,7 @@ import SignUp from "./pages/SignUp";
 import ForgotPassword from "./pages/ForgotPassword";
 import Verification from "./pages/Verification";
 import TwoFactorSetup from "./pages/TwoFactorSetup";
+import GoogleCallback from "./pages/GoogleCallback";
 import AuthGuard from "./components/AuthGuard";
 
 const queryClient = new QueryClient();
@@ -48,6 +49,7 @@ const App = () => (
             </AuthGuard>
           } />
           <Route path="/verification" element={<Verification />} />
+          <Route path="/auth/google-callback" element={<GoogleCallback />} />
           <Route path="/two-factor-setup" element={
             <AuthGuard requireAuth={true}>
               <TwoFactorSetup />

@@ -14,6 +14,11 @@ let currentUser: {
 
 let isEmailVerified = false;
 
+// Google OAuth Konfiguration
+const GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID"; // In einer echten App müsste dies konfiguriert werden
+const GOOGLE_REDIRECT_URI = `${window.location.origin}/auth/google-callback`;
+const GOOGLE_SCOPE = "email profile"; // Berechtigungen, die wir von Google anfordern
+
 // Mock-Daten für schnelle Tests
 const MOCK_USERS = [
   {
@@ -65,12 +70,25 @@ export const authService = {
   
   // Anmeldung mit Google
   signInWithGoogle: async () => {
+    // Google OAuth Redirect URL erstellen
+    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(GOOGLE_REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(GOOGLE_SCOPE)}&access_type=offline&prompt=select_account`;
+    
+    // Zu Google Auth-Seite umleiten
+    window.location.href = googleAuthUrl;
+    
+    // Diese Funktion kehrt nicht zurück, da wir umleiten
+    return new Promise<any>(() => {});
+  },
+  
+  // Google OAuth Callback verarbeiten
+  handleGoogleCallback: async (code: string) => {
+    // In einer echten App würden Sie den Code gegen ein Token austauschen
+    // und dann mit diesem Token Benutzerinformationen abrufen
+    
     // Simulierte API-Verzögerung
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // In einer echten App würde hier ein Popup für die Google-Anmeldung geöffnet werden
-    
-    // Simulierter erfolgreicher Login
+    // Simulierter erfolgreicher Login nach OAuth-Callback
     currentUser = {
       id: "google_user_id",
       name: "Google User",
