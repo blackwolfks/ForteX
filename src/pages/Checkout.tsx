@@ -165,7 +165,7 @@ const Checkout = () => {
             billingAddress: {
               address: values.address,
               city: values.city,
-              postalCode: values.postalCode,
+              postal_code: values.postalCode, // Fix: Changed postalCode to postal_code
               country: values.country
             }
           });
@@ -180,7 +180,7 @@ const Checkout = () => {
             billingAddress: {
               address: values.address,
               city: values.city,
-              postalCode: values.postalCode,
+              postal_code: values.postalCode, // Fix: Changed postalCode to postal_code
               country: values.country
             }
           });
@@ -195,7 +195,7 @@ const Checkout = () => {
             billingAddress: {
               address: values.address,
               city: values.city,
-              postalCode: values.postalCode,
+              postal_code: values.postalCode, // Fix: Changed postalCode to postal_code
               country: values.country
             }
           });
@@ -210,7 +210,7 @@ const Checkout = () => {
             billingAddress: {
               address: values.address,
               city: values.city,
-              postalCode: values.postalCode,
+              postal_code: values.postalCode, // Fix: Changed postalCode to postal_code
               country: values.country
             }
           });
@@ -242,7 +242,7 @@ const Checkout = () => {
           billingAddress: {
             address: values.address,
             city: values.city,
-            postalCode: values.postalCode,
+            postal_code: values.postalCode, // Fix: Changed postalCode to postal_code
             country: values.country
           },
           planName: selectedPlan.name,
