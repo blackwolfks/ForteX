@@ -17,6 +17,7 @@ import GoogleCallback from "./pages/GoogleCallback";
 import DiscordCallback from "./pages/DiscordCallback";
 import CFXCallback from "./pages/CFXCallback";
 import Checkout from "./pages/Checkout";
+import Profile from "./pages/Profile";
 import AuthGuard from "./components/AuthGuard";
 
 const queryClient = new QueryClient();
@@ -65,6 +66,16 @@ const App = () => (
           <Route path="/checkout" element={
             <AuthGuard requireAuth={true}>
               <Checkout />
+            </AuthGuard>
+          } />
+          
+          {/* Profile Route */}
+          <Route path="/profile" element={
+            <AuthGuard requireAuth={true}>
+              <>
+                <Navbar />
+                <Profile />
+              </>
             </AuthGuard>
           } />
           

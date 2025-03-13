@@ -14,6 +14,8 @@ import { authService } from "@/services/auth-service";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, CreditCard, Building, Euro } from "lucide-react";
+import { paymentService } from "@/services/payment-service";
+import { orderService } from "@/services/order-service";
 
 // Plan details
 const planDetails = {
@@ -67,6 +69,7 @@ type CheckoutFormValues = z.infer<typeof checkoutSchema>;
 const Checkout = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<"idle" | "processing" | "success" | "error">("idle");
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -77,6 +80,43 @@ const Checkout = () => {
   
   const selectedPlan = planDetails[plan as keyof typeof planDetails] || planDetails.basic;
   const isAuthenticated = authService.isAuthenticated();
+  
+  // For free package, redirect directly to dashboard
+  useEffect(() => {
+    if (plan === "free") {
+      // Activate free package and redirect to dashboard
+      const activateFreePackage = async () => {
+        try {
+          await orderService.createOrder({
+            planId: "free",
+            planName: planDetails.free.name,
+            amount: 0,
+            currency: "EUR",
+            paymentMethod: "none",
+            status: "completed"
+          });
+          
+          toast({
+            title: "Kostenloses Paket aktiviert",
+            description: "Sie können jetzt Ihre kostenlose Website erstellen"
+          });
+          
+          navigate("/dashboard?subscriptionActive=true");
+        } catch (err) {
+          console.error(err);
+          toast({
+            title: "Fehler",
+            description: "Paket konnte nicht aktiviert werden",
+            variant: "destructive"
+          });
+        }
+      };
+      
+      if (isAuthenticated) {
+        activateFreePackage();
+      }
+    }
+  }, [plan, isAuthenticated, navigate, toast]);
   
   useEffect(() => {
     if (!isAuthenticated) {
@@ -106,21 +146,125 @@ const Checkout = () => {
   const onSubmit = async (values: CheckoutFormValues) => {
     setIsProcessing(true);
     setError(null);
+    setPaymentStatus("processing");
     
-    // Simuliere eine Zahlungsverarbeitung
     try {
-      // In a real application, this would call a payment API
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Process payment based on method
+      let paymentResult;
       
-      toast({
-        title: "Zahlung erfolgreich",
-        description: `Ihr ${selectedPlan.name}-Paket wurde erfolgreich aktiviert.`
-      });
+      switch (values.paymentMethod) {
+        case "credit_card":
+          paymentResult = await paymentService.processCreditCardPayment({
+            amount: selectedPlan.price,
+            currency: "EUR",
+            cardNumber: values.cardNumber || "",
+            cardExpiry: values.cardExpiry || "",
+            cardCvc: values.cardCvc || "",
+            customerName: values.fullName,
+            customerEmail: values.email,
+            billingAddress: {
+              address: values.address,
+              city: values.city,
+              postalCode: values.postalCode,
+              country: values.country
+            }
+          });
+          break;
+          
+        case "paypal":
+          paymentResult = await paymentService.processPayPalPayment({
+            amount: selectedPlan.price,
+            currency: "EUR",
+            customerName: values.fullName,
+            customerEmail: values.email,
+            billingAddress: {
+              address: values.address,
+              city: values.city,
+              postalCode: values.postalCode,
+              country: values.country
+            }
+          });
+          break;
+          
+        case "bank_transfer":
+          paymentResult = await paymentService.processBankTransferPayment({
+            amount: selectedPlan.price,
+            currency: "EUR",
+            customerName: values.fullName,
+            customerEmail: values.email,
+            billingAddress: {
+              address: values.address,
+              city: values.city,
+              postalCode: values.postalCode,
+              country: values.country
+            }
+          });
+          break;
+          
+        case "sofort":
+          paymentResult = await paymentService.processSofortPayment({
+            amount: selectedPlan.price,
+            currency: "EUR",
+            customerName: values.fullName,
+            customerEmail: values.email,
+            billingAddress: {
+              address: values.address,
+              city: values.city,
+              postalCode: values.postalCode,
+              country: values.country
+            }
+          });
+          break;
+          
+        default:
+          throw new Error("Ungültige Zahlungsmethode");
+      }
       
-      navigate("/dashboard?subscriptionActive=true");
+      if (paymentResult.success) {
+        setPaymentStatus("success");
+        
+        // Create order record
+        await orderService.createOrder({
+          planId: plan,
+          planName: selectedPlan.name,
+          amount: selectedPlan.price,
+          currency: "EUR",
+          paymentMethod: values.paymentMethod,
+          paymentId: paymentResult.paymentId,
+          status: "completed"
+        });
+        
+        // Generate invoice
+        const invoiceUrl = await orderService.generateInvoice({
+          orderId: paymentResult.paymentId,
+          customerName: values.fullName,
+          customerEmail: values.email,
+          billingAddress: {
+            address: values.address,
+            city: values.city,
+            postalCode: values.postalCode,
+            country: values.country
+          },
+          planName: selectedPlan.name,
+          amount: selectedPlan.price,
+          currency: "EUR",
+          paymentMethod: values.paymentMethod
+        });
+        
+        toast({
+          title: "Zahlung erfolgreich",
+          description: `Ihr ${selectedPlan.name}-Paket wurde erfolgreich aktiviert.`
+        });
+        
+        navigate(`/dashboard?subscriptionActive=true&plan=${plan}`);
+      } else {
+        setPaymentStatus("error");
+        setError(paymentResult.message || "Bei der Verarbeitung Ihrer Zahlung ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.");
+      }
     } catch (err) {
-      setError("Bei der Verarbeitung Ihrer Zahlung ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.");
       console.error(err);
+      setPaymentStatus("error");
+      setError("Bei der Verarbeitung Ihrer Zahlung ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.");
     } finally {
       setIsProcessing(false);
     }
