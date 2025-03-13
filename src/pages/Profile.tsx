@@ -1,8 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { orderService, Order } from "@/services/order-service";
+import { orderService } from "@/services/order-service";
+import type { Order, Invoice } from "@/services/order-service";
 import { authService } from "@/services/auth-service";
 import { useToast } from "@/hooks/use-toast";
 import { FileText, Download, User, Receipt, ShoppingBag } from "lucide-react";
@@ -38,7 +40,7 @@ const Profile = () => {
   }, [toast]);
   
   const handleDownloadInvoice = (order: Order) => {
-    if (!order.invoice?.invoiceUrl) {
+    if (!order.invoice?.invoice_url) {
       toast({
         title: "Rechnung nicht verfügbar",
         description: "Für diese Bestellung ist keine Rechnung verfügbar.",
@@ -50,7 +52,7 @@ const Profile = () => {
     // In a real application, this would download the invoice PDF
     toast({
       title: "Rechnung wird heruntergeladen",
-      description: `Rechnung Nr. ${order.invoice.invoiceNumber} wird heruntergeladen.`
+      description: `Rechnung Nr. ${order.invoice.invoice_number} wird heruntergeladen.`
     });
   };
   
@@ -102,8 +104,8 @@ const Profile = () => {
               {activeSubscription ? (
                 <div className="space-y-4">
                   <div className="bg-muted rounded-md p-4">
-                    <h3 className="text-lg font-medium">{activeSubscription.planName} Paket</h3>
-                    <p className="text-muted-foreground">Aktiviert am {formatDate(activeSubscription.createdAt)}</p>
+                    <h3 className="text-lg font-medium">{activeSubscription.plan_name} Paket</h3>
+                    <p className="text-muted-foreground">Aktiviert am {formatDate(activeSubscription.created_at)}</p>
                     
                     <div className="mt-4 grid gap-2">
                       <div className="flex justify-between">
@@ -112,7 +114,7 @@ const Profile = () => {
                       </div>
                       <div className="flex justify-between">
                         <span>Zahlungsmethode</span>
-                        <span>{getPaymentMethodName(activeSubscription.paymentMethod)}</span>
+                        <span>{getPaymentMethodName(activeSubscription.payment_method)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Status</span>
@@ -123,7 +125,7 @@ const Profile = () => {
                     </div>
                   </div>
                   
-                  {activeSubscription.planId !== "pro" && (
+                  {activeSubscription.plan_id !== "pro" && (
                     <div className="rounded-md border p-4">
                       <h4 className="text-sm font-medium">Upgrade auf ein höheres Paket</h4>
                       <p className="mt-1 text-sm text-muted-foreground">
@@ -171,9 +173,9 @@ const Profile = () => {
                     <div key={order.id} className="border rounded-md p-4 space-y-3">
                       <div className="flex justify-between items-start">
                         <div>
-                          <h4 className="font-medium">{order.planName} Paket</h4>
+                          <h4 className="font-medium">{order.plan_name} Paket</h4>
                           <p className="text-sm text-muted-foreground">
-                            Bestellung am {formatDate(order.createdAt)}
+                            Bestellung am {formatDate(order.created_at)}
                           </p>
                         </div>
                         <span className={`rounded-full px-2 py-1 text-xs font-medium ${
@@ -200,12 +202,12 @@ const Profile = () => {
                         </div>
                         <div>
                           <span className="text-muted-foreground">Zahlungsmethode:</span>
-                          <span className="ml-2">{getPaymentMethodName(order.paymentMethod)}</span>
+                          <span className="ml-2">{getPaymentMethodName(order.payment_method)}</span>
                         </div>
-                        {order.invoice?.invoiceNumber && (
+                        {order.invoice?.invoice_number && (
                           <div>
                             <span className="text-muted-foreground">Rechnungsnummer:</span>
-                            <span className="ml-2">{order.invoice.invoiceNumber}</span>
+                            <span className="ml-2">{order.invoice.invoice_number}</span>
                           </div>
                         )}
                       </div>

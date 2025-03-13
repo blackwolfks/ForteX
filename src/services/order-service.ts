@@ -1,8 +1,8 @@
-
-import { supabase, Order, Invoice } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
+import type { Order, Invoice } from '@/lib/supabase';
 import { v4 as uuidv4 } from 'uuid';
 
-export { Order, Invoice };
+export type { Order, Invoice };
 
 export interface OrderDetails {
   planId: string;
@@ -21,7 +21,7 @@ export interface InvoiceDetails {
   billingAddress: {
     address: string;
     city: string;
-    postalCode: string;
+    postal_code: string;
     country: string;
   };
   planName: string;
