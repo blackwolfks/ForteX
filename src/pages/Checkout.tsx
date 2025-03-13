@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -12,8 +11,8 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { productService } from "@/services/product-service";
-import { supabase, Product } from "@/lib/supabase";
+import { Product, productService } from "@/services/product-service";
+import { supabase } from "@/lib/supabase";
 import { paymentService } from "@/services/payment-service";
 import { orderService } from "@/services/order-service";
 
@@ -58,7 +57,6 @@ const Checkout = () => {
     
     const loadPlan = async () => {
       try {
-        // Fix: Use getProductById instead of getProductByName
         const product = await productService.getProductById(plan);
         setSelectedPlan(product);
       } catch (error) {
@@ -105,14 +103,12 @@ const Checkout = () => {
     }
     
     try {
-      // Payment processing logic
       toast({
         title: "Bestellung wird verarbeitet",
         description: "Ihre Bestellung wird bearbeitet. Bitte warten Sie...",
       });
       
       if (values.paymentMethod === "credit_card") {
-        // Fix: Use processCreditCardPayment instead of processStripePayment
         const result = await paymentService.processCreditCardPayment({
           amount: selectedPlan.price,
           currency: "eur",
@@ -146,7 +142,6 @@ const Checkout = () => {
         const result = await paymentService.processPayPalPayment({
           amount: selectedPlan.price,
           currency: "eur",
-          description: `${selectedPlan.name} Plan`,
           customerEmail: values.email,
           customerName: `${values.firstName} ${values.lastName}`,
           billingAddress: {
@@ -174,7 +169,6 @@ const Checkout = () => {
         const result = await paymentService.processSofortPayment({
           amount: selectedPlan.price,
           currency: "eur",
-          description: `${selectedPlan.name} Plan`,
           customerEmail: values.email,
           customerName: `${values.firstName} ${values.lastName}`,
           billingAddress: {
@@ -202,7 +196,6 @@ const Checkout = () => {
         const result = await paymentService.processBankTransferPayment({
           amount: selectedPlan.price,
           currency: "eur",
-          description: `${selectedPlan.name} Plan`,
           customerEmail: values.email,
           customerName: `${values.firstName} ${values.lastName}`,
           billingAddress: {
@@ -228,7 +221,6 @@ const Checkout = () => {
         }
       }
       
-      // Create order
       const order = await orderService.createOrder({
         planId: selectedPlan.id,
         amount: selectedPlan.price,
@@ -243,7 +235,6 @@ const Checkout = () => {
         description: `Ihre Bestellung wurde erfolgreich aufgegeben. Bestellnummer: ${order.id}`,
       });
       
-      // Redirect to success page or profile
       navigate("/profile");
     } catch (error: any) {
       console.error("Checkout failed:", error);
