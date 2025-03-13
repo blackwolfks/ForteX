@@ -17,10 +17,10 @@ const GoogleCallback = () => {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        // Check if we have a hash in the URL which indicates 
-        // we're getting a token directly rather than a code
+        // Check if we got a token in the hash fragment (indicates Implicit flow)
         if (location.hash && location.hash.includes('access_token')) {
-          throw new Error("Ungültiger Callback-Format. Dies deutet auf einen Konfigurationsfehler mit Google OAuth hin.");
+          console.error("Invalid callback format: Got token in hash fragment, need code parameter");
+          throw new Error("OAuth-Konfigurationsfehler: Bei Google ist der falsche OAuth-Typ eingestellt. Bitte auf 'Authorization Code' umstellen statt 'Implicit' oder 'Token'.");
         }
         
         const urlParams = new URLSearchParams(location.search);
@@ -51,8 +51,8 @@ const GoogleCallback = () => {
         console.error("Google Auth Fehler:", err);
         let errorMessage = "Bei der Anmeldung mit Google ist ein Fehler aufgetreten.";
         
-        if (err.message.includes("Ungültiger Callback-Format")) {
-          errorMessage = "Konfigurationsfehler: Google OAuth ist nicht korrekt eingerichtet. Der Rückgabetyp sollte 'Authorization code' und nicht 'Implicit' sein.";
+        if (err.message.includes("OAuth-Konfigurationsfehler")) {
+          errorMessage = err.message;
         } else if (err.message.includes("403")) {
           errorMessage = "Zugriffsfehler (403): Die Google OAuth-Konfiguration ist nicht korrekt. Bitte überprüfen Sie die Client-ID und die Weiterleitungs-URL in der Google Cloud Console.";
         }
@@ -79,9 +79,9 @@ const GoogleCallback = () => {
               <div className="flex flex-col mb-4 text-sm">
                 <p className="mb-2">Mögliche Lösungen:</p>
                 <ul className="text-left list-disc pl-5 space-y-1">
-                  <li>Stellen Sie sicher, dass die Google Client-ID korrekt ist</li>
+                  <li>Stellen Sie in der Google Cloud Console unter "OAuth 2.0-Konfiguration" den Rückgabetyp auf "Authorization code" ein, nicht auf "Implicit" oder "Token"</li>
+                  <li>Prüfen Sie, ob die Google Client-ID korrekt ist</li>
                   <li>Prüfen Sie, ob die Weiterleitungs-URL (auth/google-callback) in Google Cloud Console konfiguriert ist</li>
-                  <li>Vergewissern Sie sich, dass unter "OAuth 2.0-Konfiguration" der Rückgabetyp auf "Authorization code" gesetzt ist und nicht auf "Implicit"</li>
                   <li>Vergewissern Sie sich, dass Google als OAuth-Provider in Supabase aktiviert ist</li>
                 </ul>
                 <div className="flex flex-col mt-3">
