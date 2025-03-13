@@ -3,6 +3,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_GOOGLE_CLIENT_ID: string;
+  readonly VITE_GOOGLE_CLIENT_SECRET: string;
   readonly VITE_DISCORD_CLIENT_ID: string;
   readonly VITE_CFX_CLIENT_ID: string;
 }
