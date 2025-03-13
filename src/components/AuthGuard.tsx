@@ -1,5 +1,5 @@
 
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authService } from '@/services/auth-service';
 
@@ -16,9 +16,28 @@ const AuthGuard = ({
 }: AuthGuardProps) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const isAuthenticated = authService.isAuthenticated();
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const authStatus = await authService.isAuthenticated();
+        setIsAuthenticated(authStatus);
+      } catch (error) {
+        console.error("Fehler bei der Authentifizierungsprüfung:", error);
+        setIsAuthenticated(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  useEffect(() => {
+    if (isLoading) return; // Warten, bis der Auth-Status geladen ist
+
     if (requireAuth && !isAuthenticated) {
       // Benutzer ist nicht angemeldet, aber Authentifizierung erforderlich
       navigate(redirectTo, { 
@@ -29,7 +48,12 @@ const AuthGuard = ({
       // Benutzer ist angemeldet, aber keine Authentifizierung erforderlich (z.B. Anmeldeseite)
       navigate('/dashboard', { replace: true });
     }
-  }, [isAuthenticated, requireAuth, navigate, redirectTo, location.pathname]);
+  }, [isAuthenticated, requireAuth, navigate, redirectTo, location.pathname, isLoading]);
+
+  // Während des Ladevorgangs nichts anzeigen
+  if (isLoading) {
+    return null;
+  }
 
   // Nur Inhalte anzeigen, wenn die Bedingungen erfüllt sind
   if (requireAuth && !isAuthenticated) {
