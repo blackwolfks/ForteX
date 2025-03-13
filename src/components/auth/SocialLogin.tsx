@@ -32,7 +32,7 @@ const SocialLogin = ({ setError, redirectUrl = '/dashboard', plan = null }: Soci
         description: "Google-Anmeldung ist nicht konfiguriert. Bitte kontaktiere den Administrator.",
         variant: "destructive"
       });
-      setProviderError("Google-Provider ist nicht aktiviert. Der Provider muss zuerst in den Supabase-Einstellungen konfiguriert werden.");
+      setProviderError("Google OAuth-Fehler: Der Google-Provider könnte nicht richtig konfiguriert sein. Bitte überprüfen Sie die Client-ID und stellen Sie sicher, dass die JavaScript-Ursprünge und Weiterleitungs-URLs korrekt eingerichtet sind.");
       setIsLoading(false);
     }
   };
@@ -92,14 +92,24 @@ const SocialLogin = ({ setError, redirectUrl = '/dashboard', plan = null }: Soci
         <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4 mr-2" />
           <AlertDescription className="flex-1">{providerError}</AlertDescription>
-          <a 
-            href="https://supabase.com/dashboard/project/fewcmtozntpedrsluawj/auth/providers" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="flex items-center text-xs underline ml-2"
-          >
-            Zu Supabase Auth-Einstellungen <ExternalLink className="h-3 w-3 ml-1" />
-          </a>
+          <div className="flex flex-col mt-2 text-xs">
+            <a 
+              href="https://supabase.com/dashboard/project/fewcmtozntpedrsluawj/auth/providers" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center underline mb-1"
+            >
+              Zu Supabase Auth-Einstellungen <ExternalLink className="h-3 w-3 ml-1" />
+            </a>
+            <a 
+              href="https://console.cloud.google.com/apis/credentials" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center underline"
+            >
+              Zu Google Cloud Credentials <ExternalLink className="h-3 w-3 ml-1" />
+            </a>
+          </div>
         </Alert>
       )}
       
