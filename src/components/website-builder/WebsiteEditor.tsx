@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -80,30 +79,47 @@ const WEBSHOP_TEMPLATES = {
   }
 };
 
-// Mock function to get website data
+// Function to get website data with better error handling
 const getWebsiteById = (id: string) => {
-  // First check if we have saved data in localStorage
-  const savedData = localStorage.getItem(`website_${id}`);
-  if (savedData) {
-    return JSON.parse(savedData);
-  }
-  
-  // Otherwise return the default data
-  return {
-    id,
-    name: id === "web1" ? "Mein Online-Shop" : "Portfolio",
-    url: id === "web1" ? "mein-shop.example.com" : "portfolio.example.com",
-    template: id === "web1" ? "E-Commerce" : "Portfolio",
-    shopTemplate: "default",
-    content: {
-      title: id === "web1" ? "Willkommen in meinem Shop" : "Mein Portfolio",
-      subtitle: id === "web1" ? "Entdecken Sie unsere Produkte" : "Meine Arbeiten",
-      description: id === "web1" 
-        ? "Hier finden Sie die besten Produkte zu günstigen Preisen."
-        : "Hier finden Sie eine Auswahl meiner besten Arbeiten und Projekte.",
-      sections: []
+  try {
+    // First check if we have saved data in localStorage
+    const savedData = localStorage.getItem(`website_${id}`);
+    if (savedData) {
+      return JSON.parse(savedData);
     }
-  };
+    
+    // Otherwise return the default data
+    return {
+      id,
+      name: id === "web1" ? "Mein Online-Shop" : "Portfolio",
+      url: id === "web1" ? "mein-shop.example.com" : "portfolio.example.com",
+      template: id === "web1" ? "E-Commerce" : "Portfolio",
+      shopTemplate: "default",
+      content: {
+        title: id === "web1" ? "Willkommen in meinem Shop" : "Mein Portfolio",
+        subtitle: id === "web1" ? "Entdecken Sie unsere Produkte" : "Meine Arbeiten",
+        description: id === "web1" 
+          ? "Hier finden Sie die besten Produkte zu günstigen Preisen."
+          : "Hier finden Sie eine Auswahl meiner besten Arbeiten und Projekte.",
+        sections: []
+      }
+    };
+  } catch (error) {
+    console.error("Error loading website data:", error);
+    return {
+      id,
+      name: "Neue Website",
+      url: "example.com",
+      template: "E-Commerce",
+      shopTemplate: "default",
+      content: {
+        title: "Neue Website",
+        subtitle: "Subtitle",
+        description: "Beschreibung",
+        sections: []
+      }
+    };
+  }
 };
 
 export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
@@ -117,24 +133,7 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
   const [editingTextSection, setEditingTextSection] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
   
-  // Apply template to content
-  const applyTemplate = (templateName: string) => {
-    const template = WEBSHOP_TEMPLATES[templateName as keyof typeof WEBSHOP_TEMPLATES];
-    if (!template) return;
-    
-    setContent({
-      title: template.hero.title,
-      subtitle: template.hero.subtitle,
-      description: template.hero.description,
-      sections: template.sections,
-      header: template.header
-    });
-    
-    setHasChanges(true);
-    toast.success("Template wurde angewendet");
-  };
-  
-  // Save website data to localStorage
+  // Improved save function with error handling
   const saveWebsiteData = () => {
     try {
       const dataToSave = {
@@ -146,7 +145,10 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
         lastSaved: new Date().toISOString()
       };
       
-      localStorage.setItem(`website_${websiteId}`, JSON.stringify(dataToSave));
+      // Stringify with proper error handling
+      const dataString = JSON.stringify(dataToSave);
+      localStorage.setItem(`website_${websiteId}`, dataString);
+      
       setHasChanges(false);
       console.log("Website data saved successfully:", dataToSave);
       toast.success("Änderungen wurden gespeichert");
@@ -174,6 +176,23 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
     }
   };
 
+  // Apply template to content
+  const applyTemplate = (templateName: string) => {
+    const template = WEBSHOP_TEMPLATES[templateName as keyof typeof WEBSHOP_TEMPLATES];
+    if (!template) return;
+    
+    setContent({
+      title: template.hero.title,
+      subtitle: template.hero.subtitle,
+      description: template.hero.description,
+      sections: template.sections,
+      header: template.header
+    });
+    
+    setHasChanges(true);
+    toast.success("Template wurde angewendet");
+  };
+
   // Track changes to content and other website properties
   useEffect(() => {
     setHasChanges(true);
@@ -184,16 +203,23 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
     applyTemplate(shopTemplate);
   }, [shopTemplate]);
 
-  // Auto-save every 30 seconds if changes are made
+  // Improved auto-save functionality
   useEffect(() => {
     if (!hasChanges) return;
     
+    // Save immediately after 5 seconds of inactivity
+    const saveTimeout = setTimeout(() => {
+      console.log("Auto-saving website changes after inactivity...");
+      saveWebsiteData();
+    }, 5000);
+    
+    // Auto-save every 30 seconds if changes are made
     const autoSaveInterval = setInterval(() => {
       if (hasChanges) {
         console.log("Auto-saving website changes...");
         saveWebsiteData();
       }
-    }, 30000); // 30 seconds
+    }, 30000);
     
     // Prompt user before leaving page with unsaved changes
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -207,10 +233,11 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
     window.addEventListener('beforeunload', handleBeforeUnload);
     
     return () => {
+      clearTimeout(saveTimeout);
       clearInterval(autoSaveInterval);
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [hasChanges]);
+  }, [hasChanges, content, websiteName, websiteUrl, shopTemplate]);
 
   // Save on tab change
   useEffect(() => {
