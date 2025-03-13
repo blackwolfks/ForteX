@@ -1,5 +1,9 @@
-import { supabase, Product } from '@/lib/supabase';
+
+import { supabase, Product as SupabaseProduct } from '@/lib/supabase';
 import { v4 as uuidv4 } from 'uuid';
+
+// Re-export the Product type from lib/supabase
+export type Product = SupabaseProduct;
 
 export interface CreateProductInput {
   name: string;
