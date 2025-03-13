@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { 
   Table, 
@@ -34,7 +33,6 @@ import {
   ShoppingBag,
   Tag
 } from "lucide-react";
-import { Toast } from "@/components/ui/use-toast";
 import { toast } from "sonner";
 import { productService } from "@/services/product-service";
 import { Product } from "@/lib/supabase";
@@ -45,13 +43,11 @@ const ProductsList = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const queryClient = useQueryClient();
   
-  // Produkte mit React Query laden
   const { data: products = [], isLoading, error } = useQuery({
     queryKey: ['products'],
     queryFn: () => productService.getProducts(),
   });
   
-  // Mutation zum Löschen eines Produkts
   const deleteMutation = useMutation({
     mutationFn: (id: string) => productService.deleteProduct(id),
     onSuccess: () => {
@@ -64,7 +60,6 @@ const ProductsList = () => {
     }
   });
   
-  // Produkte filtern basierend auf Suchbegriff und Kategorie
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          product.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -74,17 +69,14 @@ const ProductsList = () => {
     return matchesSearch && matchesCategory;
   });
   
-  // Alle eindeutigen Kategorien abrufen
   const categories = Array.from(new Set(products.map(product => product.category))).filter(Boolean);
   
-  // Produkt löschen
   const handleDelete = (id: string) => {
     if (window.confirm("Möchtest du dieses Produkt wirklich löschen?")) {
       deleteMutation.mutate(id);
     }
   };
   
-  // Mutation zum Generieren eines Produktschlüssels
   const generateKeyMutation = useMutation({
     mutationFn: (id: string) => productService.generateProductKey(id),
     onSuccess: (key) => {
@@ -97,12 +89,10 @@ const ProductsList = () => {
     }
   });
   
-  // Funktion zum Generieren eines Produktschlüssels
   const generateKey = (id: string) => {
     generateKeyMutation.mutate(id);
   };
   
-  // Preis formatieren
   const formatPrice = (price: number, isSubscription: boolean, interval?: string) => {
     const formattedPrice = `${price.toFixed(2)} €`;
     
@@ -121,7 +111,6 @@ const ProductsList = () => {
     return formattedPrice;
   };
   
-  // Kategorie formatieren
   const getCategoryLabel = (category: string) => {
     const categoryMap: Record<string, string> = {
       scripts: 'Scripts',
@@ -134,7 +123,6 @@ const ProductsList = () => {
     return categoryMap[category] || category;
   };
   
-  // Datum formatieren
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('de-DE', { 
@@ -144,7 +132,6 @@ const ProductsList = () => {
     });
   };
 
-  // Ladezustand anzeigen
   if (isLoading) {
     return (
       <Card className="w-full">
@@ -161,7 +148,6 @@ const ProductsList = () => {
     );
   }
 
-  // Fehler anzeigen
   if (error) {
     return (
       <Card className="w-full">

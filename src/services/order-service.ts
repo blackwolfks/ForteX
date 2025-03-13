@@ -2,6 +2,8 @@
 import { supabase, Order, Invoice } from '@/lib/supabase';
 import { v4 as uuidv4 } from 'uuid';
 
+export { Order, Invoice };
+
 export interface OrderDetails {
   planId: string;
   planName: string;
@@ -66,17 +68,23 @@ class OrderService {
       const orderId = uuidv4();
       const order = {
         id: orderId,
-        ...orderDetails,
         user_id: localStorage.getItem("userId") || "guest",
+        plan_id: orderDetails.planId,
+        plan_name: orderDetails.planName,
+        amount: orderDetails.amount,
+        currency: orderDetails.currency,
+        payment_method: orderDetails.paymentMethod,
+        payment_id: orderDetails.paymentId,
+        status: orderDetails.status,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      };
+      } as Order;
       
       const existingOrders = this.getUserOrdersFromLocalStorage();
-      existingOrders.push(order as unknown as Order);
+      existingOrders.push(order);
       localStorage.setItem("user_orders", JSON.stringify(existingOrders));
       
-      return order as Order;
+      return order;
     }
   }
   

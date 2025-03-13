@@ -143,7 +143,15 @@ const ProductCreator = () => {
   const onSubmit = (data: ProductFormValues) => {
     // Produktdaten mit Bild erstellen
     const productData: CreateProductInput = {
-      ...data,
+      name: data.name,
+      description: data.description,
+      shortDescription: data.shortDescription,
+      price: data.price,
+      category: data.category,
+      isSubscription: data.isSubscription,
+      subscriptionInterval: data.subscriptionInterval,
+      cfxResourceId: data.cfxResourceId,
+      cfxImported: data.cfxImported,
       image: previewImage || undefined,
     };
     

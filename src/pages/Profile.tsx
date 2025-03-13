@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,17 +16,26 @@ const Profile = () => {
   
   useEffect(() => {
     // Load user's orders
-    const loadOrders = () => {
-      const userOrders = orderService.getUserOrders();
-      setOrders(userOrders);
-      
-      // Get active subscription
-      const subscription = orderService.getActiveSubscription();
-      setActiveSubscription(subscription);
+    const loadOrders = async () => {
+      try {
+        const userOrders = await orderService.getUserOrders();
+        setOrders(userOrders);
+        
+        // Get active subscription
+        const subscription = await orderService.getActiveSubscription();
+        setActiveSubscription(subscription);
+      } catch (error) {
+        console.error("Failed to load orders:", error);
+        toast({
+          title: "Fehler",
+          description: "Bestellungen konnten nicht geladen werden.",
+          variant: "destructive"
+        });
+      }
     };
     
     loadOrders();
-  }, []);
+  }, [toast]);
   
   const handleDownloadInvoice = (order: Order) => {
     if (!order.invoice?.invoiceUrl) {

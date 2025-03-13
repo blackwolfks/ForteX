@@ -2,15 +2,26 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, UserCircle } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { authService } from "@/services/auth-service";
 import { useToast } from "@/hooks/use-toast";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{ name?: string } | null>(null);
   const { toast } = useToast();
   const isAuthenticated = authService.isAuthenticated();
-  const currentUser = authService.getCurrentUser();
+  
+  useEffect(() => {
+    const loadUser = async () => {
+      if (isAuthenticated) {
+        const user = await authService.getCurrentUser();
+        setCurrentUser(user);
+      }
+    };
+    
+    loadUser();
+  }, [isAuthenticated]);
   
   const handleSignOut = async () => {
     await authService.signOut();

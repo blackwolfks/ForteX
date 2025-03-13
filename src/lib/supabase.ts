@@ -38,6 +38,7 @@ export type Order = {
   status: "pending" | "completed" | "cancelled" | "refunded";
   created_at: string;
   updated_at: string;
+  invoice?: Invoice;
 };
 
 export type User = {
