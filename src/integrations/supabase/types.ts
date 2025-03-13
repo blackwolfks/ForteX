@@ -9,7 +9,181 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      invoices: {
+        Row: {
+          amount: number
+          billing_address: Json
+          currency: string
+          customer_email: string
+          customer_name: string
+          id: string
+          invoice_date: string | null
+          invoice_number: string | null
+          invoice_url: string | null
+          order_id: string
+          payment_method: string
+          plan_name: string
+        }
+        Insert: {
+          amount: number
+          billing_address: Json
+          currency: string
+          customer_email: string
+          customer_name: string
+          id?: string
+          invoice_date?: string | null
+          invoice_number?: string | null
+          invoice_url?: string | null
+          order_id: string
+          payment_method: string
+          plan_name: string
+        }
+        Update: {
+          amount?: number
+          billing_address?: Json
+          currency?: string
+          customer_email?: string
+          customer_name?: string
+          id?: string
+          invoice_date?: string | null
+          invoice_number?: string | null
+          invoice_url?: string | null
+          order_id?: string
+          payment_method?: string
+          plan_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          payment_id: string | null
+          payment_method: string
+          plan_id: string
+          plan_name: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency: string
+          id?: string
+          payment_id?: string | null
+          payment_method: string
+          plan_id: string
+          plan_name: string
+          status: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          payment_id?: string | null
+          payment_method?: string
+          plan_id?: string
+          plan_name?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      product_keys: {
+        Row: {
+          created_at: string
+          id: string
+          is_used: boolean
+          key: string
+          product_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_used?: boolean
+          key: string
+          product_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_used?: boolean
+          key?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_keys_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          category: string
+          cfx_imported: boolean
+          cfx_resource_id: string | null
+          created_at: string
+          description: string
+          id: string
+          image: string | null
+          is_subscription: boolean
+          name: string
+          price: number
+          short_description: string
+          subscription_interval: string | null
+          user_id: string
+        }
+        Insert: {
+          category: string
+          cfx_imported?: boolean
+          cfx_resource_id?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          image?: string | null
+          is_subscription?: boolean
+          name: string
+          price: number
+          short_description: string
+          subscription_interval?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string
+          cfx_imported?: boolean
+          cfx_resource_id?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          image?: string | null
+          is_subscription?: boolean
+          name?: string
+          price?: number
+          short_description?: string
+          subscription_interval?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
