@@ -1,3 +1,4 @@
+
 // Simulierter Authentifizierungsdienst
 // In einer realen Anwendung würde dies gegen eine echte Backend-API oder einen Auth-Dienst wie Firebase, Auth0, etc. kommunizieren
 
@@ -32,13 +33,22 @@ const CFX_SCOPE = "profile email"; // Berechtigungen, die wir von CFX anfordern
 const MOCK_USERS = [
   {
     id: "1",
-    email: "test@example.com",
-    password: "password123",
-    name: "Test User",
+    email: "admin@test.com", // Einfacher zu merkende E-Mail
+    password: "password123", // Einfaches Passwort für Tests
+    name: "Admin Test",
     twoFactorEnabled: false,
     twoFactorMethod: null,
     phoneNumber: null,
   },
+  {
+    id: "2",
+    email: "user@test.com",
+    password: "user123",
+    name: "User Test",
+    twoFactorEnabled: false,
+    twoFactorMethod: null,
+    phoneNumber: null,
+  }
 ];
 
 export const authService = {
