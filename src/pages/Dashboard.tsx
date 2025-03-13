@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -26,6 +27,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useNavigate, useLocation } from "react-router-dom";
 import WebsiteBuilderView from "@/components/website-builder/WebsiteBuilderView";
+import ProductsView from "@/components/products/ProductsView";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -132,7 +134,7 @@ const Dashboard = () => {
                 </div>
                 <div>
                   {activeTab === "products" && (
-                    <Button>
+                    <Button onClick={() => navigateTo("products")}>
                       <PlusCircle className="mr-2 h-4 w-4" />
                       Produkt hinzufügen
                     </Button>
@@ -526,4 +528,3 @@ const SettingsView = () => {
 };
 
 export default Dashboard;
-
