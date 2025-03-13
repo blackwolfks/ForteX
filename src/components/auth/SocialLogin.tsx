@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { authService } from "@/services/auth-service";
 import { useToast } from "@/hooks/use-toast";
+import { AlertCircle, ExternalLink } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface SocialLoginProps {
   setError: (error: string | null) => void;
@@ -13,11 +15,13 @@ interface SocialLoginProps {
 
 const SocialLogin = ({ setError, redirectUrl = '/dashboard', plan = null }: SocialLoginProps) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [providerError, setProviderError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     setError(null);
+    setProviderError(null);
     
     try {
       await authService.signInWithGoogle();
@@ -28,7 +32,7 @@ const SocialLogin = ({ setError, redirectUrl = '/dashboard', plan = null }: Soci
         description: "Google-Anmeldung ist nicht konfiguriert. Bitte kontaktiere den Administrator.",
         variant: "destructive"
       });
-      setError("Fehler bei der Anmeldung mit Google. Der Provider ist nicht aktiviert.");
+      setProviderError("Google-Provider ist nicht aktiviert. Der Provider muss zuerst in den Supabase-Einstellungen konfiguriert werden.");
       setIsLoading(false);
     }
   };
@@ -36,6 +40,7 @@ const SocialLogin = ({ setError, redirectUrl = '/dashboard', plan = null }: Soci
   const handleDiscordLogin = async () => {
     setIsLoading(true);
     setError(null);
+    setProviderError(null);
     
     try {
       await authService.signInWithDiscord();
@@ -46,7 +51,7 @@ const SocialLogin = ({ setError, redirectUrl = '/dashboard', plan = null }: Soci
         description: "Discord-Anmeldung ist nicht konfiguriert. Bitte kontaktiere den Administrator.",
         variant: "destructive"
       });
-      setError("Fehler bei der Anmeldung mit Discord. Der Provider ist nicht aktiviert.");
+      setProviderError("Discord-Provider ist nicht aktiviert. Der Provider muss zuerst in den Supabase-Einstellungen konfiguriert werden.");
       setIsLoading(false);
     }
   };
@@ -54,6 +59,7 @@ const SocialLogin = ({ setError, redirectUrl = '/dashboard', plan = null }: Soci
   const handleCFXLogin = async () => {
     setIsLoading(true);
     setError(null);
+    setProviderError(null);
     
     try {
       await authService.signInWithCFX();
@@ -64,7 +70,7 @@ const SocialLogin = ({ setError, redirectUrl = '/dashboard', plan = null }: Soci
         description: "CFX-Anmeldung ist nicht konfiguriert. Bitte kontaktiere den Administrator.",
         variant: "destructive"
       });
-      setError("Fehler bei der Anmeldung mit CFX. Der Provider ist nicht aktiviert.");
+      setProviderError("CFX-Provider ist nicht aktiviert. Der Provider muss zuerst in den Supabase-Einstellungen konfiguriert werden.");
       setIsLoading(false);
     }
   };
@@ -81,6 +87,22 @@ const SocialLogin = ({ setError, redirectUrl = '/dashboard', plan = null }: Soci
           </span>
         </div>
       </div>
+      
+      {providerError && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4 mr-2" />
+          <AlertDescription className="flex-1">{providerError}</AlertDescription>
+          <a 
+            href="https://supabase.com/dashboard/project/fewcmtozntpedrsluawj/auth/providers" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center text-xs underline ml-2"
+          >
+            Zu Supabase Auth-Einstellungen <ExternalLink className="h-3 w-3 ml-1" />
+          </a>
+        </Alert>
+      )}
+      
       <div className="grid grid-cols-1 gap-2">
         <Button
           variant="outline"
