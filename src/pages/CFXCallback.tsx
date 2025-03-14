@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { authService } from "@/services/auth-service";
@@ -20,13 +21,11 @@ const CFXCallback = () => {
         const code = urlParams.get("code");
         const state = urlParams.get("state");
         const error = urlParams.get("error");
-        const payload = urlParams.get("payload"); // Encrypted payload with API key
         
         console.log("CFX Callback params:", {
           hasCode: !!code,
           hasState: !!state,
           hasError: !!error,
-          hasPayload: !!payload,
           search: location.search
         });
         
@@ -38,8 +37,8 @@ const CFXCallback = () => {
           throw new Error(`Autorisierungsfehler: ${error}`);
         }
         
-        if (!code && !payload) {
-          throw new Error("Kein Autorisierungscode oder API-Schlüssel erhalten");
+        if (!code) {
+          throw new Error("Kein Autorisierungscode erhalten");
         }
 
         // Check state parameter for CSRF protection
@@ -51,8 +50,8 @@ const CFXCallback = () => {
         // Update processing state
         setProcessingState("Authentifizierung mit CFX...");
         
-        // Handle CFX callback with the authorization code or encrypted payload
-        const userData = await authService.handleCFXCallback(code || payload || "");
+        // Handle CFX callback with the authorization code
+        const userData = await authService.handleCFXCallback(code);
         
         // Check if we got user data back
         if (!userData) {
@@ -129,3 +128,4 @@ const CFXCallback = () => {
 };
 
 export default CFXCallback;
+
