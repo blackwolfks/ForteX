@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -151,10 +150,8 @@ const CFXApiKeySpecification = () => {
 
   const handleCFXLogin = async () => {
     try {
-      // Save info that we want to return to API keys page after authentication
       localStorage.setItem("cfx_return_to", "api-keys");
       
-      // Call the signInWithCFX function without parameters
       await authService.signInWithCFX();
     } catch (err) {
       console.error("CFX Auth Error:", err);

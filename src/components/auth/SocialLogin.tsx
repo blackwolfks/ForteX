@@ -41,7 +41,7 @@ const SocialLogin = ({ setError, redirectUrl, plan }: SocialLoginProps) => {
     }
   };
 
-  // Direct CFX login without relying on Supabase OAuth
+  // Aktualisierte CFX Login-Funktion mit Integration statt auth
   const handleCFXLogin = async () => {
     try {
       setIsLoading(true);
@@ -65,7 +65,7 @@ const SocialLogin = ({ setError, redirectUrl, plan }: SocialLoginProps) => {
       
       // Construct the CFX authorization URL - ensure URL ends with trailing slash
       const cfxBaseUrl = CFX_INTERACTION_URL.endsWith('/') ? CFX_INTERACTION_URL : `${CFX_INTERACTION_URL}/`;
-      const cfxAuthUrl = `${cfxBaseUrl}authorize?client_id=${CFX_CLIENT_ID}&redirect_uri=${encodeURIComponent(CFX_REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(CFX_SCOPE)}&state=${stateToken}`;
+      const cfxAuthUrl = `${cfxBaseUrl}integration/authorize?client_id=${CFX_CLIENT_ID}&redirect_uri=${encodeURIComponent(CFX_REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(CFX_SCOPE)}&state=${stateToken}`;
       
       console.log("Redirecting to CFX auth URL:", cfxAuthUrl);
       
