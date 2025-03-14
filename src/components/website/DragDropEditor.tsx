@@ -109,12 +109,13 @@ export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
   const renderSection = (section: WebsiteSection) => {
     const isEditing = mode === 'edit' && selectedSectionId === section.id;
     
+    // Only render the preview version in the center area, editing is now only done in the right sidebar
     switch (section.type) {
       case 'hero':
         return (
           <HeroSection 
             section={section} 
-            isEditing={isEditing}
+            isEditing={false} // Always false in center area
             onUpdate={(content) => updateSectionContent(section.id, content)} 
             onUpload={handleFileUpload}
           />
@@ -123,7 +124,7 @@ export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
         return (
           <TextSection 
             section={section} 
-            isEditing={isEditing}
+            isEditing={false} // Always false in center area
             onUpdate={(content) => updateSectionContent(section.id, content)} 
           />
         );
@@ -131,7 +132,7 @@ export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
         return (
           <ImageSection 
             section={section} 
-            isEditing={isEditing}
+            isEditing={false} // Always false in center area
             onUpdate={(content) => updateSectionContent(section.id, content)} 
             onUpload={handleFileUpload}
           />
@@ -140,7 +141,7 @@ export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
         return (
           <FormSection 
             section={section} 
-            isEditing={isEditing}
+            isEditing={false} // Always false in center area
             onUpdate={(content) => updateSectionContent(section.id, content)} 
           />
         );
@@ -148,7 +149,57 @@ export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
         return (
           <ProductSection 
             section={section} 
-            isEditing={isEditing}
+            isEditing={false} // Always false in center area
+            onUpdate={(content) => updateSectionContent(section.id, content)} 
+          />
+        );
+      default:
+        return <div>Unbekannter Abschnittstyp: {section.type}</div>;
+    }
+  };
+  
+  // For the right sidebar editor, we need to render the actual editing version
+  const renderEditingSection = (section: WebsiteSection) => {
+    switch (section.type) {
+      case 'hero':
+        return (
+          <HeroSection 
+            section={section} 
+            isEditing={true}
+            onUpdate={(content) => updateSectionContent(section.id, content)} 
+            onUpload={handleFileUpload}
+          />
+        );
+      case 'text':
+        return (
+          <TextSection 
+            section={section} 
+            isEditing={true}
+            onUpdate={(content) => updateSectionContent(section.id, content)} 
+          />
+        );
+      case 'image':
+        return (
+          <ImageSection 
+            section={section} 
+            isEditing={true}
+            onUpdate={(content) => updateSectionContent(section.id, content)} 
+            onUpload={handleFileUpload}
+          />
+        );
+      case 'form':
+        return (
+          <FormSection 
+            section={section} 
+            isEditing={true}
+            onUpdate={(content) => updateSectionContent(section.id, content)} 
+          />
+        );
+      case 'product':
+        return (
+          <ProductSection 
+            section={section} 
+            isEditing={true}
             onUpdate={(content) => updateSectionContent(section.id, content)} 
           />
         );
@@ -338,73 +389,6 @@ export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
                       className={`relative ${mode === 'edit' ? 'hover:outline hover:outline-2 hover:outline-primary/20' : ''}`}
                       onClick={() => mode === 'edit' ? setSelectedSectionId(section.id) : null}
                     >
-                      {mode === 'edit' && selectedSectionId === section.id && (
-                        <div className="absolute top-0 right-0 z-10 m-2 flex gap-1">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button 
-                                  variant="outline" 
-                                  size="icon" 
-                                  className="h-8 w-8 bg-white shadow-md"
-                                  onClick={() => handleMoveUp(section.id)}
-                                >
-                                  <ChevronUp className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Nach oben</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                          
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button 
-                                  variant="outline" 
-                                  size="icon" 
-                                  className="h-8 w-8 bg-white shadow-md"
-                                  onClick={() => handleMoveDown(section.id)}
-                                >
-                                  <ChevronDown className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Nach unten</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                          
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button 
-                                  variant="outline" 
-                                  size="icon" 
-                                  className="h-8 w-8 bg-white shadow-md"
-                                  onClick={() => duplicateSection(section.id)}
-                                >
-                                  <Copy className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Duplizieren</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                          
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button 
-                                  variant="outline" 
-                                  size="icon" 
-                                  className="h-8 w-8 bg-white shadow-md"
-                                  onClick={() => deleteSection(section.id)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Löschen</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
-                      )}
                       {renderSection(section)}
                     </div>
                   ))
@@ -440,7 +424,7 @@ export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
                 
                 {selectedSectionId && sections.find(s => s.id === selectedSectionId) && (
                   <div className="space-y-4">
-                    {renderSection(sections.find(s => s.id === selectedSectionId) as WebsiteSection)}
+                    {renderEditingSection(sections.find(s => s.id === selectedSectionId) as WebsiteSection)}
                   </div>
                 )}
               </div>
