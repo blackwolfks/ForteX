@@ -20,13 +20,11 @@ import {
   Settings, 
   Users, 
   BarChart,
-  PlusCircle,
-  Globe
+  PlusCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useLocation } from "react-router-dom";
 import ProductsView from "@/components/products/ProductsView";
-import { WebsiteBuilderView } from "@/components/website-builder/WebsiteBuilderView";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -63,14 +61,6 @@ const Dashboard = () => {
                   <a onClick={() => navigateTo("products")}>
                     <Package />
                     <span>Produkte</span>
-                  </a>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Website Builder" isActive={activeTab === "website-builder"}>
-                  <a onClick={() => navigateTo("website-builder")}>
-                    <Globe />
-                    <span>Website Builder</span>
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -124,7 +114,6 @@ const Dashboard = () => {
                   <h1 className="text-xl font-bold text-white">
                     {activeTab === "overview" && "Dashboard"}
                     {activeTab === "products" && "Produkte"}
-                    {activeTab === "website-builder" && "Website Builder"}
                     {activeTab === "payments" && "Zahlungen"}
                     {activeTab === "customers" && "Kunden"}
                     {activeTab === "analytics" && "Statistiken"}
@@ -145,7 +134,6 @@ const Dashboard = () => {
             <div className="p-6 bg-darkgray-800">
               {activeTab === "overview" && <DashboardOverview />}
               {activeTab === "products" && <ProductsView />}
-              {activeTab === "website-builder" && <WebsiteBuilderView />}
               {activeTab === "payments" && <PaymentsView />}
               {activeTab === "customers" && <CustomersView />}
               {activeTab === "analytics" && <AnalyticsView />}
