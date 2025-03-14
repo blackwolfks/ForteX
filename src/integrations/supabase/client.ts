@@ -47,7 +47,7 @@ type RpcFunctionName =
 // Define parameter types for each RPC function
 type RpcParams = {
   'add_website_change_history': {
-    website_id: string;
+    site_id: string;
     content_snapshot: Json;
     changed_fields: string[];
   };
@@ -59,24 +59,24 @@ type RpcParams = {
     website_status?: string;
   };
   'delete_website': {
-    website_id: string;
+    site_id: string;
   };
   'get_user_websites': Record<string, never>;
   'get_website_by_id': {
-    website_id: string;
+    site_id: string;
   };
   'get_website_change_history': {
-    website_id: string;
+    site_id: string;
   };
   'get_website_content': {
-    website_id: string;
+    site_id: string;
   };
   'save_website_content': {
-    website_id: string;
+    site_id: string;
     content_data: Json;
   };
   'update_website': {
-    website_id: string;
+    site_id: string;
     website_name: string;
     website_url: string;
     website_template: string;
@@ -84,7 +84,7 @@ type RpcParams = {
     website_status?: string;
   };
   'update_website_status': {
-    website_id: string;
+    site_id: string;
     website_status: string;
   };
 };
