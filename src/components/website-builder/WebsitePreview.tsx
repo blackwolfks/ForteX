@@ -1,9 +1,12 @@
+
+import React, { useEffect, useState } from 'react';
 import { useWebsiteBuilder } from '@/hooks/useWebsiteBuilder';
+import { WebsiteSection } from '@/services/website-service';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { useEffect, useState } from 'react';
-import { Product } from '@/lib/supabase';
-import { productService } from '@/services/product-service';
+import { Product } from '@/services/product/types';
+import { productService } from '@/services/product';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export function WebsitePreview() {
   const { websiteContent, selectedWebsite } = useWebsiteBuilder();

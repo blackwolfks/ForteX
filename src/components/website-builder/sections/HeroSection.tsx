@@ -14,12 +14,12 @@ export function HeroSection({ section, onUpdate }: HeroSectionProps) {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="title">Titel</Label>
+        <Label htmlFor="title">Überschrift</Label>
         <Input
           id="title"
           value={section.title || ''}
           onChange={(e) => onUpdate({ title: e.target.value })}
-          placeholder="Titel des Hero-Bereichs"
+          placeholder="Überschrift"
         />
       </div>
       
@@ -29,20 +29,30 @@ export function HeroSection({ section, onUpdate }: HeroSectionProps) {
           id="content"
           value={section.content || ''}
           onChange={(e) => onUpdate({ content: e.target.value })}
-          placeholder="Beschreibungstext"
-          rows={3}
+          placeholder="Text für den Hero-Bereich"
+          rows={4}
         />
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="imageUrl">Bild-URL</Label>
+        <Label htmlFor="imageUrl">Hintergrundbild URL</Label>
         <Input
           id="imageUrl"
           value={section.imageUrl || ''}
           onChange={(e) => onUpdate({ imageUrl: e.target.value })}
-          placeholder="URL des Hintergrundbilds"
+          placeholder="URL des Bildes"
         />
       </div>
+      
+      {section.imageUrl && (
+        <div className="border rounded-md p-2 bg-muted/20">
+          <img 
+            src={section.imageUrl} 
+            alt={section.title || "Hintergrundbild"} 
+            className="max-h-48 object-contain mx-auto"
+          />
+        </div>
+      )}
       
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
@@ -51,7 +61,7 @@ export function HeroSection({ section, onUpdate }: HeroSectionProps) {
             id="buttonText"
             value={section.buttonText || ''}
             onChange={(e) => onUpdate({ buttonText: e.target.value })}
-            placeholder="Klick mich"
+            placeholder="Mehr erfahren"
           />
         </div>
         
@@ -61,7 +71,7 @@ export function HeroSection({ section, onUpdate }: HeroSectionProps) {
             id="buttonLink"
             value={section.buttonLink || ''}
             onChange={(e) => onUpdate({ buttonLink: e.target.value })}
-            placeholder="/produkte"
+            placeholder="#kontakt oder https://example.com"
           />
         </div>
       </div>

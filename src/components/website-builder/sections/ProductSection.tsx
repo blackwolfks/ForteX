@@ -1,12 +1,12 @@
-
 import { WebsiteSection } from '@/services/website-service';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { productService } from '@/services/product-service';
+import { Product } from '@/services/product/types';
+import { productService } from '@/services/product';
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Product } from '@/lib/supabase';
 import { ShoppingBag } from 'lucide-react';
 
 interface ProductSectionProps {
@@ -19,7 +19,6 @@ export function ProductSection({ section, productCategories, onUpdate }: Product
   const [previewProducts, setPreviewProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Lade Beispielprodukte aus der gewählten Kategorie
   useEffect(() => {
     const loadProducts = async () => {
       if (!section.productCategory) return;
@@ -29,7 +28,7 @@ export function ProductSection({ section, productCategories, onUpdate }: Product
         const products = await productService.getProducts();
         const filteredProducts = products.filter(
           product => product.category === section.productCategory
-        ).slice(0, 3); // Zeige maximal 3 Vorschauprodukte
+        ).slice(0, 3);
         
         setPreviewProducts(filteredProducts);
       } catch (error) {
@@ -75,7 +74,7 @@ export function ProductSection({ section, productCategories, onUpdate }: Product
       
       <div className="space-y-2">
         <Label htmlFor="content">Beschreibungstext (optional)</Label>
-        <Input
+        <Textarea
           id="content"
           value={section.content || ''}
           onChange={(e) => onUpdate({ content: e.target.value })}
