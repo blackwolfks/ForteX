@@ -37,15 +37,38 @@ import { toast } from "sonner";
 import { productService } from "@/services/product-service";
 import { Product } from "@/lib/supabase";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 
 const ProductsList = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const [isUserAuthenticated, setIsUserAuthenticated] = useState(false);
+  
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data } = await supabase.auth.getUser();
+      setIsUserAuthenticated(!!data?.user);
+    };
+    
+    checkAuth();
+    
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      setIsUserAuthenticated(!!session?.user);
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        queryClient.invalidateQueries({ queryKey: ['products'] });
+      }
+    });
+    
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
+  }, [queryClient]);
   
   const { data: products = [], isLoading, error } = useQuery({
     queryKey: ['products'],
     queryFn: () => productService.getProducts(),
+    enabled: isUserAuthenticated,
   });
   
   const deleteMutation = useMutation({
@@ -131,6 +154,22 @@ const ProductsList = () => {
       day: '2-digit' 
     });
   };
+
+  if (!isUserAuthenticated) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Produktübersicht</CardTitle>
+          <CardDescription>Bitte anmelden, um Produkte zu sehen</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex justify-center py-8">
+            <p>Sie müssen angemeldet sein, um Ihre Produkte anzuzeigen.</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (isLoading) {
     return (

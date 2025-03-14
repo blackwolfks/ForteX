@@ -2,10 +2,10 @@
 import { createClient } from '@supabase/supabase-js';
 import { supabase as supabaseClient } from '@/integrations/supabase/client';
 
-// Für ältere Code-Stellen, die noch den direkten Import verwenden
+// For older code parts that still use the direct import
 export const supabase = supabaseClient;
 
-// Typdefinitionen für Datenbanktabellen
+// Type definitions for database tables
 export type Product = {
   id: string;
   name: string;

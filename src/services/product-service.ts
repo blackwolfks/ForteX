@@ -21,11 +21,14 @@ export interface CreateProductInput {
 class ProductService {
   async createProduct(productData: CreateProductInput): Promise<Product> {
     try {
-      // Benutzer-ID aus dem Auth-State abrufen
+      // Get user ID from the Auth state
       const { data: userData } = await supabase.auth.getUser();
       
-      // Eine temporäre Benutzer-ID generieren, falls kein Benutzer eingeloggt ist
-      const userId = userData?.user?.id || `temp-${uuidv4()}`;
+      if (!userData?.user?.id) {
+        throw new Error("User not authenticated");
+      }
+      
+      const userId = userData.user.id;
       
       const newProduct: Omit<Product, 'id' | 'created_at'> = {
         name: productData.name,
@@ -41,7 +44,7 @@ class ProductService {
         user_id: userId,
       };
 
-      // Produkt in die Datenbank einfügen
+      // Insert product into the database
       const { data, error } = await supabase
         .from('products')
         .insert([newProduct])
@@ -49,24 +52,39 @@ class ProductService {
         .maybeSingle();
 
       if (error) {
-        console.error('Fehler beim Speichern in Supabase:', error);
-        // Fallback: Im localStorage speichern, wenn die DB-Verbindung fehlschlägt
+        console.error('Error saving to Supabase:', error);
+        // Fallback: Save to localStorage if DB connection fails
         return this.saveProductToLocalStorage(productData);
       }
 
       return data as Product;
     } catch (error) {
-      console.error('Fehler beim Erstellen des Produkts:', error);
+      console.error('Error creating product:', error);
       
-      // Fallback: In localStorage speichern, wenn die DB-Verbindung fehlschlägt
+      // Fallback: Save to localStorage if DB connection fails
       return this.saveProductToLocalStorage(productData);
     }
   }
 
-  // Hilfsfunktion zum Speichern im localStorage
+  // Helper function to save to localStorage
   private saveProductToLocalStorage(productData: CreateProductInput): Product {
     const productId = uuidv4();
     const now = new Date().toISOString();
+    
+    // Get user ID from localStorage if available
+    const authUserString = localStorage.getItem('supabase.auth.token');
+    let userId = 'local-' + uuidv4();
+    
+    if (authUserString) {
+      try {
+        const authData = JSON.parse(authUserString);
+        if (authData?.user?.id) {
+          userId = authData.user.id;
+        }
+      } catch (e) {
+        console.error('Error parsing auth data from localStorage:', e);
+      }
+    }
     
     const product: Product = {
       id: productId,
@@ -81,18 +99,29 @@ class ProductService {
       cfx_imported: productData.cfxImported,
       image: productData.image,
       created_at: now,
-      user_id: 'local-' + uuidv4(), // Lokaler Platzhalter für user_id
+      user_id: userId,
     };
 
-    const existingProducts = JSON.parse(localStorage.getItem('products') || '[]');
-    localStorage.setItem('products', JSON.stringify([...existingProducts, product]));
+    // Store only products for the current user
+    const localProductsKey = `products_${userId}`;
+    const existingProducts = JSON.parse(localStorage.getItem(localProductsKey) || '[]');
+    localStorage.setItem(localProductsKey, JSON.stringify([...existingProducts, product]));
     
     return product;
   }
 
   async getProducts(): Promise<Product[]> {
     try {
-      // Versuche zuerst, Produkte aus der Datenbank zu laden
+      // Get current user ID
+      const { data: userData } = await supabase.auth.getUser();
+      
+      if (!userData?.user?.id) {
+        throw new Error("User not authenticated");
+      }
+      
+      const userId = userData.user.id;
+      
+      // Try to fetch products from the database (RLS will filter for current user)
       const { data, error } = await supabase
         .from('products')
         .select('*')
@@ -100,27 +129,52 @@ class ProductService {
 
       if (error) throw error;
       
-      // Füge lokale Produkte hinzu, wenn welche vorhanden sind
-      const localProducts = this.getLocalProducts();
+      // Add local products for the current user
+      const localProducts = this.getLocalProducts(userId);
       
       return [...(data || []), ...localProducts];
     } catch (error) {
-      console.error('Fehler beim Abrufen der Produkte:', error);
+      console.error('Error fetching products:', error);
       
-      // Fallback: Aus localStorage laden
-      return this.getLocalProducts();
+      // Try to get user ID for local storage
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id || this.getLocalUserId();
+      
+      // Fallback: Load from localStorage
+      return this.getLocalProducts(userId);
     }
   }
 
-  // Hilfsfunktion zum Abrufen aus localStorage
-  private getLocalProducts(): Product[] {
-    const localProducts = JSON.parse(localStorage.getItem('products') || '[]');
+  // Helper function to get local user ID
+  private getLocalUserId(): string {
+    const authUserString = localStorage.getItem('supabase.auth.token');
+    if (authUserString) {
+      try {
+        const authData = JSON.parse(authUserString);
+        if (authData?.user?.id) {
+          return authData.user.id;
+        }
+      } catch (e) {
+        console.error('Error parsing auth data from localStorage:', e);
+      }
+    }
+    return 'local-user';
+  }
+
+  // Helper function to fetch from localStorage
+  private getLocalProducts(userId: string): Product[] {
+    const localProductsKey = `products_${userId}`;
+    const localProducts = JSON.parse(localStorage.getItem(localProductsKey) || '[]');
     return localProducts;
   }
 
   async getProductById(productId: string): Promise<Product | null> {
     try {
-      // Prüfe zuerst in der Datenbank
+      // Get current user ID
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id;
+      
+      // First check the database
       const { data, error } = await supabase
         .from('products')
         .select('*')
@@ -131,26 +185,42 @@ class ProductService {
       
       if (data) return data;
       
-      // Wenn nicht in der Datenbank, prüfe localStorage
-      const localProducts = this.getLocalProducts();
-      return localProducts.find(p => p.id === productId) || null;
-    } catch (error) {
-      console.error('Fehler beim Abrufen des Produkts:', error);
+      // If not in the database, check localStorage
+      if (userId) {
+        const localProducts = this.getLocalProducts(userId);
+        return localProducts.find(p => p.id === productId) || null;
+      }
       
-      // Fallback: Aus localStorage laden
-      const localProducts = this.getLocalProducts();
+      return null;
+    } catch (error) {
+      console.error('Error fetching product:', error);
+      
+      // Try to get user ID for local storage
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id || this.getLocalUserId();
+      
+      // Fallback: Check localStorage
+      const localProducts = this.getLocalProducts(userId);
       return localProducts.find(p => p.id === productId) || null;
     }
   }
 
   async updateProduct(productId: string, productData: Partial<CreateProductInput>): Promise<Product | null> {
     try {
-      // Prüfe zuerst, ob es ein lokales Produkt ist
-      const localProducts = this.getLocalProducts();
+      // Get current user ID
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id;
+      
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
+      
+      // Check if it's a local product
+      const localProducts = this.getLocalProducts(userId);
       const localProductIndex = localProducts.findIndex(p => p.id === productId);
       
       if (localProductIndex >= 0) {
-        // Update das lokale Produkt
+        // Update the local product
         const updatedProduct = {
           ...localProducts[localProductIndex],
           name: productData.name || localProducts[localProductIndex].name,
@@ -166,12 +236,13 @@ class ProductService {
         };
         
         localProducts[localProductIndex] = updatedProduct;
-        localStorage.setItem('products', JSON.stringify(localProducts));
+        const localProductsKey = `products_${userId}`;
+        localStorage.setItem(localProductsKey, JSON.stringify(localProducts));
         
         return updatedProduct;
       }
       
-      // Wenn es kein lokales Produkt ist, update in der Datenbank
+      // If not a local product, update in the database
       const { data, error } = await supabase
         .from('products')
         .update({
@@ -194,25 +265,34 @@ class ProductService {
       
       return data;
     } catch (error) {
-      console.error('Fehler beim Aktualisieren des Produkts:', error);
+      console.error('Error updating product:', error);
       return null;
     }
   }
 
   async deleteProduct(productId: string): Promise<boolean> {
     try {
-      // Prüfe zuerst, ob es ein lokales Produkt ist
-      const localProducts = this.getLocalProducts();
+      // Get current user ID
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id;
+      
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
+      
+      // Check if it's a local product
+      const localProducts = this.getLocalProducts(userId);
       const localProductIndex = localProducts.findIndex(p => p.id === productId);
       
       if (localProductIndex >= 0) {
-        // Lösche das lokale Produkt
+        // Delete the local product
         localProducts.splice(localProductIndex, 1);
-        localStorage.setItem('products', JSON.stringify(localProducts));
+        const localProductsKey = `products_${userId}`;
+        localStorage.setItem(localProductsKey, JSON.stringify(localProducts));
         return true;
       }
       
-      // Wenn es kein lokales Produkt ist, lösche in der Datenbank
+      // If not a local product, delete from the database
       const { error } = await supabase
         .from('products')
         .delete()
@@ -222,13 +302,13 @@ class ProductService {
       
       return true;
     } catch (error) {
-      console.error('Fehler beim Löschen des Produkts:', error);
+      console.error('Error deleting product:', error);
       return false;
     }
   }
 
   async generateProductKey(productId: string): Promise<string> {
-    // Generiert einen Produktschlüssel im Format XXXX-XXXX-XXXX-XXXX
+    // Generate a product key in format XXXX-XXXX-XXXX-XXXX
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let key = '';
     
@@ -240,7 +320,27 @@ class ProductService {
     }
     
     try {
-      // In der Praxis würden wir den Schlüssel in einer separaten Tabelle in der Datenbank speichern
+      // Get current user ID
+      const { data: userData } = await supabase.auth.getUser();
+      
+      if (!userData?.user?.id) {
+        throw new Error("User not authenticated");
+      }
+      
+      // Verify that the product belongs to the current user
+      const { data: productData, error: productError } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', productId)
+        .maybeSingle();
+        
+      if (productError) throw productError;
+      
+      if (!productData || productData.user_id !== userData.user.id) {
+        throw new Error("Product not found or access denied");
+      }
+      
+      // Store the key in a separate table in the database
       const { error } = await supabase
         .from('product_keys')
         .insert([
@@ -253,8 +353,8 @@ class ProductService {
         
       if (error) throw error;
     } catch (error) {
-      console.error('Fehler beim Speichern des Produktschlüssels:', error);
-      // Fallback: Schlüssel nur generieren, aber nicht speichern
+      console.error('Error saving product key:', error);
+      // Fallback: Generate key but don't save
     }
     
     return key;
