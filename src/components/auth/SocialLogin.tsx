@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -41,35 +40,29 @@ const SocialLogin = ({ setError, redirectUrl, plan }: SocialLoginProps) => {
     }
   };
 
-  // Aktualisierte CFX Login-Funktion mit Integration statt auth
   const handleCFXLogin = async () => {
     try {
       setIsLoading(true);
       
-      // Generate state token for CSRF protection
       const stateToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       localStorage.setItem("cfx_auth_state", stateToken);
       
-      // Store return URL for redirect after authentication
       if (plan) {
         localStorage.setItem("cfx_return_to", "checkout");
       } else {
         localStorage.setItem("cfx_return_to", redirectUrl.replace("/", ""));
       }
       
-      // Use the direct CFX interaction URL from environment variable
       const CFX_CLIENT_ID = import.meta.env.VITE_CFX_CLIENT_ID;
       const CFX_REDIRECT_URI = `${window.location.origin}/auth/cfx-callback`;
       const CFX_SCOPE = "profile email";
       const CFX_INTERACTION_URL = import.meta.env.VITE_CFX_INTERACTION_URL;
       
-      // Construct the CFX authorization URL - ensure URL ends with trailing slash
       const cfxBaseUrl = CFX_INTERACTION_URL.endsWith('/') ? CFX_INTERACTION_URL : `${CFX_INTERACTION_URL}/`;
       const cfxAuthUrl = `${cfxBaseUrl}integration/authorize?client_id=${CFX_CLIENT_ID}&redirect_uri=${encodeURIComponent(CFX_REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(CFX_SCOPE)}&state=${stateToken}`;
       
       console.log("Redirecting to CFX auth URL:", cfxAuthUrl);
       
-      // Redirect to CFX auth page
       window.location.href = cfxAuthUrl;
       
     } catch (err) {
