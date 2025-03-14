@@ -136,7 +136,7 @@ export function WebsiteBuilderView() {
       {!showWebsiteEditor ? (
         <WebsiteList websites={websites} onSelect={selectWebsite} />
       ) : (
-        <Card>
+        <Card className="overflow-visible">
           <CardHeader className="pb-3">
             <div className="flex justify-between items-center">
               <div>
@@ -152,7 +152,7 @@ export function WebsiteBuilderView() {
               </Button>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pb-6">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="mb-4">
                 <TabsTrigger value="editor" className="flex gap-2 items-center">
@@ -169,17 +169,19 @@ export function WebsiteBuilderView() {
                 </TabsTrigger>
               </TabsList>
               
-              <TabsContent value="editor" className="mt-4">
-                <WebsiteEditor />
-              </TabsContent>
-              
-              <TabsContent value="preview" className="mt-4">
-                <WebsitePreview />
-              </TabsContent>
-              
-              <TabsContent value="settings" className="mt-4">
-                <WebsiteSettings />
-              </TabsContent>
+              <div className="mt-6 border-t pt-6">
+                <TabsContent value="editor" className="mt-0">
+                  <WebsiteEditor />
+                </TabsContent>
+                
+                <TabsContent value="preview" className="mt-0">
+                  <WebsitePreview />
+                </TabsContent>
+                
+                <TabsContent value="settings" className="mt-0">
+                  <WebsiteSettings />
+                </TabsContent>
+              </div>
             </Tabs>
           </CardContent>
           <CardFooter className="border-t pt-6">

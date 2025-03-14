@@ -1,4 +1,3 @@
-
 import { useWebsiteBuilder } from '@/hooks/useWebsiteBuilder';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,7 +23,9 @@ export function WebsiteSettings() {
   const [newFooterLink, setNewFooterLink] = useState({ label: '', link: '' });
   const [newSocialMedia, setNewSocialMedia] = useState({ platform: '', link: '' });
   
-  if (!selectedWebsite || !websiteContent) return null;
+  if (!selectedWebsite || !websiteContent) {
+    return <div className="text-center py-8">Keine Einstellungen verfügbar</div>;
+  }
   
   const { meta, layout, productCategories } = websiteContent;
   

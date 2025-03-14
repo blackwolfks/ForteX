@@ -1,4 +1,3 @@
-
 import { useWebsiteBuilder } from '@/hooks/useWebsiteBuilder';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -39,7 +38,9 @@ export function WebsitePreview() {
     loadProducts();
   }, [websiteContent]);
   
-  if (!websiteContent || !selectedWebsite) return null;
+  if (!websiteContent || !selectedWebsite) {
+    return <div className="text-center py-8">Keine Vorschau verfügbar</div>;
+  }
   
   return (
     <div className="space-y-6">

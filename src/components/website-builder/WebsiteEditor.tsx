@@ -47,7 +47,9 @@ export function WebsiteEditor() {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop');
   
-  if (!websiteContent) return null;
+  if (!websiteContent) {
+    return <div className="text-center py-8">Keine Website-Inhalte gefunden</div>;
+  }
   
   const { sections, productCategories } = websiteContent;
   
@@ -283,7 +285,7 @@ export function WebsiteEditor() {
           <TabsTrigger value="preview">Live-Vorschau</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="editor">
+        <TabsContent value="editor" className="mt-4">
           {sections.length === 0 ? (
             <div className="text-center p-12 border rounded-md bg-muted/20">
               <Plus className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
@@ -302,7 +304,7 @@ export function WebsiteEditor() {
           )}
         </TabsContent>
         
-        <TabsContent value="preview" className="relative border rounded-lg p-4">
+        <TabsContent value="preview" className="mt-4 relative border rounded-lg p-4">
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h3 className="text-lg font-medium">Live-Vorschau</h3>
