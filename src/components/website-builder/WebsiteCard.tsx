@@ -21,8 +21,10 @@ export const WebsiteCard = ({ id, name, url, template, lastUpdated, onEdit, onDe
     locale: de
   });
 
-  // Define status as a string literal type to avoid comparison errors
-  const status: "entwurf" | "veröffentlicht" = "entwurf"; // Default status for now, can be updated later
+  // Define status as a string literal type and use a type assertion when comparing
+  const status = "entwurf"; // Default status for now, can be updated later
+  // We'll use this for comparisons to avoid type errors
+  const isPublished = status === "veröffentlicht";
 
   return (
     <Card className="overflow-hidden">
@@ -30,7 +32,7 @@ export const WebsiteCard = ({ id, name, url, template, lastUpdated, onEdit, onDe
         <CardTitle className="text-lg flex justify-between items-start">
           <span>{name}</span>
           <span className={`text-xs px-2 py-1 rounded-full ${
-            status === "veröffentlicht" 
+            isPublished 
               ? "bg-green-100 text-green-800" 
               : "bg-amber-100 text-amber-800"
           }`}>
