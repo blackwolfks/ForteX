@@ -13,7 +13,7 @@ export const contentService = {
       }
 
       console.log("Fetching website content for:", websiteId);
-      const { data, error } = await callRPC<any[]>('get_website_content', { website_id: websiteId });
+      const { data, error } = await callRPC('get_website_content', { website_id: websiteId });
       
       if (error) {
         console.error("Error from get_website_content RPC:", error);
@@ -82,7 +82,7 @@ export const contentService = {
 
       console.log("Adding website change history:", websiteId, contentSnapshot, changedFields);
       
-      const { data, error } = await callRPC<string>('add_website_change_history', { 
+      const { data, error } = await callRPC('add_website_change_history', { 
         website_id: websiteId,
         content_snapshot: contentSnapshot,
         changed_fields: changedFields
@@ -111,7 +111,7 @@ export const contentService = {
       }
 
       console.log("Fetching website change history for:", websiteId);
-      const { data, error } = await callRPC<any[]>('get_website_change_history', { website_id: websiteId });
+      const { data, error } = await callRPC('get_website_change_history', { website_id: websiteId });
       
       if (error) {
         console.error("Error from get_website_change_history RPC:", error);
