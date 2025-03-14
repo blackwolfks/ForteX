@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -172,22 +173,39 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
       if (success) {
         setOriginalContent({...content});
         
-        setHasChanges(false);
+        // Only reset content-related changes
+        const websiteChanged = websiteService.compareWebsiteChanges(
+          originalWebsite,
+          {
+            name: websiteName,
+            url: websiteUrl,
+            template: websiteTemplate,
+            shop_template: shopTemplate
+          },
+          originalContent,
+          content
+        ).websiteChanged;
+        
+        // Only mark as no changes if there are no website metadata changes
+        if (!websiteChanged) {
+          setHasChanges(false);
+        }
+        
         setLastSaved(new Date().toISOString());
         
         await loadChangeHistory();
         
         console.log("Content changes saved successfully");
-        toast.success("Änderungen wurden gespeichert");
+        toast.success("Inhalte wurden gespeichert");
         return true;
       } else {
         console.error("Error saving content changes");
-        toast.error("Fehler beim Speichern der Änderungen");
+        toast.error("Fehler beim Speichern der Inhalte");
         return false;
       }
     } catch (error) {
       console.error("Error saving content changes:", error);
-      toast.error("Fehler beim Speichern der Änderungen");
+      toast.error("Fehler beim Speichern der Inhalte");
       return false;
     } finally {
       setIsSavingContent(false);
@@ -255,6 +273,7 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
   };
   
   const handlePreview = () => {
+    // Just switch tabs without saving
     setActiveTab("preview");
   };
 
@@ -323,12 +342,6 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [hasChanges]);
-
-  useEffect(() => {
-    if (activeTab === "preview" && hasChanges) {
-      saveWebsiteData();
-    }
-  }, [activeTab, hasChanges]);
   
   if (isLoading) {
     return (
@@ -347,7 +360,11 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
             size="sm" 
             onClick={() => {
               if (hasChanges) {
-                saveWebsiteData().then(() => onBack());
+                if (window.confirm("Es gibt ungespeicherte Änderungen. Möchten Sie speichern bevor Sie zurückkehren?")) {
+                  saveWebsiteData().then(() => onBack());
+                } else {
+                  onBack();
+                }
               } else {
                 onBack();
               }
@@ -618,7 +635,7 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
                         disabled={!hasChanges || isSavingContent}
                       >
                         <Save className="h-4 w-4 mr-1" />
-                        {isSavingContent ? "Wird gespeichert..." : hasChanges ? "Änderungen speichern" : "Gespeichert"}
+                        {isSavingContent ? "Wird gespeichert..." : "Inhalte speichern"}
                       </Button>
                     </div>
                   </div>
