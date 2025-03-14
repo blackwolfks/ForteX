@@ -1,10 +1,9 @@
 
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import WebsiteList from './WebsiteList';
 import WebsiteStatsView from './WebsiteStatsView';
+import WebsiteBuilderSettings from './WebsiteBuilderSettings';
 
 export default function WebsiteBuilderView() {
   const [activeTab, setActiveTab] = useState('websites');
@@ -29,44 +28,7 @@ export default function WebsiteBuilderView() {
         </TabsContent>
         
         <TabsContent value="settings" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Website-Builder Einstellungen</CardTitle>
-              <CardDescription>Konfigurieren Sie Ihren Website-Builder</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h3 className="text-lg font-medium mb-2">Allgemeine Einstellungen</h3>
-                <p className="text-muted-foreground mb-4">Passen Sie die allgemeinen Einstellungen Ihres Website-Builders an</p>
-                
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium">Standard-Domain</h4>
-                      <p className="text-sm text-muted-foreground">Die Domain für neu erstellte Websites</p>
-                    </div>
-                    <Button variant="outline">Konfigurieren</Button>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium">Benutzerdefinierte Domains</h4>
-                      <p className="text-sm text-muted-foreground">Eigene Domains für Ihre Websites verwenden</p>
-                    </div>
-                    <Button variant="outline">Verwalten</Button>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium">SEO-Einstellungen</h4>
-                      <p className="text-sm text-muted-foreground">Standard-SEO-Einstellungen für neue Websites</p>
-                    </div>
-                    <Button variant="outline">Bearbeiten</Button>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <WebsiteBuilderSettings />
         </TabsContent>
       </Tabs>
     </div>

@@ -235,6 +235,36 @@ export type Database = {
         }
         Relationships: []
       }
+      website_builder_settings: {
+        Row: {
+          created_at: string | null
+          custom_domains: Json | null
+          default_domain: string | null
+          id: string
+          seo_settings: Json | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          custom_domains?: Json | null
+          default_domain?: string | null
+          id?: string
+          seo_settings?: Json | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          custom_domains?: Json | null
+          default_domain?: string | null
+          id?: string
+          seo_settings?: Json | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       website_change_history: {
         Row: {
           changed_at: string
@@ -412,6 +442,18 @@ export type Database = {
           last_saved: string
         }[]
       }
+      get_website_builder_settings: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          user_id: string
+          default_domain: string
+          custom_domains: Json
+          seo_settings: Json
+          created_at: string
+          updated_at: string
+        }[]
+      }
       get_website_by_id: {
         Args: {
           site_id: string
@@ -452,6 +494,14 @@ export type Database = {
           created_at: string
           updated_at: string
         }[]
+      }
+      save_website_builder_settings: {
+        Args: {
+          p_default_domain?: string
+          p_custom_domains?: Json
+          p_seo_settings?: Json
+        }
+        Returns: boolean
       }
       save_website_content: {
         Args: {

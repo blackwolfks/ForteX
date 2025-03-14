@@ -14,6 +14,7 @@ import { templateService } from './website/templates';
 import { contentService } from './website/content';
 import { mediaService } from './website/media';
 import { websiteManageService } from './website/manage';
+import { settingsService } from './website/settings';
 
 // Export combined service
 export const websiteService = {
@@ -37,5 +38,9 @@ export const websiteService = {
   // Template management
   getTemplates: templateService.getTemplates,
   getShopTemplates: templateService.getShopTemplates,
-  getTemplate: templateService.getTemplate
+  getTemplate: templateService.getTemplate,
+  
+  // Settings management
+  getSettings: settingsService.getSettings,
+  saveSettings: settingsService.saveSettings
 };
