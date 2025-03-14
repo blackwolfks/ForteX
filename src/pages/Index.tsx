@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { CheckIcon } from "lucide-react";
 import { authService } from "@/services/auth-service";
 import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -16,6 +17,41 @@ const Index = () => {
       navigate(`/sign-in?redirect=/checkout&plan=${plan}`);
     }
   };
+
+  // Handle smooth scrolling for anchor links
+  useEffect(() => {
+    // Handle case when URL has hash on load
+    if (window.location.hash) {
+      const id = window.location.hash.substring(1);
+      const element = document.getElementById(id);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+
+    // Add click event listeners to anchor links
+    const handleAnchorClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const anchorElement = target.closest('a');
+      
+      if (anchorElement && anchorElement.hash && anchorElement.hash.startsWith('#')) {
+        e.preventDefault();
+        const id = anchorElement.hash.substring(1);
+        const element = document.getElementById(id);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth" });
+          // Update URL without forcing page reload
+          history.pushState(null, '', anchorElement.hash);
+        }
+      }
+    };
+
+    document.addEventListener('click', handleAnchorClick);
+    
+    return () => {
+      document.removeEventListener('click', handleAnchorClick);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-darkgray-700">
@@ -33,14 +69,14 @@ const Index = () => {
               <Link to="/dashboard">Dashboard öffnen</Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="bg-transparent border-turquoise-500 text-turquoise-500 hover:bg-turquoise-500/10">
-              <Link to="#pricing">Preise ansehen</Link>
+              <a href="#pricing">Preise ansehen</a>
             </Button>
           </div>
         </div>
       </header>
 
       {/* Features Section */}
-      <section className="py-24 bg-darkgray-600">
+      <section id="features" className="py-24 bg-darkgray-600">
         <div className="container mx-auto max-w-6xl px-4">
           <h2 className="text-3xl font-bold text-center mb-16 text-white">Alles was Sie brauchen</h2>
           
@@ -207,7 +243,7 @@ const Index = () => {
       </section>
 
       {/* Testimonials Section */}
-      <section className="py-24 bg-darkgray-600">
+      <section id="testimonials" className="py-24 bg-darkgray-600">
         <div className="container mx-auto max-w-6xl px-4">
           <h2 className="text-3xl font-bold text-center mb-16 text-white">Was unsere Kunden sagen</h2>
           
@@ -268,9 +304,9 @@ const Index = () => {
             <div>
               <h4 className="text-base font-medium mb-4">Produkt</h4>
               <ul className="space-y-2">
-                <li><a href="#" className="text-gray-400 hover:text-turquoise-500">Features</a></li>
+                <li><a href="#features" className="text-gray-400 hover:text-turquoise-500">Features</a></li>
                 <li><a href="#pricing" className="text-gray-400 hover:text-turquoise-500">Preise</a></li>
-                <li><a href="#" className="text-gray-400 hover:text-turquoise-500">Testimonials</a></li>
+                <li><a href="#testimonials" className="text-gray-400 hover:text-turquoise-500">Testimonials</a></li>
                 <li><a href="#" className="text-gray-400 hover:text-turquoise-500">FAQ</a></li>
               </ul>
             </div>

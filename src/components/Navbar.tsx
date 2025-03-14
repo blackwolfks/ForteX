@@ -1,7 +1,7 @@
 
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, UserCircle } from "lucide-react";
+import { Menu, UserCircle, Home } from "lucide-react";
 import { useState, useEffect } from "react";
 import { authService } from "@/services/auth-service";
 import { useToast } from "@/hooks/use-toast";
@@ -11,6 +11,8 @@ const Navbar = () => {
   const [currentUser, setCurrentUser] = useState<{ name?: string } | null>(null);
   const { toast } = useToast();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const location = useLocation();
+  const isDashboard = location.pathname.includes('/dashboard');
   
   useEffect(() => {
     const checkAuth = async () => {
@@ -57,25 +59,44 @@ const Navbar = () => {
           </div>
           
           <div className="hidden md:flex items-center space-x-2">
-            <Button asChild variant="ghost" className="nav-link hover:bg-secondary">
-              <Link to="/">Startseite</Link>
-            </Button>
-            <Button asChild variant="ghost" className="nav-link hover:bg-secondary">
-              <Link to="/#features">Features</Link>
-            </Button>
-            <Button asChild variant="ghost" className="nav-link hover:bg-secondary">
-              <Link to="/#pricing">Preise</Link>
-            </Button>
-            <Button asChild variant="ghost" className="nav-link hover:bg-secondary">
-              <Link to="/#testimonials">Testimonials</Link>
-            </Button>
+            {isDashboard ? (
+              <Button asChild variant="ghost" className="nav-link hover:bg-secondary">
+                <Link to="/">
+                  <Home className="mr-2 h-4 w-4" />
+                  Zur Startseite
+                </Link>
+              </Button>
+            ) : (
+              <>
+                <Button asChild variant="ghost" className="nav-link hover:bg-secondary">
+                  <Link to="/">Startseite</Link>
+                </Button>
+                <Button asChild variant="ghost" className="nav-link hover:bg-secondary">
+                  <a href="/#features">Features</a>
+                </Button>
+                <Button asChild variant="ghost" className="nav-link hover:bg-secondary">
+                  <a href="/#pricing">Preise</a>
+                </Button>
+                <Button asChild variant="ghost" className="nav-link hover:bg-secondary">
+                  <a href="/#testimonials">Testimonials</a>
+                </Button>
+              </>
+            )}
           </div>
           
           <div className="hidden md:flex items-center space-x-4">
             {isAuthenticated ? (
               <>
+                {!isDashboard && (
+                  <Button asChild variant="outline" className="border-primary/20 hover:border-primary/30">
+                    <Link to="/dashboard">
+                      <UserCircle className="mr-2 h-4 w-4" />
+                      Dashboard
+                    </Link>
+                  </Button>
+                )}
                 <Button asChild variant="outline" className="border-primary/20 hover:border-primary/30">
-                  <Link to="/dashboard">
+                  <Link to="/profile">
                     <UserCircle className="mr-2 h-4 w-4" />
                     {currentUser?.name || "Mein Konto"}
                   </Link>
@@ -112,23 +133,39 @@ const Navbar = () => {
         {isMenuOpen && (
           <div className="md:hidden py-2 pb-4 animate-fade-in">
             <div className="flex flex-col space-y-2">
-              <Button asChild variant="ghost" className="justify-start">
-                <Link to="/">Startseite</Link>
-              </Button>
-              <Button asChild variant="ghost" className="justify-start">
-                <Link to="/#features">Features</Link>
-              </Button>
-              <Button asChild variant="ghost" className="justify-start">
-                <Link to="/#pricing">Preise</Link>
-              </Button>
-              <Button asChild variant="ghost" className="justify-start">
-                <Link to="/#testimonials">Testimonials</Link>
-              </Button>
+              {isDashboard ? (
+                <Button asChild variant="ghost" className="justify-start">
+                  <Link to="/">
+                    <Home className="mr-2 h-4 w-4" />
+                    Zur Startseite
+                  </Link>
+                </Button>
+              ) : (
+                <>
+                  <Button asChild variant="ghost" className="justify-start">
+                    <Link to="/">Startseite</Link>
+                  </Button>
+                  <Button asChild variant="ghost" className="justify-start">
+                    <a href="/#features">Features</a>
+                  </Button>
+                  <Button asChild variant="ghost" className="justify-start">
+                    <a href="/#pricing">Preise</a>
+                  </Button>
+                  <Button asChild variant="ghost" className="justify-start">
+                    <a href="/#testimonials">Testimonials</a>
+                  </Button>
+                </>
+              )}
               
               {isAuthenticated ? (
                 <>
+                  {!isDashboard && (
+                    <Button asChild variant="ghost" className="justify-start">
+                      <Link to="/dashboard">Dashboard</Link>
+                    </Button>
+                  )}
                   <Button asChild variant="ghost" className="justify-start">
-                    <Link to="/dashboard">Mein Konto</Link>
+                    <Link to="/profile">Mein Konto</Link>
                   </Button>
                   <Button variant="ghost" className="justify-start" onClick={handleSignOut}>
                     Abmelden

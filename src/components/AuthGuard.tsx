@@ -46,7 +46,8 @@ const AuthGuard = ({
       });
     } else if (!requireAuth && isAuthenticated) {
       // Benutzer ist angemeldet, aber keine Authentifizierung erforderlich (z.B. Anmeldeseite)
-      navigate('/dashboard', { replace: true });
+      // Änderung: Umleitung zur Startseite statt zum Dashboard
+      navigate('/', { replace: true });
     }
   }, [isAuthenticated, requireAuth, navigate, redirectTo, location.pathname, isLoading]);
 
