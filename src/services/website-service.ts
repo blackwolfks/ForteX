@@ -254,7 +254,15 @@ export const websiteService = {
         throw error;
       }
       
-      return data?.[0] || null;
+      if (!data?.[0]) {
+        return null;
+      }
+      
+      // Convert Json to Record<string, any>
+      return {
+        ...data[0],
+        content: data[0].content as Record<string, any>
+      };
     } catch (error) {
       console.error("Error fetching website content:", error);
       toast.error("Fehler beim Laden des Website-Inhalts");
@@ -314,7 +322,15 @@ export const websiteService = {
         throw error;
       }
       
-      return data || [];
+      if (!data) {
+        return [];
+      }
+      
+      // Convert Json to Record<string, any>
+      return data.map(item => ({
+        ...item,
+        content_snapshot: item.content_snapshot as Record<string, any>
+      }));
     } catch (error) {
       console.error("Error fetching website change history:", error);
       toast.error("Fehler beim Laden der Änderungshistorie");
