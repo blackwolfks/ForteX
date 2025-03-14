@@ -128,4 +128,3 @@ const CFXCallback = () => {
 };
 
 export default CFXCallback;
-

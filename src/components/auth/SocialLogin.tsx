@@ -56,18 +56,22 @@ const SocialLogin = ({ setError, redirectUrl, plan }: SocialLoginProps) => {
         localStorage.setItem("cfx_return_to", redirectUrl.replace("/", ""));
       }
       
-      // Generate a unique interaction ID - would be regenerated on each connection
-      // In a production app, this would be generated server-side or retrieved from an API
-      const cfxUniqueId = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
-      
-      const CFX_REDIRECT_URI = `${window.location.origin}/auth/cfx-callback`;
+      // Get the CFX interaction URL from environment
       const CFX_INTERACTION_URL = import.meta.env.VITE_CFX_INTERACTION_URL;
+      const CFX_REDIRECT_URI = `${window.location.origin}/auth/cfx-callback`;
       
-      // Ensure the base URL ends with a slash if needed
+      // Ensure base URL ends with a slash if needed
       const cfxBaseUrl = CFX_INTERACTION_URL.endsWith('/') ? CFX_INTERACTION_URL : `${CFX_INTERACTION_URL}/`;
       
-      // Build the interaction URL (no client_id needed as it uses a unique interaction ID)
-      const cfxAuthUrl = `${cfxBaseUrl}interaction/${cfxUniqueId}?redirect_uri=${encodeURIComponent(CFX_REDIRECT_URI)}&state=${stateToken}`;
+      // Generate a unique random ID similar to what's shown in the screenshot (random alphanumeric string)
+      // This acts as a unique session identifier for this authorization request
+      const uniqueId = Array(20)
+        .fill(0)
+        .map(() => Math.random().toString(36).charAt(2))
+        .join('');
+      
+      // Build the interaction URL without client_id, using the format from the screenshot
+      const cfxAuthUrl = `${cfxBaseUrl}interaction/${uniqueId}?redirect_uri=${encodeURIComponent(CFX_REDIRECT_URI)}&state=${stateToken}`;
       
       console.log("Redirecting to CFX auth URL:", cfxAuthUrl);
       
@@ -130,4 +134,3 @@ const SocialLogin = ({ setError, redirectUrl, plan }: SocialLoginProps) => {
 };
 
 export default SocialLogin;
-
