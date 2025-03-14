@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { 
   websiteService, 
@@ -11,7 +10,19 @@ import { toast } from 'sonner';
 import { Product } from '@/lib/supabase';
 
 // Template defintions
-const TEMPLATES = {
+const TEMPLATES: Record<string, {
+  sections: WebsiteSection[];
+  header: {
+    logoText: string;
+    navigation: { label: string; link: string }[];
+  };
+  footer: {
+    companyName: string;
+    copyrightText: string;
+    links: { label: string; link: string }[];
+    socialMedia: { platform: string; link: string }[];
+  };
+}> = {
   'business-standard': {
     sections: [
       {
@@ -22,7 +33,7 @@ const TEMPLATES = {
         imageUrl: '/placeholder.svg',
         backgroundColor: '#f8f9fa',
         textColor: '#212529',
-        alignment: 'left',
+        alignment: 'left' as 'left' | 'center' | 'right',
         buttonText: 'Mehr erfahren',
         buttonLink: '#services'
       },
@@ -33,7 +44,7 @@ const TEMPLATES = {
         content: 'Unser Unternehmen wurde gegründet, um erstklassige Dienstleistungen anzubieten. Wir haben uns auf die Bereitstellung hochwertiger Lösungen spezialisiert.',
         backgroundColor: '#ffffff',
         textColor: '#212529',
-        alignment: 'center'
+        alignment: 'center' as 'left' | 'center' | 'right'
       },
       {
         id: crypto.randomUUID(),
@@ -43,7 +54,7 @@ const TEMPLATES = {
         imageUrl: '/placeholder.svg',
         backgroundColor: '#f8f9fa',
         textColor: '#212529',
-        alignment: 'center'
+        alignment: 'center' as 'left' | 'center' | 'right'
       }
     ],
     header: {
@@ -80,7 +91,7 @@ const TEMPLATES = {
         imageUrl: '/placeholder.svg',
         backgroundColor: '#ffffff',
         textColor: '#000000',
-        alignment: 'center',
+        alignment: 'center' as 'left' | 'center' | 'right',
         buttonText: 'Jetzt einkaufen',
         buttonLink: '#products'
       },
@@ -93,7 +104,7 @@ const TEMPLATES = {
         columns: 3,
         backgroundColor: '#f8f9fa',
         textColor: '#212529',
-        alignment: 'center'
+        alignment: 'center' as 'left' | 'center' | 'right'
       },
       {
         id: crypto.randomUUID(),
@@ -102,7 +113,7 @@ const TEMPLATES = {
         content: 'Wir bieten erstklassige Produkte, schnellen Versand und exzellenten Kundenservice.',
         backgroundColor: '#ffffff',
         textColor: '#212529',
-        alignment: 'center'
+        alignment: 'center' as 'left' | 'center' | 'right'
       }
     ],
     header: {
@@ -139,7 +150,7 @@ const TEMPLATES = {
         imageUrl: '/placeholder.svg',
         backgroundColor: '#000000',
         textColor: '#ffffff',
-        alignment: 'center',
+        alignment: 'center' as 'left' | 'center' | 'right',
         buttonText: 'Meine Arbeiten',
         buttonLink: '#works'
       },
@@ -151,7 +162,7 @@ const TEMPLATES = {
         imageUrl: '/placeholder.svg',
         backgroundColor: '#ffffff',
         textColor: '#000000',
-        alignment: 'center'
+        alignment: 'center' as 'left' | 'center' | 'right'
       },
       {
         id: crypto.randomUUID(),
@@ -160,7 +171,7 @@ const TEMPLATES = {
         content: 'Ich bin ein Designer und Entwickler mit über 10 Jahren Erfahrung in der Branche.',
         backgroundColor: '#f8f9fa',
         textColor: '#212529',
-        alignment: 'left'
+        alignment: 'left' as 'left' | 'center' | 'right'
       }
     ],
     header: {
