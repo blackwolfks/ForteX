@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { websiteService, Website } from "@/services/website-service";
+import { websiteService, Website, WebsiteChangeHistory } from "@/services/website-service";
 
 export function useWebsiteBuilder() {
   const navigate = useNavigate();
@@ -13,6 +13,8 @@ export function useWebsiteBuilder() {
   const [showNewWebsiteDialog, setShowNewWebsiteDialog] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [lastChangeTimestamp, setLastChangeTimestamp] = useState<number | null>(null);
+  const [changeHistory, setChangeHistory] = useState<WebsiteChangeHistory[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   // Check if user is authenticated
   useEffect(() => {
@@ -43,9 +45,35 @@ export function useWebsiteBuilder() {
     }
   };
 
+  // Load change history for a specific website
+  const loadChangeHistory = async (websiteId: string) => {
+    if (!websiteId) return;
+    
+    setIsLoadingHistory(true);
+    try {
+      const history = await websiteService.getWebsiteChangeHistory(websiteId);
+      console.log("Loaded change history:", history);
+      setChangeHistory(history);
+    } catch (error) {
+      console.error("Error loading change history:", error);
+      toast.error("Fehler beim Laden der Änderungshistorie");
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
   useEffect(() => {
     loadWebsites();
   }, []);
+
+  // Load change history when selected website changes
+  useEffect(() => {
+    if (selectedWebsite) {
+      loadChangeHistory(selectedWebsite);
+    } else {
+      setChangeHistory([]);
+    }
+  }, [selectedWebsite]);
 
   const handleCreateWebsite = async (name: string, template: string) => {
     if (!name.trim()) {
@@ -121,6 +149,12 @@ export function useWebsiteBuilder() {
         const action = shouldPublish ? "veröffentlicht" : "zurückgezogen";
         toast.success(`Website wurde ${action}`);
         await loadWebsites();
+        
+        // Refresh change history
+        if (selectedWebsite === id) {
+          await loadChangeHistory(id);
+        }
+        
         return true;
       } else {
         const action = shouldPublish ? "Veröffentlichen" : "Zurückziehen";
@@ -145,6 +179,9 @@ export function useWebsiteBuilder() {
     handleDeleteWebsite,
     handlePublishWebsite,
     loadWebsites,
-    lastChangeTimestamp
+    lastChangeTimestamp,
+    changeHistory,
+    isLoadingHistory,
+    loadChangeHistory
   };
 }

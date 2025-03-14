@@ -184,6 +184,48 @@ export type Database = {
         }
         Relationships: []
       }
+      website_change_history: {
+        Row: {
+          changed_at: string
+          changed_by: string
+          changed_fields: string[]
+          content_snapshot: Json
+          id: string
+          website_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by: string
+          changed_fields: string[]
+          content_snapshot: Json
+          id?: string
+          website_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string
+          changed_fields?: string[]
+          content_snapshot?: Json
+          id?: string
+          website_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_website"
+            columns: ["website_id"]
+            isOneToOne: false
+            referencedRelation: "websites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "website_change_history_website_id_fkey"
+            columns: ["website_id"]
+            isOneToOne: false
+            referencedRelation: "websites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       website_content: {
         Row: {
           content: Json
@@ -257,6 +299,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_website_change_history: {
+        Args: {
+          website_id: string
+          content_snapshot: Json
+          changed_fields: string[]
+        }
+        Returns: string
+      }
       create_website:
         | {
             Args: {
@@ -311,6 +361,19 @@ export type Database = {
           user_id: string
           created_at: string
           last_saved: string
+        }[]
+      }
+      get_website_change_history: {
+        Args: {
+          website_id: string
+        }
+        Returns: {
+          id: string
+          website_id: string
+          content_snapshot: Json
+          changed_fields: string[]
+          changed_at: string
+          changed_by: string
         }[]
       }
       get_website_content: {

@@ -7,11 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, Eye, Layout, Type, Image, List, ShoppingCart } from "lucide-react";
+import { ArrowLeft, Save, Eye, Layout, Type, Image, List, ShoppingCart, History } from "lucide-react";
 import { toast } from "sonner";
 import { TextConfigSection } from "./TextConfigSection";
-import { websiteService, WebsiteContent, WebsiteSection } from "@/services/website-service";
+import { websiteService, WebsiteContent, WebsiteSection, WebsiteChangeHistory } from "@/services/website-service";
 import { useNavigate } from "react-router-dom";
+import { WebsiteChangeHistoryPanel } from "./WebsiteChangeHistoryPanel";
 
 interface WebsiteEditorProps {
   websiteId: string;
@@ -104,7 +105,10 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [originalContent, setOriginalContent] = useState<WebsiteContent | null>(null);
   const [originalWebsite, setOriginalWebsite] = useState<any>(null);
+  const [changeHistory, setChangeHistory] = useState<WebsiteChangeHistory[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   
+  // Load website data
   useEffect(() => {
     const loadWebsiteData = async () => {
       setIsLoading(true);
@@ -125,6 +129,9 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
           setContent(content);
           setLastSaved(website.last_saved || null);
           setIsInitialized(true);
+          
+          // Load change history
+          await loadChangeHistory();
         } else {
           toast.error("Website konnte nicht geladen werden");
           onBack();
@@ -139,6 +146,20 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
 
     loadWebsiteData();
   }, [websiteId, onBack]);
+  
+  // Load change history
+  const loadChangeHistory = async () => {
+    setIsLoadingHistory(true);
+    try {
+      const history = await websiteService.getWebsiteChangeHistory(websiteId);
+      console.log("Loaded change history:", history);
+      setChangeHistory(history);
+    } catch (error) {
+      console.error("Error loading change history:", error);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
   
   // Improved save function with error handling
   const saveWebsiteData = async () => {
@@ -169,6 +190,10 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
         
         setHasChanges(false);
         setLastSaved(new Date().toISOString());
+        
+        // Refresh change history
+        await loadChangeHistory();
+        
         console.log("Website data saved successfully");
         toast.success("Änderungen wurden gespeichert");
         return true;
@@ -217,6 +242,15 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
     
     setHasChanges(true);
     toast.success("Template wurde angewendet");
+  };
+
+  // Handle restoring a previous version
+  const handleRestoreVersion = (versionContent: WebsiteContent) => {
+    if (window.confirm("Sind Sie sicher, dass Sie diese Version wiederherstellen möchten? Alle ungespeicherten Änderungen gehen verloren.")) {
+      setContent(versionContent);
+      setHasChanges(true);
+      toast.success("Version wurde wiederhergestellt");
+    }
   };
 
   // Detect changes by comparing to original data
@@ -321,6 +355,10 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
           <TabsTrigger value="edit">Editor</TabsTrigger>
           <TabsTrigger value="preview">Vorschau</TabsTrigger>
           <TabsTrigger value="settings">Einstellungen</TabsTrigger>
+          <TabsTrigger value="history">
+            <History className="h-4 w-4 mr-1" />
+            Änderungshistorie
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="edit" className="space-y-4">
@@ -681,6 +719,21 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+        
+        <TabsContent value="history">
+          <div className="grid grid-cols-1 gap-4">
+            <WebsiteChangeHistoryPanel 
+              history={changeHistory} 
+              isLoading={isLoadingHistory}
+              onRestoreVersion={handleRestoreVersion}
+            />
+            
+            <div className="my-4 p-4 border rounded-md bg-slate-50 text-sm text-muted-foreground">
+              <p>In der Änderungshistorie sehen Sie alle Änderungen, die an dieser Website vorgenommen wurden. Jede Änderung wird mit einem Zeitstempel und den geänderten Feldern gespeichert.</p>
+              <p className="mt-2">Sie können eine frühere Version wiederherstellen, indem Sie auf "Wiederherstellen" klicken.</p>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

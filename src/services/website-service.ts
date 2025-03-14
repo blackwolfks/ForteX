@@ -34,6 +34,15 @@ export type WebsiteChanges = {
   changedFields: string[];
 };
 
+export type WebsiteChangeHistory = {
+  id: string;
+  website_id: string;
+  content_snapshot: WebsiteContent;
+  changed_fields: string[];
+  changed_at: string;
+  changed_by: string;
+};
+
 export const websiteService = {
   /**
    * Compares a website with its original state to identify changes
@@ -141,6 +150,59 @@ export const websiteService = {
   },
 
   /**
+   * Fetches all change history for a website
+   */
+  async getWebsiteChangeHistory(websiteId: string): Promise<WebsiteChangeHistory[]> {
+    try {
+      console.log("Fetching website change history for:", websiteId);
+      
+      const { data, error } = await supabase
+        .rpc('get_website_change_history', { website_id: websiteId });
+      
+      if (error) {
+        console.error("Error fetching website change history:", error);
+        throw error;
+      }
+      
+      console.log("Received change history data:", data);
+      return data as WebsiteChangeHistory[] || [];
+    } catch (error) {
+      console.error("Failed to fetch website change history:", error);
+      toast.error("Fehler beim Laden der Änderungshistorie");
+      return [];
+    }
+  },
+
+  /**
+   * Records a change to the website history
+   */
+  async addChangeHistory(websiteId: string, contentSnapshot: WebsiteContent, changedFields: string[]): Promise<string | null> {
+    try {
+      console.log("Recording change history for website:", websiteId);
+      console.log("Changed fields:", changedFields);
+      
+      const { data: historyId, error } = await supabase
+        .rpc('add_website_change_history', { 
+          website_id: websiteId,
+          content_snapshot: contentSnapshot,
+          changed_fields: changedFields
+        });
+      
+      if (error) {
+        console.error("Error recording change history:", error);
+        throw error;
+      }
+      
+      console.log("Change history recorded with ID:", historyId);
+      return historyId as string;
+    } catch (error) {
+      console.error("Failed to record change history:", error);
+      // Don't show toast here to avoid confusion with the main save operation
+      return null;
+    }
+  },
+
+  /**
    * Fetches a single website by ID with its content
    */
   async getWebsiteById(id: string): Promise<{website: Website, content: WebsiteContent} | null> {
@@ -240,6 +302,13 @@ export const websiteService = {
         throw contentError;
       }
       
+      // Record initial change history
+      await this.addChangeHistory(
+        websiteId as string, 
+        content, 
+        ['initial_creation']
+      );
+      
       return websiteId as string;
     } catch (error) {
       console.error("Failed to create website:", error);
@@ -311,6 +380,15 @@ export const websiteService = {
         }
       }
       
+      // Record change history if there are changes
+      if (changes.websiteChanged || changes.contentChanged) {
+        await this.addChangeHistory(
+          id, 
+          content, 
+          changes.changedFields
+        );
+      }
+      
       console.log("Website and content updated successfully");
       console.log("Changed fields:", changes.changedFields);
       return true;
@@ -339,8 +417,16 @@ export const websiteService = {
         throw error;
       }
       
-      // Hier würde in einem realen System ein Webhook oder eine andere Funktion 
-      // ausgelöst werden, die die Webseite tatsächlich veröffentlicht
+      // Record this change in history
+      const websiteData = await this.getWebsiteById(id);
+      if (websiteData) {
+        await this.addChangeHistory(
+          id,
+          websiteData.content,
+          [`status_changed_to_${status}`]
+        );
+      }
+      
       console.log(`Website mit ID ${id} wurde ${shouldPublish ? 'veröffentlicht' : 'zurückgezogen'}`);
       
       return true;
