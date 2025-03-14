@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -28,7 +27,95 @@ export type WebsiteSection = {
   description: string;
 };
 
+export type WebsiteChanges = {
+  websiteChanged: boolean;
+  contentChanged: boolean;
+  changedFields: string[];
+};
+
 export const websiteService = {
+  /**
+   * Compares a website with its original state to identify changes
+   */
+  compareWebsiteChanges(
+    originalWebsite: Website | null, 
+    updatedWebsite: Partial<Website>,
+    originalContent: WebsiteContent | null,
+    updatedContent: WebsiteContent | null
+  ): WebsiteChanges {
+    const changes: WebsiteChanges = {
+      websiteChanged: false,
+      contentChanged: false,
+      changedFields: []
+    };
+
+    // Check website properties
+    if (originalWebsite && updatedWebsite) {
+      if (originalWebsite.name !== updatedWebsite.name) {
+        changes.websiteChanged = true;
+        changes.changedFields.push('name');
+      }
+      if (originalWebsite.url !== updatedWebsite.url) {
+        changes.websiteChanged = true;
+        changes.changedFields.push('url');
+      }
+      if (originalWebsite.template !== updatedWebsite.template) {
+        changes.websiteChanged = true;
+        changes.changedFields.push('template');
+      }
+      if (originalWebsite.shop_template !== updatedWebsite.shop_template) {
+        changes.websiteChanged = true;
+        changes.changedFields.push('shop_template');
+      }
+      if (originalWebsite.status !== updatedWebsite.status) {
+        changes.websiteChanged = true;
+        changes.changedFields.push('status');
+      }
+    }
+
+    // Check content changes
+    if (originalContent && updatedContent) {
+      if (originalContent.title !== updatedContent.title) {
+        changes.contentChanged = true;
+        changes.changedFields.push('content.title');
+      }
+      if (originalContent.subtitle !== updatedContent.subtitle) {
+        changes.contentChanged = true;
+        changes.changedFields.push('content.subtitle');
+      }
+      if (originalContent.description !== updatedContent.description) {
+        changes.contentChanged = true;
+        changes.changedFields.push('content.description');
+      }
+      if (originalContent.header !== updatedContent.header) {
+        changes.contentChanged = true;
+        changes.changedFields.push('content.header');
+      }
+      
+      // Check sections
+      if (originalContent.sections.length !== updatedContent.sections.length) {
+        changes.contentChanged = true;
+        changes.changedFields.push('content.sections');
+      } else {
+        // Compare each section
+        for (let i = 0; i < originalContent.sections.length; i++) {
+          const originalSection = originalContent.sections[i];
+          const updatedSection = updatedContent.sections[i];
+          
+          if (
+            originalSection.title !== updatedSection.title ||
+            originalSection.description !== updatedSection.description
+          ) {
+            changes.contentChanged = true;
+            changes.changedFields.push(`content.sections[${i}]`);
+          }
+        }
+      }
+    }
+
+    return changes;
+  },
+
   /**
    * Fetches all websites for the current user
    */
@@ -167,37 +254,64 @@ export const websiteService = {
     try {
       console.log("Updating website:", id, websiteData);
       
-      // Update website
-      const { error: websiteError } = await supabase
-        .rpc('update_website', {
-          website_id: id,
-          website_name: websiteData.name,
-          website_url: websiteData.url,
-          website_template: websiteData.template,
-          website_shop_template: websiteData.shop_template,
-          website_status: websiteData.status
-        });
+      // Fetch current website data to check for changes
+      const currentData = await this.getWebsiteById(id);
+      if (!currentData) {
+        throw new Error("Website nicht gefunden");
+      }
       
-      if (websiteError) {
-        console.error("Error updating website:", websiteError);
-        throw websiteError;
+      // Compare changes
+      const changes = this.compareWebsiteChanges(
+        currentData.website,
+        websiteData,
+        currentData.content,
+        content
+      );
+      
+      console.log("Detected changes:", changes);
+      
+      // Only update if there are changes to avoid unnecessary operations
+      if (!changes.websiteChanged && !changes.contentChanged) {
+        console.log("No changes detected, skipping update");
+        return true;
+      }
+      
+      // Update website if needed
+      if (changes.websiteChanged) {
+        const { error: websiteError } = await supabase
+          .rpc('update_website', {
+            website_id: id,
+            website_name: websiteData.name,
+            website_url: websiteData.url,
+            website_template: websiteData.template,
+            website_shop_template: websiteData.shop_template,
+            website_status: websiteData.status
+          });
+        
+        if (websiteError) {
+          console.error("Error updating website:", websiteError);
+          throw websiteError;
+        }
       }
 
-      console.log("Website updated successfully, now updating content");
-      
-      // Update content
-      const { error: contentError } = await supabase
-        .rpc('save_website_content', {
-          website_id: id,
-          content_data: content
-        });
-      
-      if (contentError) {
-        console.error("Error updating website content:", contentError);
-        throw contentError;
+      // Update content if needed
+      if (changes.contentChanged) {
+        console.log("Website content updated");
+        
+        const { error: contentError } = await supabase
+          .rpc('save_website_content', {
+            website_id: id,
+            content_data: content
+          });
+        
+        if (contentError) {
+          console.error("Error updating website content:", contentError);
+          throw contentError;
+        }
       }
       
       console.log("Website and content updated successfully");
+      console.log("Changed fields:", changes.changedFields);
       return true;
     } catch (error) {
       console.error("Failed to update website:", error);

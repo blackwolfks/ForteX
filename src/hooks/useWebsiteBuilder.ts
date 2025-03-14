@@ -12,6 +12,7 @@ export function useWebsiteBuilder() {
   const [selectedWebsite, setSelectedWebsite] = useState<string | null>(null);
   const [showNewWebsiteDialog, setShowNewWebsiteDialog] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [lastChangeTimestamp, setLastChangeTimestamp] = useState<number | null>(null);
 
   // Check if user is authenticated
   useEffect(() => {
@@ -32,6 +33,7 @@ export function useWebsiteBuilder() {
     try {
       const websiteList = await websiteService.getUserWebsites();
       setWebsites(websiteList);
+      setLastChangeTimestamp(Date.now());
     } catch (error) {
       console.error("Error loading websites:", error);
       toast.error("Fehler beim Laden der Websites");
@@ -98,7 +100,7 @@ export function useWebsiteBuilder() {
       const success = await websiteService.deleteWebsite(id);
       if (success) {
         toast.success("Website wurde gelöscht");
-        loadWebsites();
+        await loadWebsites();
         if (selectedWebsite === id) {
           setSelectedWebsite(null);
         }
@@ -113,7 +115,17 @@ export function useWebsiteBuilder() {
 
   const handlePublishWebsite = async (id: string, shouldPublish: boolean) => {
     try {
-      return await websiteService.publishWebsite(id, shouldPublish);
+      const success = await websiteService.publishWebsite(id, shouldPublish);
+      if (success) {
+        const action = shouldPublish ? "veröffentlicht" : "zurückgezogen";
+        toast.success(`Website wurde ${action}`);
+        await loadWebsites();
+        return true;
+      } else {
+        const action = shouldPublish ? "Veröffentlichen" : "Zurückziehen";
+        toast.error(`Fehler beim ${action} der Website`);
+        return false;
+      }
     } catch (error) {
       console.error("Error publishing website:", error);
       return false;
@@ -131,6 +143,7 @@ export function useWebsiteBuilder() {
     handleCreateWebsite,
     handleDeleteWebsite,
     handlePublishWebsite,
-    loadWebsites
+    loadWebsites,
+    lastChangeTimestamp
   };
 }
