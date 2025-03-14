@@ -104,6 +104,30 @@ export type Database = {
         }
         Relationships: []
       }
+      pro_users: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
       product_keys: {
         Row: {
           created_at: string
@@ -325,6 +349,18 @@ export type Database = {
           site_id: string
         }
         Returns: undefined
+      }
+      enable_pro_access: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          success: boolean
+        }[]
+      }
+      get_user_pro_status: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          has_pro: boolean
+        }[]
       }
       get_user_websites: {
         Args: Record<PropertyKey, never>

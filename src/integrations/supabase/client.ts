@@ -42,7 +42,9 @@ type RpcFunctionName =
   | 'get_website_content'
   | 'save_website_content'
   | 'update_website'
-  | 'update_website_status';
+  | 'update_website_status'
+  | 'get_user_pro_status'
+  | 'enable_pro_access';
 
 // Define parameter types for each RPC function
 type RpcParams = {
@@ -87,6 +89,8 @@ type RpcParams = {
     site_id: string;
     website_status: string;
   };
+  'get_user_pro_status': Record<string, never>;
+  'enable_pro_access': Record<string, never>;
 };
 
 // Verbesserte callRPC-Funktion mit zusätzlichem Logging und Fehlerbehandlung

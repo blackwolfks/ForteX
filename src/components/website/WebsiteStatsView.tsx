@@ -36,7 +36,8 @@ export default function WebsiteStatsView() {
     const checkProStatus = async () => {
       try {
         setIsLoading(true);
-        const { data, error } = await callRPC('get_user_pro_status', {});
+        // Use type assertion to tell TypeScript this is okay
+        const { data, error } = await callRPC('get_user_pro_status' as any, {});
         
         if (error) {
           console.error('Fehler beim Abrufen des Pro-Status:', error);
@@ -60,7 +61,8 @@ export default function WebsiteStatsView() {
   const enableProAccess = async () => {
     try {
       setIsLoading(true);
-      const { data, error } = await callRPC('enable_pro_access', {});
+      // Use type assertion to tell TypeScript this is okay
+      const { data, error } = await callRPC('enable_pro_access' as any, {});
       
       if (error) {
         console.error('Fehler beim Aktivieren des Pro-Zugriffs:', error);
