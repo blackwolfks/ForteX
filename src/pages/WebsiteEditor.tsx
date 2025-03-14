@@ -8,6 +8,8 @@ import { ArrowLeft, Undo, Redo } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import WebsiteSettingsPanel from '@/components/website/WebsiteSettingsPanel';
+import SeoSettings from '@/components/website/SeoSettings';
 
 export default function WebsiteEditor() {
   const { websiteId } = useParams<{ websiteId: string }>();
@@ -98,22 +100,12 @@ export default function WebsiteEditor() {
           </div>
         </TabsContent>
         
-        <TabsContent value="settings" className="h-[calc(100vh-48px)] p-4">
-          <div className="bg-card rounded-lg p-6 h-full">
-            <h2 className="text-2xl font-bold mb-4">Website-Einstellungen</h2>
-            <p className="text-muted-foreground">
-              Diese Funktion wird in Kürze verfügbar sein. Hier können Sie später Schriftarten, Farben und andere globale Einstellungen anpassen.
-            </p>
-          </div>
+        <TabsContent value="settings" className="h-[calc(100vh-48px)] p-4 overflow-y-auto">
+          <WebsiteSettingsPanel websiteId={websiteId} />
         </TabsContent>
         
-        <TabsContent value="seo" className="h-[calc(100vh-48px)] p-4">
-          <div className="bg-card rounded-lg p-6 h-full">
-            <h2 className="text-2xl font-bold mb-4">SEO-Einstellungen</h2>
-            <p className="text-muted-foreground">
-              Diese Funktion wird in Kürze verfügbar sein. Hier können Sie später Meta-Tags, Beschreibungen und andere SEO-Einstellungen verwalten.
-            </p>
-          </div>
+        <TabsContent value="seo" className="h-[calc(100vh-48px)] p-4 overflow-y-auto">
+          <SeoSettings websiteId={websiteId} />
         </TabsContent>
       </Tabs>
     </div>
