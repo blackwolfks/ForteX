@@ -4,6 +4,7 @@ import { useWebsiteBuilder } from '@/hooks/useWebsiteBuilder';
 import { WebsiteSection } from '@/services/website-service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Product } from '@/services/product/types';
 import { productService } from '@/services/product';
 import { ChevronLeft, ChevronRight } from 'lucide-react';

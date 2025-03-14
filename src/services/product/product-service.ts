@@ -1,6 +1,6 @@
 
 import { supabase } from '@/lib/supabase';
-import { Product, CreateProductInput } from './types';
+import { Product, CreateProductInput, ProductCartItem } from './types';
 import { productLocalStorage } from './local-storage';
 import { productKeyService } from './product-keys';
 
@@ -209,6 +209,23 @@ class ProductService {
 
   async generateProductKey(productId: string): Promise<string> {
     return productKeyService.generateProductKey(productId);
+  }
+  
+  // Add getCartItems method to fetch cart items from local storage
+  async getCartItems(): Promise<ProductCartItem[]> {
+    // Get cart items from localStorage
+    const cartItemsJson = localStorage.getItem('cartItems');
+    if (!cartItemsJson) {
+      return [];
+    }
+    
+    try {
+      const cartItems = JSON.parse(cartItemsJson) as ProductCartItem[];
+      return cartItems;
+    } catch (error) {
+      console.error('Error parsing cart items from localStorage:', error);
+      return [];
+    }
   }
 }
 

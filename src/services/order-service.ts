@@ -1,33 +1,19 @@
 import { supabase } from '@/lib/supabase';
 import type { Order, Invoice } from '@/lib/supabase';
 import { v4 as uuidv4 } from 'uuid';
+import { ProductCartItem } from '@/services/product/types';
 
 export type { Order, Invoice };
 
 export interface OrderDetails {
-  planId: string;
-  planName: string;
-  amount: number;
-  currency: string;
-  paymentMethod: string;
+  planId?: string;
+  planName?: string;
+  amount?: number;
+  currency?: string;
+  paymentMethod?: string;
   paymentId?: string;
-  status: "pending" | "completed" | "cancelled" | "refunded";
-}
-
-export interface InvoiceDetails {
-  orderId: string;
-  customerName: string;
-  customerEmail: string;
-  billingAddress: {
-    address: string;
-    city: string;
-    postal_code: string;
-    country: string;
-  };
-  planName: string;
-  amount: number;
-  currency: string;
-  paymentMethod: string;
+  status?: "pending" | "completed" | "cancelled" | "refunded";
+  items?: ProductCartItem[];
 }
 
 class OrderService {

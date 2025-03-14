@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,7 @@ import { toast } from 'sonner';
 import { authService } from '@/services/auth-service';
 import { paymentService } from '@/services/payment-service';
 import { orderService } from '@/services/order-service';
-import { PayPalScriptProvider, PayPalButtons } from '@paypal/paypal-js';
+import { loadPayPalScript, PayPalButtons } from "@paypal/paypal-js";
 import { ProductCartItem } from '@/services/product/types';
 import { productService } from '@/services/product';
 
@@ -19,6 +20,7 @@ const Checkout = () => {
   const [cartItems, setCartItems] = useState<ProductCartItem[]>([]);
   const [totalAmount, setTotalAmount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [paypalLoaded, setPaypalLoaded] = useState(false);
 
   useEffect(() => {
     const fetchCartItems = async () => {
@@ -35,6 +37,19 @@ const Checkout = () => {
     };
 
     fetchCartItems();
+    
+    // Load PayPal script
+    const initPayPal = async () => {
+      try {
+        await loadPayPalScript({ "client-id": "test" });
+        setPaypalLoaded(true);
+      } catch (error) {
+        console.error("Failed to load PayPal script:", error);
+        toast.error("Fehler beim Laden von PayPal");
+      }
+    };
+    
+    initPayPal();
   }, []);
 
   const handlePaymentSuccess = async (details: any) => {
@@ -42,6 +57,8 @@ const Checkout = () => {
       await orderService.createOrder({
         items: cartItems,
         paymentId: details.id,
+        status: "completed",
+        paymentMethod: "paypal"
       });
       toast.success('Zahlung erfolgreich! Vielen Dank für Ihren Einkauf.');
       navigate('/thank-you');
@@ -79,7 +96,7 @@ const Checkout = () => {
           )}
         </CardContent>
         <CardFooter>
-          <PayPalScriptProvider options={{ "client-id": "test" }}>
+          {paypalLoaded && cartItems.length > 0 && (
             <PayPalButtons
               createOrder={(data, actions) => {
                 return actions.order.create({
@@ -91,11 +108,13 @@ const Checkout = () => {
                 });
               }}
               onApprove={async (data, actions) => {
-                const details = await actions.order.capture();
-                handlePaymentSuccess(details);
+                if (actions.order) {
+                  const details = await actions.order.capture();
+                  handlePaymentSuccess(details);
+                }
               }}
             />
-          </PayPalScriptProvider>
+          )}
         </CardFooter>
       </Card>
     </div>

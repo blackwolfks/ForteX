@@ -16,3 +16,12 @@ export interface CreateProductInput {
   cfxImported: boolean;
   image?: string;
 }
+
+// Add ProductCartItem interface for shopping cart
+export interface ProductCartItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  image?: string;
+}
