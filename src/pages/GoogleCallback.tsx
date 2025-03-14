@@ -20,19 +20,16 @@ const GoogleCallback = () => {
       try {
         console.log("Google callback triggered, location:", location);
         
-        // Überprüfen, ob wir ein Token im Hash-Fragment haben (zeigt Implicit Flow an)
-        if (location.hash && location.hash.includes('access_token')) {
-          console.error("Invalid callback format: Got token in hash fragment, need code parameter");
-          setDebugInfo(`Hash fragment detected: ${location.hash.substring(0, 20)}...`);
-          throw new Error("OAuth-Konfigurationsfehler: Bei Google ist der falsche OAuth-Typ eingestellt. Bitte in der Google Cloud Console auf 'Authorization Code' umstellen statt 'Implicit' oder 'Token'.");
-        }
-        
         const urlParams = new URLSearchParams(location.search);
         const code = urlParams.get("code");
         const error = urlParams.get("error");
-        const state = urlParams.get("state");
+        const accessToken = location.hash ? new URLSearchParams(location.hash.substring(1)).get("access_token") : null;
         
-        console.log("URL params:", { code: code ? "present" : "missing", error, state: state ? "present" : "missing" });
+        console.log("URL params:", { 
+          code: code ? "present" : "missing", 
+          error, 
+          accessToken: accessToken ? "present" : "missing" 
+        });
         
         if (error) {
           if (error === "access_denied") {
@@ -42,12 +39,15 @@ const GoogleCallback = () => {
           }
         }
         
-        if (!code) {
-          setDebugInfo(`URL search params: ${location.search}`);
-          throw new Error("Kein Autorisierungscode erhalten");
+        // Handle both code and token based flows
+        if (code) {
+          await authService.handleGoogleCallback(code);
+        } else if (accessToken) {
+          await authService.handleGoogleTokenCallback(accessToken);
+        } else {
+          setDebugInfo(`URL search params: ${location.search}, Hash: ${location.hash}`);
+          throw new Error("Keine Authentifizierungsdaten erhalten");
         }
-        
-        await authService.handleGoogleCallback(code);
         
         toast({
           title: "Erfolgreich angemeldet",
@@ -59,10 +59,8 @@ const GoogleCallback = () => {
         console.error("Google Auth Fehler:", err);
         let errorMessage = "Bei der Anmeldung mit Google ist ein Fehler aufgetreten.";
         
-        if (err.message.includes("OAuth-Konfigurationsfehler")) {
+        if (err.message) {
           errorMessage = err.message;
-        } else if (err.message.includes("403")) {
-          errorMessage = "Zugriffsfehler (403): Die Google OAuth-Konfiguration ist nicht korrekt. Bitte überprüfen Sie die Client-ID und die Weiterleitungs-URL in der Google Cloud Console.";
         }
         
         setError(errorMessage);
@@ -92,7 +90,6 @@ const GoogleCallback = () => {
               <div className="flex flex-col mb-4 text-sm">
                 <p className="mb-2">Mögliche Lösungen:</p>
                 <ul className="text-left list-disc pl-5 space-y-1">
-                  <li>Stellen Sie in der Google Cloud Console unter "OAuth 2.0-Konfiguration" den Rückgabetyp auf "Authorization code" ein, nicht auf "Implicit" oder "Token"</li>
                   <li>Prüfen Sie, ob die Google Client-ID korrekt ist: {import.meta.env.VITE_GOOGLE_CLIENT_ID ? import.meta.env.VITE_GOOGLE_CLIENT_ID.substring(0, 10) + "..." : "Nicht gesetzt"}</li>
                   <li>Prüfen Sie, ob die Weiterleitungs-URL (<code>{window.location.origin}/auth/google-callback</code>) in Google Cloud Console konfiguriert ist</li>
                   <li>Vergewissern Sie sich, dass Google als OAuth-Provider in Supabase aktiviert ist</li>

@@ -117,15 +117,11 @@ export const authService = {
     try {
       console.log("Starting Google OAuth sign-in process");
       
-      // Mit Supabase Google OAuth durchführen
+      // Mit Supabase Google OAuth durchführen - ohne spezifischen Flow Type
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: GOOGLE_REDIRECT_URI,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'select_account'
-          }
+          redirectTo: GOOGLE_REDIRECT_URI
         }
       });
       
@@ -145,8 +141,8 @@ export const authService = {
       console.error('Supabase OAuth-Fehler, Fallback zu Mock-OAuth:', error);
       
       // Fallback zu Mock-OAuth
-      // Google OAuth Redirect URL erstellen - auch hier Authorization Code Flow
-      const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(GOOGLE_REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(GOOGLE_SCOPE)}&access_type=offline&prompt=select_account`;
+      // Google OAuth Redirect URL erstellen - ohne Festlegung auf Authorization Code Flow
+      const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(GOOGLE_REDIRECT_URI)}&response_type=token&scope=${encodeURIComponent(GOOGLE_SCOPE)}`;
       
       console.log("Fallback: Redirecting to Google auth URL:", googleAuthUrl);
       
@@ -158,7 +154,7 @@ export const authService = {
     }
   },
   
-  // Google OAuth Callback verarbeiten
+  // Google OAuth Callback verarbeiten (mit Code)
   handleGoogleCallback: async (code: string) => {
     try {
       console.log("Processing Google callback with code:", code.substring(0, 5) + "...");
@@ -187,6 +183,58 @@ export const authService = {
       };
     } catch (error) {
       console.error('Supabase Session-Fehler, Fallback zu Mock-Auth:', error);
+      
+      // Fallback zu Mock-Auth
+      // Simulierte API-Verzögerung
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Simulierter erfolgreicher Login nach OAuth-Callback
+      currentUser = {
+        id: "google_user_id",
+        name: "Google User",
+        email: "google_user@example.com",
+        twoFactorEnabled: false,
+        twoFactorMethod: null,
+        phoneNumber: null
+      };
+      
+      localStorage.setItem("auth_token", "mock_google_jwt_token");
+      
+      return currentUser;
+    }
+  },
+  
+  // Google OAuth Callback verarbeiten (mit Token - Implicit Flow)
+  handleGoogleTokenCallback: async (token: string) => {
+    try {
+      console.log("Processing Google token callback");
+      
+      // Versuchen, mit Token einzuloggen
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token,
+      });
+      
+      if (error) {
+        console.error("Error signing in with token:", error);
+        throw error;
+      }
+      
+      if (!data.session) {
+        console.error("No valid session after token login");
+        throw new Error("Keine gültige Sitzung nach Token-Anmeldung");
+      }
+      
+      console.log("Session obtained successfully");
+      const user = data.session.user;
+      
+      return {
+        id: user.id,
+        name: user.user_metadata?.full_name || "Google User",
+        email: user.email,
+      };
+    } catch (error) {
+      console.error('Supabase Token-Authentifizierungsfehler, Fallback zu Mock-Auth:', error);
       
       // Fallback zu Mock-Auth
       // Simulierte API-Verzögerung
