@@ -15,7 +15,6 @@ import Verification from "./pages/Verification";
 import TwoFactorSetup from "./pages/TwoFactorSetup";
 import GoogleCallback from "./pages/GoogleCallback";
 import DiscordCallback from "./pages/DiscordCallback";
-import CFXCallback from "./pages/CFXCallback";
 import Checkout from "./pages/Checkout";
 import Profile from "./pages/Profile";
 import AuthGuard from "./components/AuthGuard";
@@ -55,7 +54,6 @@ const App = () => (
           <Route path="/verification" element={<Verification />} />
           <Route path="/auth/google-callback" element={<GoogleCallback />} />
           <Route path="/auth/discord-callback" element={<DiscordCallback />} />
-          <Route path="/auth/cfx-callback" element={<CFXCallback />} />
           <Route path="/two-factor-setup" element={
             <AuthGuard requireAuth={true}>
               <TwoFactorSetup />

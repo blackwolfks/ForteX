@@ -125,6 +125,7 @@ const ProductCreator = () => {
       isSubscription: data.isSubscription,
       subscriptionInterval: data.subscriptionInterval,
       image: previewImage || undefined,
+      cfxImported: false,
     };
     
     createProductMutation.mutate(productData);
