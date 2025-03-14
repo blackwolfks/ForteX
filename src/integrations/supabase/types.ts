@@ -184,6 +184,109 @@ export type Database = {
         }
         Relationships: []
       }
+      website_change_history: {
+        Row: {
+          changed_at: string
+          changed_by: string
+          changed_fields: string[]
+          content_snapshot: Json
+          id: string
+          website_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by: string
+          changed_fields: string[]
+          content_snapshot: Json
+          id?: string
+          website_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string
+          changed_fields?: string[]
+          content_snapshot?: Json
+          id?: string
+          website_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "website_change_history_website_id_fkey"
+            columns: ["website_id"]
+            isOneToOne: false
+            referencedRelation: "websites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      website_content: {
+        Row: {
+          content: Json
+          created_at: string
+          id: string
+          updated_at: string
+          website_id: string
+        }
+        Insert: {
+          content?: Json
+          created_at?: string
+          id?: string
+          updated_at?: string
+          website_id: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          id?: string
+          updated_at?: string
+          website_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "website_content_website_id_fkey"
+            columns: ["website_id"]
+            isOneToOne: false
+            referencedRelation: "websites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      websites: {
+        Row: {
+          created_at: string
+          id: string
+          last_saved: string
+          name: string
+          shop_template: string | null
+          status: string
+          template: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_saved?: string
+          name: string
+          shop_template?: string | null
+          status?: string
+          template: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_saved?: string
+          name?: string
+          shop_template?: string | null
+          status?: string
+          template?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

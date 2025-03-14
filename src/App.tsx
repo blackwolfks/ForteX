@@ -18,6 +18,7 @@ import DiscordCallback from "./pages/DiscordCallback";
 import Checkout from "./pages/Checkout";
 import Profile from "./pages/Profile";
 import AuthGuard from "./components/AuthGuard";
+import WebsiteEditor from "./pages/WebsiteEditor";
 
 const queryClient = new QueryClient();
 
@@ -74,6 +75,13 @@ const App = () => (
                 <Navbar />
                 <Profile />
               </>
+            </AuthGuard>
+          } />
+          
+          {/* Website Editor */}
+          <Route path="/dashboard/website-editor/:websiteId" element={
+            <AuthGuard requireAuth={true}>
+              <WebsiteEditor />
             </AuthGuard>
           } />
           
