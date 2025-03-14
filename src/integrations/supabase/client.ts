@@ -30,18 +30,33 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   }
 });
 
+// Define the types of RPC functions for better type safety
+type RpcFunctionName = 
+  | 'add_website_change_history'
+  | 'create_website'
+  | 'delete_website'
+  | 'get_user_websites'
+  | 'get_website_by_id'
+  | 'get_website_change_history'
+  | 'get_website_content'
+  | 'save_website_content'
+  | 'update_website'
+  | 'update_website_status';
+
 // Export an explicit function for RPC calls to ensure API key is always included
 export const callRPC = async <T>(
-  functionName: string,
+  functionName: RpcFunctionName,
   params: Record<string, any> = {}
 ): Promise<{ data: T | null; error: Error | null }> => {
   console.log(`Calling RPC function: ${functionName} with params:`, params);
   
   try {
+    // Make sure the API key is included in every request
     const { data, error } = await supabase.rpc(functionName, params, {
       headers: {
         'apikey': SUPABASE_PUBLISHABLE_KEY,
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
       }
     });
 
@@ -51,7 +66,7 @@ export const callRPC = async <T>(
     }
 
     console.log(`RPC call to ${functionName} successful:`, data);
-    return { data, error: null };
+    return { data: data as T, error: null };
   } catch (error) {
     console.error(`Exception in RPC call to ${functionName}:`, error);
     return { data: null, error: error as Error };
