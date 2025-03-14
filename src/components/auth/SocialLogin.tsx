@@ -61,10 +61,13 @@ const SocialLogin = ({ setError, redirectUrl, plan }: SocialLoginProps) => {
       const CFX_CLIENT_ID = import.meta.env.VITE_CFX_CLIENT_ID;
       const CFX_REDIRECT_URI = `${window.location.origin}/auth/cfx-callback`;
       const CFX_SCOPE = "profile email";
-      const CFX_INTERACTION_URL = import.meta.env.VITE_CFX_INTERACTION_URL || "https://idms.fivem.net/interaction/";
+      const CFX_INTERACTION_URL = import.meta.env.VITE_CFX_INTERACTION_URL;
       
-      // Construct the CFX authorization URL
-      const cfxAuthUrl = `${CFX_INTERACTION_URL}authorize?client_id=${CFX_CLIENT_ID}&redirect_uri=${encodeURIComponent(CFX_REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(CFX_SCOPE)}&state=${stateToken}`;
+      // Construct the CFX authorization URL - ensure URL ends with trailing slash
+      const cfxBaseUrl = CFX_INTERACTION_URL.endsWith('/') ? CFX_INTERACTION_URL : `${CFX_INTERACTION_URL}/`;
+      const cfxAuthUrl = `${cfxBaseUrl}authorize?client_id=${CFX_CLIENT_ID}&redirect_uri=${encodeURIComponent(CFX_REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(CFX_SCOPE)}&state=${stateToken}`;
+      
+      console.log("Redirecting to CFX auth URL:", cfxAuthUrl);
       
       // Redirect to CFX auth page
       window.location.href = cfxAuthUrl;

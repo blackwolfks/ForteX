@@ -151,7 +151,10 @@ const CFXApiKeySpecification = () => {
 
   const handleCFXLogin = async () => {
     try {
-      // Remove the "api-keys" parameter as the function doesn't expect arguments
+      // Save info that we want to return to API keys page after authentication
+      localStorage.setItem("cfx_return_to", "api-keys");
+      
+      // Call the signInWithCFX function without parameters
       await authService.signInWithCFX();
     } catch (err) {
       console.error("CFX Auth Error:", err);

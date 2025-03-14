@@ -23,6 +23,14 @@ const CFXCallback = () => {
         const error = urlParams.get("error");
         const payload = urlParams.get("payload"); // Encrypted payload with API key
         
+        console.log("CFX Callback params:", {
+          hasCode: !!code,
+          hasState: !!state,
+          hasError: !!error,
+          hasPayload: !!payload,
+          search: location.search
+        });
+        
         // Update processing state for better user feedback
         setProcessingState("Autorisierungscode wird verarbeitet...");
 
@@ -45,7 +53,6 @@ const CFXCallback = () => {
         setProcessingState("Authentifizierung mit CFX...");
         
         // Handle CFX callback with the authorization code or encrypted payload
-        // The txAdmin approach handles both authentication code and API key payload
         const userData = await authService.handleCFXCallback(code || payload || "");
         
         // Check if we got user data back
@@ -59,13 +66,17 @@ const CFXCallback = () => {
           variant: "default",
         });
         
-        // Redirect to API keys page if coming from there, otherwise dashboard
-        const returnTo = urlParams.get("return_to") || localStorage.getItem("cfx_return_to");
+        // Redirect to the appropriate page based on the stored return path
+        const returnTo = localStorage.getItem("cfx_return_to");
         localStorage.removeItem("cfx_auth_state");
         localStorage.removeItem("cfx_return_to");
         
-        if (returnTo && returnTo === "api-keys") {
+        if (returnTo === "api-keys") {
           navigate("/cfx-api-keys");
+        } else if (returnTo === "checkout") {
+          navigate("/checkout");
+        } else if (returnTo) {
+          navigate(`/${returnTo}`);
         } else {
           navigate("/dashboard");
         }
