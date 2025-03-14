@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,6 +12,7 @@ import { TextConfigSection } from "./TextConfigSection";
 import { websiteService, WebsiteContent, WebsiteSection, WebsiteChangeHistory } from "@/services/website-service";
 import { useNavigate } from "react-router-dom";
 import { WebsiteChangeHistoryPanel } from "./WebsiteChangeHistoryPanel";
+import { useWebsiteBuilder } from "@/hooks/useWebsiteBuilder";
 
 interface WebsiteEditorProps {
   websiteId: string;
@@ -108,6 +108,8 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
   const [changeHistory, setChangeHistory] = useState<WebsiteChangeHistory[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   
+  const { handleSaveWebsiteContent } = useWebsiteBuilder();
+  
   // Load website data
   useEffect(() => {
     const loadWebsiteData = async () => {
@@ -177,11 +179,8 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
         shop_template: shopTemplate
       };
       
-      const success = await websiteService.updateWebsite(
-        websiteId,
-        updatedWebsiteData,
-        content
-      );
+      // Verwende die neue Funktion zum Speichern der Inhalte
+      const success = await handleSaveWebsiteContent(websiteId, content);
       
       if (success) {
         // Update our originals after successful save

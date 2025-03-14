@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -323,6 +322,7 @@ export const websiteService = {
   async updateWebsite(id: string, websiteData: Partial<Website>, content: WebsiteContent): Promise<boolean> {
     try {
       console.log("Updating website:", id, websiteData);
+      console.log("Content to be saved:", JSON.stringify(content));
       
       // Fetch current website data to check for changes
       const currentData = await this.getWebsiteById(id);

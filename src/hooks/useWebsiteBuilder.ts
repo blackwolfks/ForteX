@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { websiteService, Website, WebsiteChangeHistory } from "@/services/website-service";
+import { websiteService, Website, WebsiteChangeHistory, WebsiteContent } from "@/services/website-service";
 
 export function useWebsiteBuilder() {
   const navigate = useNavigate();
@@ -15,6 +15,7 @@ export function useWebsiteBuilder() {
   const [lastChangeTimestamp, setLastChangeTimestamp] = useState<number | null>(null);
   const [changeHistory, setChangeHistory] = useState<WebsiteChangeHistory[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [currentContent, setCurrentContent] = useState<WebsiteContent | null>(null);
 
   // Check if user is authenticated
   useEffect(() => {
@@ -62,6 +63,25 @@ export function useWebsiteBuilder() {
     }
   };
 
+  // Load current content for a website
+  const loadWebsiteContent = async (websiteId: string) => {
+    if (!websiteId) return null;
+    
+    try {
+      const result = await websiteService.getWebsiteById(websiteId);
+      if (result) {
+        console.log("Loaded website content:", result.content);
+        setCurrentContent(result.content);
+        return result.content;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error loading website content:", error);
+      toast.error("Fehler beim Laden der Website-Inhalte");
+      return null;
+    }
+  };
+
   useEffect(() => {
     loadWebsites();
   }, []);
@@ -70,8 +90,10 @@ export function useWebsiteBuilder() {
   useEffect(() => {
     if (selectedWebsite) {
       loadChangeHistory(selectedWebsite);
+      loadWebsiteContent(selectedWebsite);
     } else {
       setChangeHistory([]);
+      setCurrentContent(null);
     }
   }, [selectedWebsite]);
 
@@ -153,6 +175,7 @@ export function useWebsiteBuilder() {
         // Refresh change history
         if (selectedWebsite === id) {
           await loadChangeHistory(id);
+          await loadWebsiteContent(id);
         }
         
         return true;
@@ -163,6 +186,50 @@ export function useWebsiteBuilder() {
       }
     } catch (error) {
       console.error("Error publishing website:", error);
+      return false;
+    }
+  };
+
+  // Speichern der Website-Inhalte
+  const handleSaveWebsiteContent = async (websiteId: string, content: WebsiteContent) => {
+    if (!websiteId) {
+      toast.error("Keine Website ausgewählt");
+      return false;
+    }
+
+    try {
+      console.log("Saving website content:", content);
+      
+      // Aktuelle Website-Daten holen
+      const websiteData = websites.find(w => w.id === websiteId);
+      if (!websiteData) {
+        toast.error("Website-Daten nicht gefunden");
+        return false;
+      }
+
+      const success = await websiteService.updateWebsite(
+        websiteId,
+        websiteData,
+        content
+      );
+
+      if (success) {
+        toast.success("Inhalte wurden gespeichert");
+        // Aktualisiere den Content im State
+        setCurrentContent(content);
+        
+        // Historie neu laden
+        await loadChangeHistory(websiteId);
+        await loadWebsites();
+        
+        return true;
+      } else {
+        toast.error("Fehler beim Speichern der Inhalte");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error saving website content:", error);
+      toast.error("Fehler beim Speichern der Inhalte");
       return false;
     }
   };
@@ -182,6 +249,8 @@ export function useWebsiteBuilder() {
     lastChangeTimestamp,
     changeHistory,
     isLoadingHistory,
-    loadChangeHistory
+    loadChangeHistory,
+    currentContent,
+    handleSaveWebsiteContent
   };
 }
