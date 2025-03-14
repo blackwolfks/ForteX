@@ -1,3 +1,4 @@
+
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, UserCircle, Home } from "lucide-react";
@@ -40,6 +41,33 @@ const Navbar = () => {
     
     checkAuth();
   }, []);
+  
+  const handleEnablePro = async () => {
+    try {
+      const { data, error } = await callRPC('enable_pro_access', {});
+      if (error) {
+        console.error('Fehler beim Aktivieren des Pro-Zugriffs:', error);
+        toast({
+          title: "Fehler",
+          description: "Pro-Zugriff konnte nicht aktiviert werden.",
+          variant: "destructive",
+        });
+      } else {
+        setSubscriptionTier('pro');
+        toast({
+          title: "Erfolg",
+          description: "Pro-Zugriff wurde erfolgreich aktiviert!",
+        });
+      }
+    } catch (err) {
+      console.error('Fehler beim Aktivieren des Pro-Zugriffs:', err);
+      toast({
+        title: "Fehler",
+        description: "Ein unerwarteter Fehler ist aufgetreten.",
+        variant: "destructive",
+      });
+    }
+  };
   
   const renderSubscriptionBadge = () => {
     if (!isAuthenticated) return null;
@@ -118,6 +146,16 @@ const Navbar = () => {
             
             {isAuthenticated ? (
               <>
+                {subscriptionTier !== 'pro' && (
+                  <Button 
+                    variant="outline" 
+                    onClick={handleEnablePro}
+                    className="bg-gradient-to-r from-purple-400 to-blue-400 hover:from-purple-500 hover:to-blue-500 text-white border-none"
+                  >
+                    Pro aktivieren
+                  </Button>
+                )}
+                
                 {!isDashboard && (
                   <Button asChild variant="outline" className="border-primary/20 hover:border-primary/30">
                     <Link to="/dashboard">
@@ -165,8 +203,18 @@ const Navbar = () => {
           <div className="md:hidden py-2 pb-4 animate-fade-in">
             <div className="flex flex-col space-y-2">
               {isAuthenticated && (
-                <div className="py-2 flex justify-center">
+                <div className="py-2 flex justify-between items-center">
                   {renderSubscriptionBadge()}
+                  {subscriptionTier !== 'pro' && (
+                    <Button 
+                      variant="outline" 
+                      onClick={handleEnablePro}
+                      className="bg-gradient-to-r from-purple-400 to-blue-400 hover:from-purple-500 hover:to-blue-500 text-white border-none"
+                      size="sm"
+                    >
+                      Pro aktivieren
+                    </Button>
+                  )}
                 </div>
               )}
               
