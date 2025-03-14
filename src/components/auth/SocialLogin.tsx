@@ -56,12 +56,17 @@ const SocialLogin = ({ setError, redirectUrl, plan }: SocialLoginProps) => {
         localStorage.setItem("cfx_return_to", redirectUrl.replace("/", ""));
       }
       
-      // Official CFX.re OAuth URL
-      const CFX_OAUTH_URL = "https://id.cfx.re/oauth2/authorize";
-      const CFX_REDIRECT_URI = `${window.location.origin}/auth/cfx-callback`;
+      // Get the CFX interaction URL from environment
+      const CFX_INTERACTION_URL = import.meta.env.VITE_CFX_INTERACTION_URL;
       
-      // Build the OAuth URL with proper parameters
-      const cfxAuthUrl = `${CFX_OAUTH_URL}?response_type=code&client_id=fivem_web&redirect_uri=${encodeURIComponent(CFX_REDIRECT_URI)}&scope=openid%20identify&state=${stateToken}`;
+      // Generate a unique random ID (20 characters) for the interaction path
+      const uniqueId = Array(20)
+        .fill(0)
+        .map(() => Math.random().toString(36).charAt(2))
+        .join('');
+      
+      // Build the interaction URL without any query parameters
+      const cfxAuthUrl = `${CFX_INTERACTION_URL}/interaction/${uniqueId}`;
       
       console.log("Redirecting to CFX auth URL:", cfxAuthUrl);
       

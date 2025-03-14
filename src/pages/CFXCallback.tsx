@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { authService } from "@/services/auth-service";
@@ -48,15 +47,9 @@ const CFXCallback = () => {
         }
 
         // Update processing state
-        setProcessingState("Token wird abgerufen...");
+        setProcessingState("Authentifizierung mit CFX...");
         
-        // Exchange the code for an access token (this would normally be done server-side)
-        // In this example, we're simulating this part with the authService.handleCFXCallback function
-        
-        // Update processing state
-        setProcessingState("Benutzerdaten werden abgerufen...");
-        
-        // Use the token to get user information
+        // Handle CFX callback with the authorization code
         const userData = await authService.handleCFXCallback(code);
         
         // Check if we got user data back
