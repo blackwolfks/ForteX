@@ -117,11 +117,15 @@ export const authService = {
     try {
       console.log("Starting Google OAuth sign-in process");
       
-      // Mit Supabase Google OAuth durchführen - ohne spezifischen Flow Type
+      // Mit Supabase Google OAuth durchführen
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: GOOGLE_REDIRECT_URI
+          redirectTo: GOOGLE_REDIRECT_URI,
+          queryParams: {
+            prompt: 'select_account',
+            access_type: 'offline'
+          }
         }
       });
       
@@ -141,8 +145,8 @@ export const authService = {
       console.error('Supabase OAuth-Fehler, Fallback zu Mock-OAuth:', error);
       
       // Fallback zu Mock-OAuth
-      // Google OAuth Redirect URL erstellen - ohne Festlegung auf Authorization Code Flow
-      const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(GOOGLE_REDIRECT_URI)}&response_type=token&scope=${encodeURIComponent(GOOGLE_SCOPE)}`;
+      // Google OAuth Redirect URL erstellen - verwende den impliziten Flow
+      const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(GOOGLE_REDIRECT_URI)}&response_type=token&scope=${encodeURIComponent(GOOGLE_SCOPE)}&prompt=select_account`;
       
       console.log("Fallback: Redirecting to Google auth URL:", googleAuthUrl);
       
