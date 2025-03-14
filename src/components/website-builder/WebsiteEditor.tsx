@@ -30,13 +30,16 @@ import {
   Save,
   LayoutGrid,
   FileText,
-  FormInput
+  FormInput,
+  AlertTriangle
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TemplatePicker } from './TemplatePicker';
 import { WebsitePreviewInline } from './WebsitePreviewInline';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { toast } from 'sonner';
 
 export function WebsiteEditor() {
   const { 
@@ -47,7 +50,8 @@ export function WebsiteEditor() {
     reorderSections,
     updateProductCategories,
     applyTemplate,
-    saveContent
+    saveContent,
+    selectedWebsite
   } = useWebsiteBuilder();
   
   const [isAddSectionDialogOpen, setIsAddSectionDialogOpen] = useState(false);
@@ -57,12 +61,43 @@ export function WebsiteEditor() {
   const [activeTab, setActiveTab] = useState('editor');
   const [editorMode, setEditorMode] = useState<'standard' | 'dragdrop'>('standard');
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
+  const [isInitializingContent, setIsInitializingContent] = useState(false);
   
-  if (!websiteContent) {
-    return <div className="text-center py-8">Keine Website-Inhalte gefunden</div>;
+  if (!selectedWebsite) {
+    return (
+      <div className="text-center py-8">
+        <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
+        <h3 className="text-lg font-medium mb-2">Keine Website ausgewählt</h3>
+        <p className="text-muted-foreground">Bitte wählen Sie eine Website aus der Liste aus.</p>
+      </div>
+    );
   }
   
-  const { sections, productCategories, forms = [] } = websiteContent;
+  if (!websiteContent) {
+    return (
+      <div className="text-center py-8">
+        <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
+        <h3 className="text-lg font-medium mb-2">Keine Website-Inhalte gefunden</h3>
+        <p className="text-muted-foreground mb-4">
+          Es wurden keine Inhalte für diese Website gefunden. Möchten Sie einen neuen Inhalt erstellen?
+        </p>
+        <Button 
+          onClick={() => {
+            setIsInitializingContent(true);
+            // Initialisiere mit Standard-Template
+            applyTemplate('business-standard');
+            toast.success('Website-Inhalte initialisiert');
+            setIsInitializingContent(false);
+          }}
+          disabled={isInitializingContent}
+        >
+          {isInitializingContent ? 'Wird initialisiert...' : 'Inhalte initialisieren'}
+        </Button>
+      </div>
+    );
+  }
+  
+  const { sections = [], productCategories = [], forms = [] } = websiteContent;
   
   const handleAddSection = (type: string) => {
     if (type === 'products' && !selectedCategory) {
@@ -85,10 +120,12 @@ export function WebsiteEditor() {
     updatedSections.splice(currentIndex + 1, 0, newSection);
     
     // Update the websiteContent with the new sections array
-    websiteContent.sections = updatedSections;
-    
-    // Trigger a content update
-    updateSection(section.id, {}); // This is just to trigger an update
+    if (websiteContent) {
+      websiteContent.sections = updatedSections;
+      
+      // Trigger a content update
+      updateSection(section.id, {}); // This is just to trigger an update
+    }
   };
   
   const handleMoveSection = (index: number, direction: 'up' | 'down') => {
@@ -101,6 +138,7 @@ export function WebsiteEditor() {
   const handleApplyTemplate = (templateName: string) => {
     applyTemplate(templateName);
     setIsTemplatePickerOpen(false);
+    toast.success(`Template "${templateName}" erfolgreich angewendet`);
   };
   
   const activeSection = activeSectionId ? sections.find(s => s.id === activeSectionId) : null;

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { 
   websiteService, 
@@ -206,15 +207,19 @@ export function useWebsiteBuilder() {
   const [websiteContent, setWebsiteContent] = useState<WebsiteContentData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   
   // Websites laden
   const loadWebsites = useCallback(async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const data = await websiteService.getUserWebsites();
       setWebsites(data);
     } catch (error) {
       console.error('Error loading websites:', error);
+      setLoadError('Fehler beim Laden der Websites');
+      toast.error('Fehler beim Laden der Websites');
     } finally {
       setIsLoading(false);
     }
@@ -231,6 +236,7 @@ export function useWebsiteBuilder() {
     }
     
     setIsLoading(true);
+    setLoadError(null);
     try {
       const website = await websiteService.getWebsiteById(websiteId);
       if (website) {
@@ -241,7 +247,7 @@ export function useWebsiteBuilder() {
           setWebsiteContent(content);
         } else {
           // Wenn keine Inhalte gefunden wurden, setze Standardinhalte
-          setWebsiteContent({
+          const defaultContent: WebsiteContentData = {
             sections: [],
             meta: {
               title: website.name,
@@ -261,11 +267,21 @@ export function useWebsiteBuilder() {
               }
             },
             productCategories: []
-          });
+          };
+          
+          setWebsiteContent(defaultContent);
+          
+          // Optional: Speichere diese Standardinhalte auch direkt in der Datenbank
+          await websiteService.saveWebsiteContent(websiteId, defaultContent);
+          toast.info('Es wurden keine Inhalte gefunden. Es wurden Standardinhalte erstellt.');
         }
+      } else {
+        setLoadError('Website nicht gefunden');
+        toast.error('Website konnte nicht geladen werden');
       }
     } catch (error) {
       console.error('Error selecting website:', error);
+      setLoadError('Fehler beim Laden der Website');
       toast.error('Fehler beim Laden der Website');
     } finally {
       setIsLoading(false);
@@ -275,7 +291,45 @@ export function useWebsiteBuilder() {
   
   // Template anwenden
   const applyTemplate = useCallback((templateId: string) => {
-    if (!websiteContent || !TEMPLATES[templateId as keyof typeof TEMPLATES]) return;
+    if (!websiteContent) {
+      // Wenn kein websiteContent existiert, erstelle einen mit dem Template
+      if (selectedWebsite) {
+        const template = TEMPLATES[templateId as keyof typeof TEMPLATES];
+        if (template) {
+          const newContent: WebsiteContentData = {
+            sections: [...template.sections],
+            meta: {
+              title: selectedWebsite.name,
+              description: '',
+              keywords: ''
+            },
+            layout: {
+              header: template.header,
+              footer: template.footer
+            },
+            productCategories: ['scripts', 'vehicles', 'maps', 'characters', 'other'],
+          };
+          
+          setWebsiteContent(newContent);
+          setIsDirty(true);
+          
+          // Speichere die Inhalte direkt
+          if (selectedWebsite.id) {
+            websiteService.saveWebsiteContent(selectedWebsite.id, newContent)
+              .then(() => {
+                toast.success('Template erfolgreich angewendet und gespeichert');
+                setIsDirty(false);
+              })
+              .catch(() => {
+                toast.error('Fehler beim Speichern des Templates');
+              });
+          }
+        }
+      }
+      return;
+    }
+    
+    if (!TEMPLATES[templateId as keyof typeof TEMPLATES]) return;
     
     const template = TEMPLATES[templateId as keyof typeof TEMPLATES];
     
@@ -290,7 +344,7 @@ export function useWebsiteBuilder() {
     
     setIsDirty(true);
     toast.success('Template erfolgreich angewendet');
-  }, [websiteContent]);
+  }, [websiteContent, selectedWebsite]);
   
   // Neue Website erstellen
   const createNewWebsite = useCallback(async (data: CreateWebsiteInput) => {
@@ -505,11 +559,15 @@ export function useWebsiteBuilder() {
       
       if (success) {
         setIsDirty(false);
+        toast.success('Änderungen erfolgreich gespeichert');
+      } else {
+        toast.error('Fehler beim Speichern der Änderungen');
       }
       
       return success;
     } catch (error) {
       console.error('Error saving content:', error);
+      toast.error('Fehler beim Speichern der Änderungen');
       return false;
     } finally {
       setIsLoading(false);
@@ -548,6 +606,7 @@ export function useWebsiteBuilder() {
     websiteContent,
     isLoading,
     isDirty,
+    loadError,
     loadWebsites,
     selectWebsite,
     createNewWebsite,
