@@ -120,6 +120,15 @@ export function WebsiteBuilderView() {
     }
   };
 
+  const handlePublishWebsite = async (id: string, shouldPublish: boolean) => {
+    try {
+      return await websiteService.publishWebsite(id, shouldPublish);
+    } catch (error) {
+      console.error("Error publishing website:", error);
+      return false;
+    }
+  };
+
   // Show website editor when a website is selected
   if (selectedWebsite) {
     return (
@@ -199,8 +208,10 @@ export function WebsiteBuilderView() {
               url={website.url || ""}
               template={website.template}
               lastUpdated={website.last_saved || website.created_at || ""}
+              status={website.status as "entwurf" | "veröffentlicht"}
               onEdit={() => setSelectedWebsite(website.id)}
               onDelete={() => handleDeleteWebsite(website.id)}
+              onPublish={handlePublishWebsite}
             />
           ))}
         </div>
