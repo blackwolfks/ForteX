@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import WebsiteList from './WebsiteList';
+import WebsiteStatsView from './WebsiteStatsView';
 
 export default function WebsiteBuilderView() {
   const [activeTab, setActiveTab] = useState('websites');
@@ -24,18 +25,7 @@ export default function WebsiteBuilderView() {
         </TabsContent>
         
         <TabsContent value="analytics" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Statistiken</CardTitle>
-              <CardDescription>Website-Besuche und Interaktionen</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">Statistiken sind für die Pro-Version verfügbar</p>
-                <Button variant="outline" className="mt-4">Upgrade</Button>
-              </div>
-            </CardContent>
-          </Card>
+          <WebsiteStatsView />
         </TabsContent>
         
         <TabsContent value="settings" className="space-y-6">
