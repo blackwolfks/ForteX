@@ -20,7 +20,7 @@ const GoogleCallback = () => {
       try {
         console.log("Google callback triggered, location:", location);
         
-        // Check if we got a token in the hash fragment (indicates Implicit flow)
+        // Überprüfen, ob wir ein Token im Hash-Fragment haben (zeigt Implicit Flow an)
         if (location.hash && location.hash.includes('access_token')) {
           console.error("Invalid callback format: Got token in hash fragment, need code parameter");
           setDebugInfo(`Hash fragment detected: ${location.hash.substring(0, 20)}...`);

@@ -1,4 +1,3 @@
-
 // Auth-Service für die Integration mit Supabase Auth
 // Fallback zu simuliertem Auth-Verhalten, wenn keine Verbindung zur Datenbank besteht
 
@@ -123,12 +122,9 @@ export const authService = {
         provider: 'google',
         options: {
           redirectTo: GOOGLE_REDIRECT_URI,
-          // Konfiguration für Authorization Code Flow statt Implicit Flow
           queryParams: {
-            // Diese Parameter sorgen dafür, dass der Authorization Code Flow verwendet wird
             access_type: 'offline',
-            prompt: 'select_account',
-            response_type: 'code'
+            prompt: 'select_account'
           }
         }
       });
@@ -149,7 +145,7 @@ export const authService = {
       console.error('Supabase OAuth-Fehler, Fallback zu Mock-OAuth:', error);
       
       // Fallback zu Mock-OAuth
-      // Google OAuth Redirect URL erstellen - hier verwenden wir ebenfalls Authorization Code Flow
+      // Google OAuth Redirect URL erstellen - auch hier Authorization Code Flow
       const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(GOOGLE_REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(GOOGLE_SCOPE)}&access_type=offline&prompt=select_account`;
       
       console.log("Fallback: Redirecting to Google auth URL:", googleAuthUrl);
