@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { websiteService, Website } from "@/services/website-service";
 import { supabase } from "@/integrations/supabase/client";
 
-export const WebsiteBuilderView = () => {
+export function WebsiteBuilderView() {
   const navigate = useNavigate();
   const [websites, setWebsites] = useState<Website[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -222,4 +222,4 @@ export const WebsiteBuilderView = () => {
       )}
     </div>
   );
-};
+}

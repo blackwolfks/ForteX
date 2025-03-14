@@ -33,10 +33,9 @@ export const websiteService = {
    */
   async getUserWebsites(): Promise<Website[]> {
     try {
+      // We need to use a direct SQL query since the 'websites' table isn't in the TypeScript types yet
       const { data, error } = await supabase
-        .from('websites')
-        .select('*')
-        .order('last_saved', { ascending: false });
+        .rpc('get_user_websites');
       
       if (error) {
         console.error("Error fetching websites:", error);
@@ -56,24 +55,22 @@ export const websiteService = {
    */
   async getWebsiteById(id: string): Promise<{website: Website, content: WebsiteContent} | null> {
     try {
-      // Get website data
+      // Get website data using RPC
       const { data: websiteData, error: websiteError } = await supabase
-        .from('websites')
-        .select('*')
-        .eq('id', id)
-        .single();
+        .rpc('get_website_by_id', { website_id: id });
       
       if (websiteError) {
         console.error("Error fetching website:", websiteError);
         throw websiteError;
       }
 
+      if (!websiteData || websiteData.length === 0) {
+        throw new Error("Website not found");
+      }
+
       // Get content data
       const { data: contentData, error: contentError } = await supabase
-        .from('website_content')
-        .select('content')
-        .eq('website_id', id)
-        .maybeSingle();
+        .rpc('get_website_content', { website_id: id });
       
       if (contentError) {
         console.error("Error fetching website content:", contentError);
@@ -81,14 +78,14 @@ export const websiteService = {
       }
 
       const defaultContent: WebsiteContent = {
-        title: websiteData.name || "Neue Website",
+        title: websiteData[0].name || "Neue Website",
         subtitle: "Subtitle",
         description: "Beschreibung",
         sections: []
       };
       
       return {
-        website: websiteData as Website,
+        website: websiteData[0] as Website,
         content: (contentData?.content as WebsiteContent) || defaultContent
       };
     } catch (error) {
@@ -103,32 +100,37 @@ export const websiteService = {
    */
   async createWebsite(websiteData: Omit<Website, 'id' | 'user_id' | 'created_at'>, content: WebsiteContent): Promise<string | null> {
     try {
-      // Create website
-      const { data: website, error: websiteError } = await supabase
-        .from('websites')
-        .insert([websiteData])
-        .select()
-        .single();
+      // Create website through RPC
+      const { data: websiteId, error: websiteError } = await supabase
+        .rpc('create_website', { 
+          website_name: websiteData.name,
+          website_url: websiteData.url,
+          website_template: websiteData.template,
+          website_shop_template: websiteData.shop_template
+        });
       
       if (websiteError) {
         console.error("Error creating website:", websiteError);
         throw websiteError;
       }
 
+      if (!websiteId) {
+        throw new Error("Failed to create website, no ID returned");
+      }
+
       // Create content
       const { error: contentError } = await supabase
-        .from('website_content')
-        .insert([{
-          website_id: website.id,
-          content: content
-        }]);
+        .rpc('save_website_content', {
+          website_id: websiteId,
+          content_data: content
+        });
       
       if (contentError) {
         console.error("Error creating website content:", contentError);
         throw contentError;
       }
       
-      return website.id;
+      return websiteId;
     } catch (error) {
       console.error("Failed to create website:", error);
       toast.error("Fehler beim Erstellen der Website");
@@ -143,48 +145,25 @@ export const websiteService = {
     try {
       // Update website
       const { error: websiteError } = await supabase
-        .from('websites')
-        .update({
-          ...websiteData,
-          last_saved: new Date().toISOString()
-        })
-        .eq('id', id);
+        .rpc('update_website', {
+          website_id: id,
+          website_name: websiteData.name,
+          website_url: websiteData.url,
+          website_template: websiteData.template,
+          website_shop_template: websiteData.shop_template
+        });
       
       if (websiteError) {
         console.error("Error updating website:", websiteError);
         throw websiteError;
       }
 
-      // Check if content exists
-      const { data: existingContent, error: checkError } = await supabase
-        .from('website_content')
-        .select('id')
-        .eq('website_id', id)
-        .maybeSingle();
-      
-      if (checkError) {
-        console.error("Error checking for existing content:", checkError);
-        throw checkError;
-      }
-
-      let contentError;
-      if (existingContent) {
-        // Update content
-        const { error } = await supabase
-          .from('website_content')
-          .update({ content })
-          .eq('website_id', id);
-        contentError = error;
-      } else {
-        // Insert content
-        const { error } = await supabase
-          .from('website_content')
-          .insert([{
-            website_id: id,
-            content
-          }]);
-        contentError = error;
-      }
+      // Update content
+      const { error: contentError } = await supabase
+        .rpc('save_website_content', {
+          website_id: id,
+          content_data: content
+        });
       
       if (contentError) {
         console.error("Error updating website content:", contentError);
@@ -205,9 +184,7 @@ export const websiteService = {
   async deleteWebsite(id: string): Promise<boolean> {
     try {
       const { error } = await supabase
-        .from('websites')
-        .delete()
-        .eq('id', id);
+        .rpc('delete_website', { website_id: id });
       
       if (error) {
         console.error("Error deleting website:", error);
