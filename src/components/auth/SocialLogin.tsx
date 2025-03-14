@@ -41,49 +41,6 @@ const SocialLogin = ({ setError, redirectUrl, plan }: SocialLoginProps) => {
     }
   };
 
-  const handleCFXLogin = async () => {
-    try {
-      setIsLoading(true);
-      
-      // Generate a random state token for security
-      const stateToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      localStorage.setItem("cfx_auth_state", stateToken);
-      
-      // Set return path for after authentication
-      if (plan) {
-        localStorage.setItem("cfx_return_to", "checkout");
-      } else {
-        localStorage.setItem("cfx_return_to", redirectUrl.replace("/", ""));
-      }
-      
-      // Store client credentials in localStorage for the callback to use
-      localStorage.setItem("cfx_client_id", "txadmin_test");
-      localStorage.setItem("cfx_client_secret", "txadmin_test");
-      
-      // Get the CFX interaction URL from environment
-      const CFX_INTERACTION_URL = import.meta.env.VITE_CFX_INTERACTION_URL;
-      
-      // Generate a unique random ID (20 characters) for the interaction path
-      const uniqueId = Array(20)
-        .fill(0)
-        .map(() => Math.random().toString(36).charAt(2))
-        .join('');
-      
-      // Build the interaction URL without any query parameters
-      const cfxAuthUrl = `${CFX_INTERACTION_URL}/interaction/${uniqueId}`;
-      
-      console.log("Redirecting to CFX auth URL:", cfxAuthUrl);
-      
-      // Redirect to the CFX auth URL
-      window.location.href = cfxAuthUrl;
-      
-    } catch (err) {
-      console.error("CFX Login Error:", err);
-      setIsLoading(false);
-      setError("Bei der Anmeldung mit CFX ist ein Fehler aufgetreten. Bitte versuchen Sie es später erneut.");
-    }
-  };
-
   return (
     <>
       <Separator className="my-4" />
@@ -114,18 +71,6 @@ const SocialLogin = ({ setError, redirectUrl, plan }: SocialLoginProps) => {
             </svg>
           }
           Discord
-        </Button>
-        <Button 
-          variant="outline" 
-          onClick={handleCFXLogin}
-          disabled={isLoading}
-        >
-          {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 
-            <svg viewBox="0 0 24 24" fill="currentColor" className="mr-2 h-4 w-4">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
-            </svg>
-          }
-          CFX
         </Button>
       </div>
     </>

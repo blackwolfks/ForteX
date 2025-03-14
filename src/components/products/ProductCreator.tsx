@@ -38,9 +38,7 @@ import {
   Image, 
   Tag, 
   Euro, 
-  ShoppingBag, 
-  Key,
-  Upload
+  ShoppingBag
 } from "lucide-react";
 import { toast } from "sonner";
 import { productService, CreateProductInput } from "@/services/product-service";
@@ -55,8 +53,6 @@ const productSchema = z.object({
   category: z.string().min(1, "Bitte wähle eine Kategorie"),
   isSubscription: z.boolean().default(false),
   subscriptionInterval: z.string().optional(),
-  cfxResourceId: z.string().optional(),
-  cfxImported: z.boolean().default(false),
 });
 
 type ProductFormValues = z.infer<typeof productSchema>;
@@ -65,7 +61,6 @@ const ProductCreator = () => {
   const [activeTab, setActiveTab] = useState("details");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [cfxResourceName, setCfxResourceName] = useState<string>("");
   const queryClient = useQueryClient();
   
   const form = useForm<ProductFormValues>({
@@ -78,8 +73,6 @@ const ProductCreator = () => {
       category: "",
       isSubscription: false,
       subscriptionInterval: "monthly",
-      cfxResourceId: "",
-      cfxImported: false,
     },
   });
   
@@ -115,29 +108,10 @@ const ProductCreator = () => {
     }
   };
   
-  const onImportFromCFX = async () => {
-    const cfxId = form.getValues("cfxResourceId");
-    if (!cfxId) return;
-    
-    toast.info("CFX-Daten werden importiert...");
-    
-    // Simulierte API-Abfrage zu CFX
-    setTimeout(() => {
-      setCfxResourceName("Example CFX Script");
-      form.setValue("name", "Example CFX Script");
-      form.setValue("shortDescription", "Imported from CFX.re marketplace");
-      form.setValue("description", "This script was automatically imported from CFX.re marketplace. Edit this description to provide more details about the product.");
-      form.setValue("cfxImported", true);
-      
-      toast.success("CFX-Daten erfolgreich importiert");
-    }, 1000);
-  };
-  
   const resetForm = () => {
     form.reset();
     setSelectedImage(null);
     setPreviewImage(null);
-    setCfxResourceName("");
   };
   
   const onSubmit = (data: ProductFormValues) => {
@@ -150,8 +124,6 @@ const ProductCreator = () => {
       category: data.category,
       isSubscription: data.isSubscription,
       subscriptionInterval: data.subscriptionInterval,
-      cfxResourceId: data.cfxResourceId,
-      cfxImported: data.cfxImported,
       image: previewImage || undefined,
     };
     
@@ -170,7 +142,6 @@ const ProductCreator = () => {
             <TabsTrigger value="details">Details</TabsTrigger>
             <TabsTrigger value="images">Bilder</TabsTrigger>
             <TabsTrigger value="pricing">Preise</TabsTrigger>
-            <TabsTrigger value="cfx">CFX Integration</TabsTrigger>
           </TabsList>
           
           <Form {...form}>
@@ -367,48 +338,6 @@ const ProductCreator = () => {
                     )}
                   />
                 )}
-              </TabsContent>
-              
-              <TabsContent value="cfx" className="space-y-4">
-                <div className="border rounded-md p-4">
-                  <h3 className="text-lg font-medium mb-4">CFX.re Integration</h3>
-                  
-                  <FormField
-                    control={form.control}
-                    name="cfxResourceId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>CFX Resource ID</FormLabel>
-                        <div className="flex gap-2">
-                          <FormControl>
-                            <Input placeholder="z.B. 1234-abcd" {...field} />
-                          </FormControl>
-                          <Button 
-                            type="button" 
-                            variant="outline"
-                            onClick={onImportFromCFX}
-                          >
-                            <Upload className="h-4 w-4 mr-2" />
-                            Importieren
-                          </Button>
-                        </div>
-                        <FormDescription>
-                          Gib die Resource-ID von CFX.re ein, um Details automatisch zu importieren
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  {cfxResourceName && (
-                    <div className="mt-4 p-4 bg-muted rounded-md">
-                      <p className="font-medium">Gefundene Resource: {cfxResourceName}</p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Die Resourcedaten wurden in die Produktdetails importiert.
-                      </p>
-                    </div>
-                  )}
-                </div>
               </TabsContent>
 
               <div className="flex justify-end pt-4">
