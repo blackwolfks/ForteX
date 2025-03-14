@@ -76,6 +76,7 @@ export function WebsiteBuilderView() {
                 variant="outline" 
                 onClick={handleSave} 
                 disabled={!isDirty || isLoading}
+                className="border-turquoise-500 text-turquoise-500 hover:bg-turquoise-500/10"
               >
                 <Save className="h-4 w-4 mr-2" />
                 Speichern
@@ -85,12 +86,12 @@ export function WebsiteBuilderView() {
           
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button className="bg-turquoise-500 hover:bg-turquoise-600">
                 <Plus className="h-4 w-4 mr-2" />
                 Neue Website erstellen
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="dark-card">
               <DialogHeader>
                 <DialogTitle>Neue Website erstellen</DialogTitle>
                 <DialogDescription>
@@ -106,6 +107,7 @@ export function WebsiteBuilderView() {
                     value={newWebsiteData.name}
                     onChange={(e) => setNewWebsiteData({ ...newWebsiteData, name: e.target.value })}
                     placeholder="Meine Website"
+                    className="bg-darkgray-700 border-darkgray-500 focus:border-turquoise-500 focus:ring-turquoise-500/20"
                   />
                 </div>
                 
@@ -116,15 +118,16 @@ export function WebsiteBuilderView() {
                     value={newWebsiteData.url}
                     onChange={(e) => setNewWebsiteData({ ...newWebsiteData, url: e.target.value })}
                     placeholder="meine-website"
+                    className="bg-darkgray-700 border-darkgray-500 focus:border-turquoise-500 focus:ring-turquoise-500/20"
                   />
                 </div>
               </div>
               
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="border-darkgray-400 hover:bg-darkgray-500">
                   Abbrechen
                 </Button>
-                <Button onClick={handleCreateWebsite} disabled={!newWebsiteData.name || !newWebsiteData.url}>
+                <Button onClick={handleCreateWebsite} disabled={!newWebsiteData.name || !newWebsiteData.url} className="bg-turquoise-500 hover:bg-turquoise-600">
                   Website erstellen
                 </Button>
               </DialogFooter>
@@ -136,7 +139,7 @@ export function WebsiteBuilderView() {
       {!showWebsiteEditor ? (
         <WebsiteList websites={websites} onSelect={selectWebsite} />
       ) : (
-        <Card className="overflow-visible">
+        <Card className="overflow-visible dark-card border-darkgray-400">
           <CardHeader className="pb-3">
             <div className="flex justify-between items-center">
               <div>
@@ -146,7 +149,7 @@ export function WebsiteBuilderView() {
                   • Zuletzt bearbeitet: {new Date(selectedWebsite.last_saved).toLocaleString()}
                 </CardDescription>
               </div>
-              <Button variant="outline" onClick={handleBackToList}>
+              <Button variant="outline" onClick={handleBackToList} className="border-darkgray-400 hover:bg-darkgray-500">
                 <List className="h-4 w-4 mr-2" />
                 Zurück zur Liste
               </Button>
@@ -154,22 +157,31 @@ export function WebsiteBuilderView() {
           </CardHeader>
           <CardContent className="pb-6">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="mb-4">
-                <TabsTrigger value="editor" className="flex gap-2 items-center">
+              <TabsList className="mb-4 bg-darkgray-700">
+                <TabsTrigger 
+                  value="editor" 
+                  className="flex gap-2 items-center data-[state=active]:bg-turquoise-500 data-[state=active]:text-white"
+                >
                   <Save className="h-4 w-4" />
                   <span>Editor</span>
                 </TabsTrigger>
-                <TabsTrigger value="preview" className="flex gap-2 items-center">
+                <TabsTrigger 
+                  value="preview" 
+                  className="flex gap-2 items-center data-[state=active]:bg-turquoise-500 data-[state=active]:text-white"
+                >
                   <Eye className="h-4 w-4" />
                   <span>Vorschau</span>
                 </TabsTrigger>
-                <TabsTrigger value="settings" className="flex gap-2 items-center">
+                <TabsTrigger 
+                  value="settings" 
+                  className="flex gap-2 items-center data-[state=active]:bg-turquoise-500 data-[state=active]:text-white"
+                >
                   <Settings className="h-4 w-4" />
                   <span>Einstellungen</span>
                 </TabsTrigger>
               </TabsList>
               
-              <div className="mt-6 border-t pt-6">
+              <div className="mt-6 border-t border-darkgray-500 pt-6">
                 <TabsContent value="editor" className="mt-0">
                   <WebsiteEditor />
                 </TabsContent>
@@ -184,12 +196,12 @@ export function WebsiteBuilderView() {
               </div>
             </Tabs>
           </CardContent>
-          <CardFooter className="border-t pt-6">
+          <CardFooter className="border-t border-darkgray-500 pt-6">
             <div className="flex justify-between w-full">
-              <Button variant="outline" onClick={handleBackToList}>
+              <Button variant="outline" onClick={handleBackToList} className="border-darkgray-400 hover:bg-darkgray-500">
                 Zurück zur Liste
               </Button>
-              <Button onClick={handleSave} disabled={!isDirty || isLoading}>
+              <Button onClick={handleSave} disabled={!isDirty || isLoading} className="bg-turquoise-500 hover:bg-turquoise-600">
                 <Save className="h-4 w-4 mr-2" />
                 Änderungen speichern
               </Button>

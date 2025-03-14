@@ -27,7 +27,9 @@ export default {
 				foreground: 'hsl(var(--foreground))',
 				primary: {
 					DEFAULT: 'hsl(var(--primary))',
-					foreground: 'hsl(var(--primary-foreground))'
+					foreground: 'hsl(var(--primary-foreground))',
+					light: 'hsl(175, 75%, 55%)',
+					dark: 'hsl(175, 75%, 35%)'
 				},
 				secondary: {
 					DEFAULT: 'hsl(var(--secondary))',
@@ -62,6 +64,28 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				turquoise: {
+					100: 'hsl(175, 75%, 85%)',
+					200: 'hsl(175, 75%, 75%)',
+					300: 'hsl(175, 75%, 65%)',
+					400: 'hsl(175, 75%, 55%)',
+					500: 'hsl(175, 75%, 45%)',
+					600: 'hsl(175, 75%, 35%)',
+					700: 'hsl(175, 75%, 25%)',
+					800: 'hsl(175, 75%, 15%)',
+					900: 'hsl(175, 75%, 10%)'
+				},
+				darkgray: {
+					100: 'hsl(220, 10%, 40%)',
+					200: 'hsl(220, 10%, 35%)',
+					300: 'hsl(220, 10%, 30%)',
+					400: 'hsl(220, 10%, 25%)',
+					500: 'hsl(220, 10%, 20%)',
+					600: 'hsl(220, 10%, 15%)',
+					700: 'hsl(220, 10%, 12%)',
+					800: 'hsl(220, 10%, 10%)',
+					900: 'hsl(220, 10%, 8%)'
 				}
 			},
 			fontFamily: {
@@ -118,9 +142,10 @@ export default {
 				'slide-in': 'slide-in 0.3s ease-out'
 			},
 			boxShadow: {
-				'soft': '0 4px 10px rgba(0, 0, 0, 0.05)',
-				'medium': '0 8px 30px rgba(0, 0, 0, 0.08)',
-				'hard': '0 15px 50px rgba(0, 0, 0, 0.12)',
+				'soft': '0 4px 10px rgba(0, 0, 0, 0.15)',
+				'medium': '0 8px 30px rgba(0, 0, 0, 0.18)',
+				'hard': '0 15px 50px rgba(0, 0, 0, 0.25)',
+				'glow': '0 0 15px rgba(42, 204, 190, 0.5)',
 			},
 		}
 	},
