@@ -1,16 +1,18 @@
-
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, UserCircle, Home } from "lucide-react";
 import { useState, useEffect } from "react";
 import { authService } from "@/services/auth-service";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
+import { callRPC } from "@/integrations/supabase/client";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ name?: string } | null>(null);
   const { toast } = useToast();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [subscriptionTier, setSubscriptionTier] = useState<string>('free');
   const location = useLocation();
   const isDashboard = location.pathname.includes('/dashboard');
   
@@ -22,11 +24,38 @@ const Navbar = () => {
       if (authStatus) {
         const user = await authService.getCurrentUser();
         setCurrentUser(user);
+        
+        try {
+          const { data, error } = await callRPC('get_user_pro_status', {});
+          if (error) {
+            console.error('Fehler beim Abrufen des Abonnement-Status:', error);
+          } else if (data && data.length > 0) {
+            setSubscriptionTier(data[0].subscription_tier || 'free');
+          }
+        } catch (err) {
+          console.error('Fehler beim Abrufen des Abonnement-Status:', err);
+        }
       }
     };
     
     checkAuth();
   }, []);
+  
+  const renderSubscriptionBadge = () => {
+    if (!isAuthenticated) return null;
+    
+    return (
+      <Badge variant={subscriptionTier === 'free' ? "outline" : "default"} className={
+        subscriptionTier === 'pro' 
+          ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white" 
+          : subscriptionTier === 'basic' 
+            ? "bg-blue-500 text-white" 
+            : ""
+      }>
+        {subscriptionTier.toUpperCase()}
+      </Badge>
+    );
+  };
   
   const handleSignOut = async () => {
     try {
@@ -85,6 +114,8 @@ const Navbar = () => {
           </div>
           
           <div className="hidden md:flex items-center space-x-4">
+            {isAuthenticated && renderSubscriptionBadge()}
+            
             {isAuthenticated ? (
               <>
                 {!isDashboard && (
@@ -133,6 +164,12 @@ const Navbar = () => {
         {isMenuOpen && (
           <div className="md:hidden py-2 pb-4 animate-fade-in">
             <div className="flex flex-col space-y-2">
+              {isAuthenticated && (
+                <div className="py-2 flex justify-center">
+                  {renderSubscriptionBadge()}
+                </div>
+              )}
+              
               {isDashboard ? (
                 <Button asChild variant="ghost" className="justify-start">
                   <Link to="/">
