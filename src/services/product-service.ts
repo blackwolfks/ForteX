@@ -121,10 +121,11 @@ class ProductService {
       
       const userId = userData.user.id;
       
-      // Try to fetch products from the database (RLS will filter for current user)
+      // Fix: Only fetch products for the current user
       const { data, error } = await supabase
         .from('products')
         .select('*')
+        .eq('user_id', userId)  // Only select products belonging to current user
         .order('created_at', { ascending: false });
 
       if (error) throw error;
