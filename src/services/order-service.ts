@@ -20,7 +20,12 @@ export interface InvoiceDetails {
   orderId: string;
   customerName: string;
   customerEmail: string;
-  billingAddress: string;
+  billingAddress: {
+    address: string;
+    city: string;
+    postal_code: string;
+    country: string;
+  };
   planName?: string;
   amount: number;
   currency: string;
