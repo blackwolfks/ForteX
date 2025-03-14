@@ -123,11 +123,12 @@ export const authService = {
         provider: 'google',
         options: {
           redirectTo: GOOGLE_REDIRECT_URI,
-          // Explizit code challenge setzen, um Authorization Code Flow zu erzwingen
-          flowType: 'pkce',
+          // Konfiguration für Authorization Code Flow statt Implicit Flow
           queryParams: {
+            // Diese Parameter sorgen dafür, dass der Authorization Code Flow verwendet wird
             access_type: 'offline',
             prompt: 'select_account',
+            response_type: 'code'
           }
         }
       });
