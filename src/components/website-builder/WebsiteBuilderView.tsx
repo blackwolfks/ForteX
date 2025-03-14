@@ -160,21 +160,21 @@ export function WebsiteBuilderView() {
               <TabsList className="mb-4 bg-darkgray-700">
                 <TabsTrigger 
                   value="editor" 
-                  className="flex gap-2 items-center data-[state=active]:bg-turquoise-500 data-[state=active]:text-white"
+                  className="flex gap-2 items-center data-[state=active]:bg-turquoise-500 data-[state=active]:text-darkgray-800"
                 >
                   <Save className="h-4 w-4" />
                   <span>Editor</span>
                 </TabsTrigger>
                 <TabsTrigger 
                   value="preview" 
-                  className="flex gap-2 items-center data-[state=active]:bg-turquoise-500 data-[state=active]:text-white"
+                  className="flex gap-2 items-center data-[state=active]:bg-turquoise-500 data-[state=active]:text-darkgray-800"
                 >
                   <Eye className="h-4 w-4" />
                   <span>Vorschau</span>
                 </TabsTrigger>
                 <TabsTrigger 
                   value="settings" 
-                  className="flex gap-2 items-center data-[state=active]:bg-turquoise-500 data-[state=active]:text-white"
+                  className="flex gap-2 items-center data-[state=active]:bg-turquoise-500 data-[state=active]:text-darkgray-800"
                 >
                   <Settings className="h-4 w-4" />
                   <span>Einstellungen</span>
