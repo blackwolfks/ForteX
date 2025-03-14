@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { authService } from "@/services/auth-service";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
 
 const CFXCallback = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -27,6 +28,7 @@ const CFXCallback = () => {
         toast({
           title: "Erfolgreich angemeldet",
           description: "Sie wurden erfolgreich mit CFX angemeldet.",
+          variant: "default",
         });
         
         navigate("/dashboard");
@@ -42,15 +44,15 @@ const CFXCallback = () => {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md shadow-medium">
+      <div className="flex min-h-screen items-center justify-center bg-gray-900 p-4">
+        <Card className="w-full max-w-md shadow-medium bg-gray-800 border-gray-700">
           <CardContent className="pt-6">
             <div className="text-center space-y-4">
-              <h2 className="text-xl font-medium">Anmeldefehler</h2>
-              <p className="text-muted-foreground">{error}</p>
+              <h2 className="text-xl font-medium text-gray-100">Anmeldefehler</h2>
+              <p className="text-gray-400">{error}</p>
               <button 
                 onClick={() => navigate('/sign-in')}
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-teal-600 text-white hover:bg-teal-700 h-10 px-4 py-2"
               >
                 Zurück zur Anmeldung
               </button>
@@ -62,14 +64,14 @@ const CFXCallback = () => {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md shadow-medium">
+    <div className="flex min-h-screen items-center justify-center bg-gray-900 p-4">
+      <Card className="w-full max-w-md shadow-medium bg-gray-800 border-gray-700">
         <CardContent className="pt-6">
           <div className="text-center space-y-4">
-            <h2 className="text-xl font-medium">Anmeldung mit CFX</h2>
-            <p className="text-muted-foreground">Sie werden angemeldet, bitte warten...</p>
+            <h2 className="text-xl font-medium text-gray-100">Anmeldung mit CFX</h2>
+            <p className="text-gray-400">Sie werden angemeldet, bitte warten...</p>
             <div className="flex justify-center">
-              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+              <Loader2 className="h-6 w-6 text-teal-500 animate-spin" />
             </div>
           </div>
         </CardContent>
