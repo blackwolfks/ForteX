@@ -64,8 +64,10 @@ export const websiteService = {
         throw websiteError;
       }
 
-      if (!websiteData || (websiteData as any[]).length === 0) {
-        throw new Error("Website not found");
+      if (!websiteData || websiteData.length === 0) {
+        console.error("Website not found");
+        toast.error("Website nicht gefunden");
+        return null;
       }
 
       // Get content data
@@ -78,15 +80,21 @@ export const websiteService = {
       }
 
       const defaultContent: WebsiteContent = {
-        title: (websiteData as any[])[0].name || "Neue Website",
+        title: websiteData[0].name || "Neue Website",
         subtitle: "Subtitle",
         description: "Beschreibung",
         sections: []
       };
       
+      // Check if content exists, use default content if not
+      const finalContent = 
+        (contentData && contentData.length > 0 && contentData[0]?.content) 
+          ? contentData[0].content as WebsiteContent 
+          : defaultContent;
+      
       return {
-        website: (websiteData as any[])[0] as Website,
-        content: (contentData && (contentData as any[])[0]?.content as WebsiteContent) || defaultContent
+        website: websiteData[0] as Website,
+        content: finalContent
       };
     } catch (error) {
       console.error("Failed to fetch website by ID:", error);
@@ -100,6 +108,8 @@ export const websiteService = {
    */
   async createWebsite(websiteData: Omit<Website, 'id' | 'user_id' | 'created_at'>, content: WebsiteContent): Promise<string | null> {
     try {
+      console.log("Creating website with data:", websiteData);
+      
       // Create website through RPC
       const { data: websiteId, error: websiteError } = await supabase
         .rpc('create_website', { 
@@ -116,9 +126,12 @@ export const websiteService = {
       }
 
       if (!websiteId) {
+        console.error("Failed to create website, no ID returned");
         throw new Error("Failed to create website, no ID returned");
       }
 
+      console.log("Website created with ID:", websiteId);
+      
       // Create content
       const { error: contentError } = await supabase
         .rpc('save_website_content', {
@@ -144,6 +157,8 @@ export const websiteService = {
    */
   async updateWebsite(id: string, websiteData: Partial<Website>, content: WebsiteContent): Promise<boolean> {
     try {
+      console.log("Updating website:", id, websiteData);
+      
       // Update website
       const { error: websiteError } = await supabase
         .rpc('update_website', {
@@ -160,6 +175,8 @@ export const websiteService = {
         throw websiteError;
       }
 
+      console.log("Website updated successfully, now updating content");
+      
       // Update content
       const { error: contentError } = await supabase
         .rpc('save_website_content', {
@@ -172,6 +189,7 @@ export const websiteService = {
         throw contentError;
       }
       
+      console.log("Website and content updated successfully");
       return true;
     } catch (error) {
       console.error("Failed to update website:", error);

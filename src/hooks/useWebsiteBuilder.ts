@@ -52,6 +52,8 @@ export function useWebsiteBuilder() {
 
     setIsCreating(true);
     try {
+      console.log("Creating website:", name, template);
+      
       // Create initial content based on template
       const initialContent = {
         title: name,
