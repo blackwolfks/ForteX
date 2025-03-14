@@ -48,9 +48,15 @@ const CFXCallback = () => {
         }
 
         // Update processing state
-        setProcessingState("Authentifizierung mit CFX...");
+        setProcessingState("Token wird abgerufen...");
         
-        // Handle CFX callback with the authorization code
+        // Exchange the code for an access token (this would normally be done server-side)
+        // In this example, we're simulating this part with the authService.handleCFXCallback function
+        
+        // Update processing state
+        setProcessingState("Benutzerdaten werden abgerufen...");
+        
+        // Use the token to get user information
         const userData = await authService.handleCFXCallback(code);
         
         // Check if we got user data back
