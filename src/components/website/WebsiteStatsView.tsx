@@ -1,187 +1,155 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line, Tooltip, Legend } from 'recharts';
-import { CalendarRange, Users, MousePointerClick, Clock, TrendingUp } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { callRPC } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
-// Beispiel-Statistikdaten (in einer realen Anwendung würden diese von einer API kommen)
-const demoData = {
-  visits: [
-    { name: 'Mo', visits: 0 },
-    { name: 'Di', visits: 0 },
-    { name: 'Mi', visits: 0 },
-    { name: 'Do', visits: 0 },
-    { name: 'Fr', visits: 0 },
-    { name: 'Sa', visits: 0 },
-    { name: 'So', visits: 0 },
-  ],
-  interactions: [
-    { name: 'Mo', clicks: 0, scrolls: 0 },
-    { name: 'Di', clicks: 0, scrolls: 0 },
-    { name: 'Mi', clicks: 0, scrolls: 0 },
-    { name: 'Do', clicks: 0, scrolls: 0 },
-    { name: 'Fr', clicks: 0, scrolls: 0 },
-    { name: 'Sa', clicks: 0, scrolls: 0 },
-    { name: 'So', clicks: 0, scrolls: 0 },
-  ],
-  summary: {
-    totalVisits: 0,
-    uniqueVisitors: 0,
-    avgTimeOnSite: '0:00',
-    conversionRate: '0%'
-  }
-};
+// Demo-Daten für die Statistiken
+const demoVisitData = [
+  { name: '01.05', visits: 20 },
+  { name: '02.05', visits: 15 },
+  { name: '03.05', visits: 25 },
+  { name: '04.05', visits: 22 },
+  { name: '05.05', visits: 30 },
+  { name: '06.05', visits: 28 },
+  { name: '07.05', visits: 35 },
+];
+
+const demoInteractionData = [
+  { name: '01.05', interactions: 5 },
+  { name: '02.05', interactions: 4 },
+  { name: '03.05', interactions: 8 },
+  { name: '04.05', interactions: 10 },
+  { name: '05.05', interactions: 12 },
+  { name: '06.05', interactions: 15 },
+  { name: '07.05', interactions: 18 },
+];
 
 export default function WebsiteStatsView() {
-  const [statsData] = useState(demoData);
-  const [statsTab, setStatsTab] = useState('visits');
+  const [hasPro, setHasPro] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  
+  // Abrufen des Pro-Status beim Laden der Komponente
+  useEffect(() => {
+    const checkProStatus = async () => {
+      try {
+        setIsLoading(true);
+        const { data, error } = await callRPC('get_user_pro_status', {});
+        
+        if (error) {
+          console.error('Fehler beim Abrufen des Pro-Status:', error);
+          toast.error('Fehler beim Prüfen deines Pro-Status.');
+          setHasPro(false);
+        } else {
+          setHasPro(!!data?.has_pro);
+        }
+      } catch (err) {
+        console.error('Unerwarteter Fehler:', err);
+        setHasPro(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    checkProStatus();
+  }, []);
+  
+  // Funktion zum Aktivieren des Pro-Zugriffs (für Demozwecke)
+  const enableProAccess = async () => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await callRPC('enable_pro_access', {});
+      
+      if (error) {
+        console.error('Fehler beim Aktivieren des Pro-Zugriffs:', error);
+        toast.error('Pro-Zugriff konnte nicht aktiviert werden.');
+      } else {
+        setHasPro(true);
+        toast.success('Pro-Zugriff wurde erfolgreich aktiviert!');
+      }
+    } catch (err) {
+      console.error('Unerwarteter Fehler:', err);
+      toast.error('Ein unerwarteter Fehler ist aufgetreten.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   return (
     <div className="space-y-6">
-      <div className="flex flex-col space-y-2">
-        <h2 className="text-2xl font-bold tracking-tight">Statistiken</h2>
-        <p className="text-muted-foreground">Website-Besuche und Interaktionen</p>
-      </div>
-      
-      {/* Pro-Version Hinweis */}
-      <Card className="bg-muted/40 border-dashed">
-        <CardContent className="flex flex-col items-center justify-center py-10">
-          <div className="text-center space-y-3">
-            <h3 className="text-lg font-medium">Statistiken sind für die Pro-Version verfügbar</h3>
-            <p className="text-sm text-muted-foreground max-w-md">
-              Upgrade auf die Pro-Version, um detaillierte Einblicke in die Leistung Ihrer Website zu erhalten.
-            </p>
-            <Button className="mt-2">Upgrade</Button>
-          </div>
-        </CardContent>
-      </Card>
-      
-      {/* Vorschau der Statistiken (wird in der Pro-Version angezeigt) */}
-      <div className="space-y-6 opacity-50 pointer-events-none">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-2">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <h3 className="text-sm font-medium">Besucher</h3>
-              </div>
-              <div className="mt-3">
-                <div className="text-2xl font-bold">{statsData.summary.uniqueVisitors}</div>
-                <p className="text-xs text-muted-foreground">Eindeutige Besucher</p>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-2">
-                <MousePointerClick className="h-4 w-4 text-muted-foreground" />
-                <h3 className="text-sm font-medium">Seitenaufrufe</h3>
-              </div>
-              <div className="mt-3">
-                <div className="text-2xl font-bold">{statsData.summary.totalVisits}</div>
-                <p className="text-xs text-muted-foreground">Gesamte Besuche</p>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-2">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <h3 className="text-sm font-medium">Verweildauer</h3>
-              </div>
-              <div className="mt-3">
-                <div className="text-2xl font-bold">{statsData.summary.avgTimeOnSite}</div>
-                <p className="text-xs text-muted-foreground">Durchschnittliche Zeit</p>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-2">
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                <h3 className="text-sm font-medium">Conversion</h3>
-              </div>
-              <div className="mt-3">
-                <div className="text-2xl font-bold">{statsData.summary.conversionRate}</div>
-                <p className="text-xs text-muted-foreground">Conversion-Rate</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        
+      {!hasPro ? (
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Besucherdaten</CardTitle>
-                <CardDescription>Analyse der Website-Besuche und Interaktionen</CardDescription>
-              </div>
-              <div className="flex items-center space-x-2">
-                <CalendarRange className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Letzte 7 Tage</span>
-              </div>
-            </div>
+            <CardTitle>Website-Statistiken - PRO Version</CardTitle>
+            <CardDescription>
+              Erhalte detaillierte Einblicke in die Performance deiner Websites mit dem Pro-Zugriff
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Tabs value={statsTab} onValueChange={setStatsTab}>
-              <TabsList className="mb-4">
-                <TabsTrigger value="visits">Besuche</TabsTrigger>
-                <TabsTrigger value="interactions">Interaktionen</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="visits" className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={statsData.visits}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="visits" fill="#2563eb" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </TabsContent>
-              
-              <TabsContent value="interactions" className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={statsData.interactions}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Legend />
-                    <Line type="monotone" dataKey="clicks" stroke="#2563eb" />
-                    <Line type="monotone" dataKey="scrolls" stroke="#16a34a" />
-                  </LineChart>
-                </ResponsiveContainer>
-              </TabsContent>
-            </Tabs>
+          <CardContent className="space-y-4">
+            <div className="bg-muted p-6 rounded-lg text-center">
+              <h3 className="text-xl font-bold mb-2">Upgrade auf PRO</h3>
+              <p className="mb-4">Erhalte vollständigen Zugriff auf alle Website-Statistiken und erweiterte Analysetools.</p>
+              <Button 
+                onClick={enableProAccess} 
+                className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
+                disabled={isLoading}
+              >
+                {isLoading ? 'Wird verarbeitet...' : 'Pro-Zugriff freischalten'}
+              </Button>
+            </div>
           </CardContent>
         </Card>
-      </div>
+      ) : (
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle>Website-Besuche</CardTitle>
+              <CardDescription>Analyse der Besucherzahlen der letzten 7 Tage</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={demoVisitData}
+                    margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Area type="monotone" dataKey="visits" stroke="#8884d8" fill="#8884d8" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Benutzerinteraktionen</CardTitle>
+              <CardDescription>Analyse der Benutzerinteraktionen der letzten 7 Tage</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={demoInteractionData}
+                    margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Area type="monotone" dataKey="interactions" stroke="#82ca9d" fill="#82ca9d" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }
-
-// Benutzerdefinierter Tooltip für Charts
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-background p-2 border border-border rounded-md shadow-md">
-        <p className="font-medium">{label}</p>
-        {payload.map((entry: any, index: number) => (
-          <p key={`item-${index}`} style={{ color: entry.color }}>
-            {entry.name}: {entry.value}
-          </p>
-        ))}
-      </div>
-    );
-  }
-
-  return null;
-};
