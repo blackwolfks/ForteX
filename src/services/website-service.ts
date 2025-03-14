@@ -33,7 +33,6 @@ export const websiteService = {
    */
   async getUserWebsites(): Promise<Website[]> {
     try {
-      // We need to use a direct SQL query since the 'websites' table isn't in the TypeScript types yet
       const { data, error } = await supabase
         .rpc('get_user_websites');
       
@@ -86,7 +85,7 @@ export const websiteService = {
       
       return {
         website: websiteData[0] as Website,
-        content: (contentData?.content as WebsiteContent) || defaultContent
+        content: (contentData && contentData[0]?.content as WebsiteContent) || defaultContent
       };
     } catch (error) {
       console.error("Failed to fetch website by ID:", error);
