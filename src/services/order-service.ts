@@ -16,11 +16,20 @@ export interface OrderDetails {
   items?: ProductCartItem[];
 }
 
+export interface InvoiceDetails {
+  orderId: string;
+  customerName: string;
+  customerEmail: string;
+  billingAddress: string;
+  planName?: string;
+  amount: number;
+  currency: string;
+  paymentMethod: string;
+}
+
 class OrderService {
-  // Neue Bestellung erstellen
   async createOrder(orderDetails: OrderDetails): Promise<Order> {
     try {
-      // Benutzer-ID aus dem Auth-State abrufen oder einen Fallback verwenden
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData?.user?.id || 'anonymous';
 
@@ -37,7 +46,6 @@ class OrderService {
         updated_at: new Date().toISOString(),
       };
 
-      // Bestellung in die Datenbank einfügen
       const { data, error } = await supabase
         .from('orders')
         .insert([newOrder])
@@ -50,7 +58,6 @@ class OrderService {
     } catch (error) {
       console.error('Fehler beim Erstellen der Bestellung:', error);
       
-      // Fallback: In localStorage speichern, wenn die DB-Verbindung fehlschlägt
       const orderId = uuidv4();
       const order = {
         id: orderId,
@@ -74,7 +81,6 @@ class OrderService {
     }
   }
   
-  // Hilfsfunktion zum Laden von Bestellungen aus localStorage
   private getUserOrdersFromLocalStorage(): Order[] {
     const userId = localStorage.getItem("userId") || "guest";
     const ordersJson = localStorage.getItem("user_orders");
@@ -92,14 +98,11 @@ class OrderService {
     }
   }
   
-  // Benutzerbestellungen abrufen
   async getUserOrders(): Promise<Order[]> {
     try {
-      // Benutzer-ID aus dem Auth-State abrufen oder einen Fallback verwenden
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData?.user?.id || 'anonymous';
 
-      // Bestellungen aus der Datenbank abrufen
       const { data, error } = await supabase
         .from('orders')
         .select('*')
@@ -112,15 +115,12 @@ class OrderService {
     } catch (error) {
       console.error('Fehler beim Abrufen der Bestellungen:', error);
       
-      // Fallback: Aus localStorage laden, wenn die DB-Verbindung fehlschlägt
       return this.getUserOrdersFromLocalStorage();
     }
   }
   
-  // Bestellung nach ID abrufen
   async getOrderById(orderId: string): Promise<Order | null> {
     try {
-      // Bestellung aus der Datenbank abrufen
       const { data, error } = await supabase
         .from('orders')
         .select('*')
@@ -133,16 +133,13 @@ class OrderService {
     } catch (error) {
       console.error('Fehler beim Abrufen der Bestellung:', error);
       
-      // Fallback: Aus localStorage laden
       const orders = this.getUserOrdersFromLocalStorage();
       return orders.find(order => order.id === orderId) || null;
     }
   }
   
-  // Bestellstatus aktualisieren
   async updateOrderStatus(orderId: string, status: Order["status"]): Promise<Order | null> {
     try {
-      // Bestellung in der Datenbank aktualisieren
       const { data, error } = await supabase
         .from('orders')
         .update({ 
@@ -159,7 +156,6 @@ class OrderService {
     } catch (error) {
       console.error('Fehler beim Aktualisieren der Bestellung:', error);
       
-      // Fallback: In localStorage aktualisieren
       const orders = this.getUserOrdersFromLocalStorage();
       const orderIndex = orders.findIndex(order => order.id === orderId);
       
@@ -176,7 +172,6 @@ class OrderService {
     }
   }
   
-  // Rechnung für eine Bestellung generieren
   async generateInvoice(invoiceDetails: InvoiceDetails): Promise<string> {
     try {
       const invoiceNumber = `INV-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
@@ -197,7 +192,6 @@ class OrderService {
         invoice_url: invoiceUrl,
       };
       
-      // Rechnung in die Datenbank einfügen
       const { error } = await supabase
         .from('invoices')
         .insert([newInvoice]);
@@ -208,10 +202,8 @@ class OrderService {
     } catch (error) {
       console.error('Fehler beim Generieren der Rechnung:', error);
       
-      // Fallback: Simulierte Rechnung ohne Speicherung
       const invoiceNumber = `INV-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       
-      // Update der lokalen Bestellung mit Rechnungsinformationen
       const orders = this.getUserOrdersFromLocalStorage();
       const orderIndex = orders.findIndex(order => order.id === invoiceDetails.orderId);
       
@@ -239,14 +231,11 @@ class OrderService {
     }
   }
   
-  // Aktives Abonnement des Benutzers abrufen
   async getActiveSubscription(): Promise<Order | null> {
     try {
-      // Benutzer-ID aus dem Auth-State abrufen oder einen Fallback verwenden
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData?.user?.id || 'anonymous';
 
-      // Abgeschlossene Bestellungen aus der Datenbank abrufen und nach Datum sortieren
       const { data, error } = await supabase
         .from('orders')
         .select('*')
@@ -261,14 +250,11 @@ class OrderService {
     } catch (error) {
       console.error('Fehler beim Abrufen des aktiven Abonnements:', error);
       
-      // Fallback: Aus localStorage laden
       const orders = this.getUserOrdersFromLocalStorage();
-      // Filter abgeschlossene Bestellungen und sortiere nach Datum (neueste zuerst)
       const completedOrders = orders
         .filter(order => order.status === "completed")
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       
-      // Gib die neueste abgeschlossene Bestellung als aktives Abonnement zurück
       return completedOrders.length > 0 ? completedOrders[0] : null;
     }
   }
