@@ -56,6 +56,10 @@ const SocialLogin = ({ setError, redirectUrl, plan }: SocialLoginProps) => {
         localStorage.setItem("cfx_return_to", redirectUrl.replace("/", ""));
       }
       
+      // Store client credentials in localStorage for the callback to use
+      localStorage.setItem("cfx_client_id", "txadmin_test");
+      localStorage.setItem("cfx_client_secret", "txadmin_test");
+      
       // Get the CFX interaction URL from environment
       const CFX_INTERACTION_URL = import.meta.env.VITE_CFX_INTERACTION_URL;
       

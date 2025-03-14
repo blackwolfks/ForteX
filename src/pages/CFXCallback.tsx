@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { authService } from "@/services/auth-service";
@@ -46,11 +47,19 @@ const CFXCallback = () => {
           throw new Error("Ungültiger State-Parameter (CSRF-Schutz)");
         }
 
+        // Get client credentials from localStorage
+        const clientId = localStorage.getItem("cfx_client_id") || "txadmin_test";
+        const clientSecret = localStorage.getItem("cfx_client_secret") || "txadmin_test";
+
         // Update processing state
         setProcessingState("Authentifizierung mit CFX...");
         
-        // Handle CFX callback with the authorization code
-        const userData = await authService.handleCFXCallback(code);
+        // Handle CFX callback with the authorization code and client credentials
+        const userData = await authService.handleCFXCallback(code, clientId, clientSecret);
+        
+        // Clean up localStorage items
+        localStorage.removeItem("cfx_client_id");
+        localStorage.removeItem("cfx_client_secret");
         
         // Check if we got user data back
         if (!userData) {

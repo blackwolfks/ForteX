@@ -308,7 +308,7 @@ export const authService = {
   },
   
   // CFX OAuth Callback verarbeiten
-  handleCFXCallback: async (code: string) => {
+  handleCFXCallback: async (code: string, clientId = "txadmin_test", clientSecret = "txadmin_test") => {
     try {
       // Verify state parameter for CSRF protection
       const storedState = localStorage.getItem("cfx_auth_state");
@@ -316,10 +316,10 @@ export const authService = {
       
       // Log the code received for debugging
       console.log("CFX callback received with code:", code ? "Code received" : "No code received");
+      console.log("Using client credentials:", { clientId, clientSecret });
       
       // In a real implementation, you'd exchange this code for a token
-      // by calling the CFX token endpoint. For this example, we're simulating
-      // a successful authentication.
+      // by calling the CFX token endpoint with the client_id and client_secret
       
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 1000));
