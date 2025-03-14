@@ -32,6 +32,7 @@ export function useWebsiteBuilder() {
     setIsLoading(true);
     try {
       const websiteList = await websiteService.getUserWebsites();
+      console.log("Loaded websites:", websiteList);
       setWebsites(websiteList);
       setLastChangeTimestamp(Date.now());
     } catch (error) {

@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -296,7 +297,7 @@ export const websiteService = {
 
       // Update content if needed
       if (changes.contentChanged) {
-        console.log("Website content updated");
+        console.log("Updating website content:", content);
         
         const { error: contentError } = await supabase
           .rpc('save_website_content', {

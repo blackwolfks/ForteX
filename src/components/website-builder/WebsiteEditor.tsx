@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -101,6 +102,8 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
   const [editingTextSection, setEditingTextSection] = useState<string | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
+  const [originalContent, setOriginalContent] = useState<WebsiteContent | null>(null);
+  const [originalWebsite, setOriginalWebsite] = useState<any>(null);
   
   useEffect(() => {
     const loadWebsiteData = async () => {
@@ -110,6 +113,11 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
         
         if (result) {
           const { website, content } = result;
+          // Store original data for change comparison
+          setOriginalWebsite(website);
+          setOriginalContent(content);
+          
+          // Set current data
           setWebsiteName(website.name);
           setWebsiteUrl(website.url || "");
           setWebsiteTemplate(website.template);
@@ -138,23 +146,34 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
     
     setIsSaving(true);
     try {
+      console.log("Saving website data...");
+      console.log("Content being saved:", content);
+      
+      const updatedWebsiteData = {
+        name: websiteName,
+        url: websiteUrl,
+        template: websiteTemplate,
+        shop_template: shopTemplate
+      };
+      
       const success = await websiteService.updateWebsite(
         websiteId,
-        {
-          name: websiteName,
-          url: websiteUrl,
-          shop_template: shopTemplate
-        },
+        updatedWebsiteData,
         content
       );
       
       if (success) {
+        // Update our originals after successful save
+        setOriginalWebsite({...originalWebsite, ...updatedWebsiteData});
+        setOriginalContent({...content});
+        
         setHasChanges(false);
         setLastSaved(new Date().toISOString());
         console.log("Website data saved successfully");
         toast.success("Änderungen wurden gespeichert");
         return true;
       } else {
+        console.error("Error saving website data");
         toast.error("Fehler beim Speichern der Änderungen");
         return false;
       }
@@ -200,16 +219,28 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
     toast.success("Template wurde angewendet");
   };
 
-  // Track changes to content and other website properties
+  // Detect changes by comparing to original data
   useEffect(() => {
-    if (isInitialized) {
-      setHasChanges(true);
-    }
-  }, [content, websiteName, websiteUrl, shopTemplate, isInitialized]);
+    if (!isInitialized || !originalContent || !originalWebsite) return;
+    
+    const websiteChanges = websiteService.compareWebsiteChanges(
+      originalWebsite,
+      {
+        name: websiteName,
+        url: websiteUrl,
+        template: websiteTemplate,
+        shop_template: shopTemplate
+      },
+      originalContent,
+      content
+    );
+    
+    setHasChanges(websiteChanges.websiteChanged || websiteChanges.contentChanged);
+  }, [content, websiteName, websiteUrl, shopTemplate, websiteTemplate, isInitialized, originalContent, originalWebsite]);
 
   // Apply template when it changes
   useEffect(() => {
-    if (isInitialized) {
+    if (isInitialized && shopTemplate !== originalWebsite?.shop_template) {
       applyTemplate(shopTemplate);
     }
   }, [shopTemplate, isInitialized]);
@@ -238,7 +269,7 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
     if (activeTab === "preview" && hasChanges) {
       saveWebsiteData();
     }
-  }, [activeTab]);
+  }, [activeTab, hasChanges]);
   
   if (isLoading) {
     return (
