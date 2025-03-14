@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -55,9 +54,19 @@ export default function WebsiteSettingsPanel({ websiteId }: WebsiteSettingsPanel
         // Lade Website-Daten und Einstellungen
         const websiteData = await websiteService.getWebsiteById(websiteId);
         if (websiteData?.settings) {
+          // Ensure all required properties have values by merging with default settings
           setSettings({
-            ...settings,
-            ...websiteData.settings,
+            fonts: {
+              headings: websiteData.settings.fonts?.headings || 'Inter',
+              body: websiteData.settings.fonts?.body || 'Inter'
+            },
+            colors: {
+              primary: websiteData.settings.colors?.primary || '#3b82f6',
+              secondary: websiteData.settings.colors?.secondary || '#10b981',
+              background: websiteData.settings.colors?.background || '#ffffff',
+              text: websiteData.settings.colors?.text || '#1f2937'
+            },
+            layout: websiteData.settings.layout || 'fluid',
             customDomain: '',
             analytics: {
               enabled: false,
