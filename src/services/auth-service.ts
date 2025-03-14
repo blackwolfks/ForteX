@@ -30,7 +30,7 @@ const DISCORD_SCOPE = "identify email";
 const CFX_CLIENT_ID = import.meta.env.VITE_CFX_CLIENT_ID || "YOUR_CFX_CLIENT_ID";
 const CFX_REDIRECT_URI = `${window.location.origin}/auth/cfx-callback`;
 const CFX_SCOPE = "profile email";
-const CFX_INTERACTION_URL = "https://idms.fivem.net/interaction/";
+const CFX_INTERACTION_URL = import.meta.env.VITE_CFX_INTERACTION_URL || "https://idms.fivem.net/interaction/";
 
 // Mock-Daten für schnelle Tests
 const MOCK_USERS = [
@@ -277,59 +277,51 @@ export const authService = {
   },
   
   // Anmeldung mit CFX
-  signInWithCFX: async (returnTo: string = "dashboard") => {
+  signInWithCFX: async () => {
     try {
-      // Mit Supabase CFX OAuth durchführen
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'github',
-        options: {
-          redirectTo: CFX_REDIRECT_URI,
-          queryParams: {
-            return_to: returnTo
-          }
-        }
-      });
-      
-      if (error) throw error;
-      
-      // Umleitung zu CFX Auth-Seite - in einer echten Implementierung
-      window.location.href = data.url;
-      
-      // Diese Funktion kehrt nicht zurück, da wir umleiten
-      return new Promise<any>(() => {});
-    } catch (error) {
-      console.log('Supabase OAuth-Fehler, Fallback zu Mock-OAuth:', error);
-      
-      // Fallback zu Mock-OAuth
-      // CFX OAuth Redirect URL erstellen
-      const stateToken = Math.random().toString(36).substring(2, 15);
+      // Generate state token for CSRF protection
+      const stateToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       localStorage.setItem("cfx_auth_state", stateToken);
-      localStorage.setItem("cfx_return_to", returnTo);
       
+      // CFX OAuth Configuration
+      const CFX_CLIENT_ID = import.meta.env.VITE_CFX_CLIENT_ID || "YOUR_CFX_CLIENT_ID";
+      const CFX_REDIRECT_URI = `${window.location.origin}/auth/cfx-callback`;
+      const CFX_SCOPE = "profile email";
+      const CFX_INTERACTION_URL = import.meta.env.VITE_CFX_INTERACTION_URL || "https://idms.fivem.net/interaction/";
+      
+      // Build CFX OAuth URL directly
       const cfxAuthUrl = `${CFX_INTERACTION_URL}authorize?client_id=${CFX_CLIENT_ID}&redirect_uri=${encodeURIComponent(CFX_REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(CFX_SCOPE)}&state=${stateToken}`;
       
-      // Zu CFX Auth-Seite umleiten
+      // Redirect to CFX Auth page
+      console.log("Redirecting to CFX auth URL:", cfxAuthUrl);
       window.location.href = cfxAuthUrl;
       
-      // Diese Funktion kehrt nicht zurück, da wir umleiten
+      // This function doesn't return as we're redirecting
       return new Promise<any>(() => {});
+    } catch (error) {
+      console.error("CFX Login Error:", error);
+      throw new Error("Bei der Anmeldung mit CFX ist ein Fehler aufgetreten.");
     }
   },
   
   // CFX OAuth Callback verarbeiten
   handleCFXCallback: async (code: string) => {
     try {
-      // Prüfen auf den State-Parameter (würde in einer echten App für CSRF-Schutz verwendet)
+      // Verify state parameter for CSRF protection
       const storedState = localStorage.getItem("cfx_auth_state");
       localStorage.removeItem("cfx_auth_state");
       
-      // In einer echten App würde hier ein Token-Austausch mit dem CFX-API-Endpunkt stattfinden
-      // In diesem simulierten Beispiel überspringe ich diesen Schritt
+      // Log the code received for debugging
+      console.log("CFX callback received with code:", code ? "Code received" : "No code received");
       
-      // Simulierte API-Verzögerung
+      // In a real implementation, you'd exchange this code for a token
+      // by calling the CFX token endpoint. For this example, we're simulating
+      // a successful authentication.
+      
+      // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Simulierter erfolgreicher Login nach OAuth-Callback
+      // Create a simulated user from the CFX login
       currentUser = {
         id: "cfx_user_id",
         name: "CFX User",

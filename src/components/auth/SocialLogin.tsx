@@ -41,12 +41,12 @@ const SocialLogin = ({ setError, redirectUrl, plan }: SocialLoginProps) => {
     }
   };
 
-  // Modified CFX login with txAdmin-like state handling
+  // Direct CFX login without relying on Supabase OAuth
   const handleCFXLogin = async () => {
     try {
       setIsLoading(true);
       
-      // Generate state token for CSRF protection, similar to txAdmin approach
+      // Generate state token for CSRF protection
       const stateToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       localStorage.setItem("cfx_auth_state", stateToken);
       
@@ -57,10 +57,18 @@ const SocialLogin = ({ setError, redirectUrl, plan }: SocialLoginProps) => {
         localStorage.setItem("cfx_return_to", redirectUrl.replace("/", ""));
       }
       
-      // Call the auth service
-      await authService.signInWithCFX();
+      // Use the direct CFX interaction URL from environment variable
+      const CFX_CLIENT_ID = import.meta.env.VITE_CFX_CLIENT_ID;
+      const CFX_REDIRECT_URI = `${window.location.origin}/auth/cfx-callback`;
+      const CFX_SCOPE = "profile email";
+      const CFX_INTERACTION_URL = import.meta.env.VITE_CFX_INTERACTION_URL || "https://idms.fivem.net/interaction/";
       
-      // No need to setIsLoading(false) as we're redirecting away
+      // Construct the CFX authorization URL
+      const cfxAuthUrl = `${CFX_INTERACTION_URL}authorize?client_id=${CFX_CLIENT_ID}&redirect_uri=${encodeURIComponent(CFX_REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(CFX_SCOPE)}&state=${stateToken}`;
+      
+      // Redirect to CFX auth page
+      window.location.href = cfxAuthUrl;
+      
     } catch (err) {
       console.error("CFX Login Error:", err);
       setIsLoading(false);
