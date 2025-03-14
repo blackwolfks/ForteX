@@ -184,12 +184,148 @@ export type Database = {
         }
         Relationships: []
       }
+      website_content: {
+        Row: {
+          content: Json
+          created_at: string | null
+          id: string
+          updated_at: string | null
+          website_id: string
+        }
+        Insert: {
+          content: Json
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+          website_id: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+          website_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "website_content_website_id_fkey"
+            columns: ["website_id"]
+            isOneToOne: false
+            referencedRelation: "websites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      websites: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_saved: string | null
+          name: string
+          shop_template: string
+          template: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_saved?: string | null
+          name: string
+          shop_template: string
+          template: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_saved?: string | null
+          name?: string
+          shop_template?: string
+          template?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_website: {
+        Args: {
+          website_name: string
+          website_url: string
+          website_template: string
+          website_shop_template: string
+        }
+        Returns: string
+      }
+      delete_website: {
+        Args: {
+          website_id: string
+        }
+        Returns: undefined
+      }
+      get_user_websites: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string | null
+          id: string
+          last_saved: string | null
+          name: string
+          shop_template: string
+          template: string
+          url: string
+          user_id: string
+        }[]
+      }
+      get_website_by_id: {
+        Args: {
+          website_id: string
+        }
+        Returns: {
+          created_at: string | null
+          id: string
+          last_saved: string | null
+          name: string
+          shop_template: string
+          template: string
+          url: string
+          user_id: string
+        }[]
+      }
+      get_website_content: {
+        Args: {
+          website_id: string
+        }
+        Returns: {
+          id: string
+          website_id: string
+          content: Json
+          created_at: string
+          updated_at: string
+        }[]
+      }
+      save_website_content: {
+        Args: {
+          website_id: string
+          content_data: Json
+        }
+        Returns: undefined
+      }
+      update_website: {
+        Args: {
+          website_id: string
+          website_name: string
+          website_url: string
+          website_template: string
+          website_shop_template: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

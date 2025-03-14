@@ -21,9 +21,9 @@ export const WebsiteCard = ({ id, name, url, template, lastUpdated, onEdit, onDe
     locale: de
   });
 
-  // Define status as a string literal type and use a type assertion when comparing
+  // Define status as a string and use a boolean for comparison
   const status = "entwurf"; // Default status for now, can be updated later
-  // We'll use this for comparisons to avoid type errors
+  // We'll use this boolean for comparisons to avoid type errors
   const isPublished = status === "veröffentlicht";
 
   return (
