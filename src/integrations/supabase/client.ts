@@ -22,6 +22,38 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
   global: {
     headers: {
       'apikey': SUPABASE_PUBLISHABLE_KEY,
+      'Content-Type': 'application/json',
     },
   },
+  db: {
+    schema: 'public',
+  }
 });
+
+// Export an explicit function for RPC calls to ensure API key is always included
+export const callRPC = async <T>(
+  functionName: string,
+  params: Record<string, any> = {}
+): Promise<{ data: T | null; error: Error | null }> => {
+  console.log(`Calling RPC function: ${functionName} with params:`, params);
+  
+  try {
+    const { data, error } = await supabase.rpc(functionName, params, {
+      headers: {
+        'apikey': SUPABASE_PUBLISHABLE_KEY,
+        'Content-Type': 'application/json',
+      }
+    });
+
+    if (error) {
+      console.error(`Error in RPC call to ${functionName}:`, error);
+      return { data: null, error };
+    }
+
+    console.log(`RPC call to ${functionName} successful:`, data);
+    return { data, error: null };
+  } catch (error) {
+    console.error(`Exception in RPC call to ${functionName}:`, error);
+    return { data: null, error: error as Error };
+  }
+};
