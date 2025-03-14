@@ -223,6 +223,7 @@ export type Database = {
           last_saved: string | null
           name: string
           shop_template: string
+          status: string | null
           template: string
           url: string
           user_id: string
@@ -233,6 +234,7 @@ export type Database = {
           last_saved?: string | null
           name: string
           shop_template: string
+          status?: string | null
           template: string
           url: string
           user_id: string
@@ -243,6 +245,7 @@ export type Database = {
           last_saved?: string | null
           name?: string
           shop_template?: string
+          status?: string | null
           template?: string
           url?: string
           user_id?: string
@@ -254,15 +257,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      create_website: {
-        Args: {
-          website_name: string
-          website_url: string
-          website_template: string
-          website_shop_template: string
-        }
-        Returns: string
-      }
+      create_website:
+        | {
+            Args: {
+              website_name: string
+              website_url: string
+              website_template: string
+              website_shop_template: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              website_name: string
+              website_url: string
+              website_template: string
+              website_shop_template: string
+              website_status?: string
+            }
+            Returns: string
+          }
       delete_website: {
         Args: {
           website_id: string
@@ -277,6 +291,7 @@ export type Database = {
           last_saved: string | null
           name: string
           shop_template: string
+          status: string | null
           template: string
           url: string
           user_id: string
@@ -292,6 +307,7 @@ export type Database = {
           last_saved: string | null
           name: string
           shop_template: string
+          status: string | null
           template: string
           url: string
           user_id: string
@@ -316,13 +332,32 @@ export type Database = {
         }
         Returns: undefined
       }
-      update_website: {
+      update_website:
+        | {
+            Args: {
+              website_id: string
+              website_name: string
+              website_url: string
+              website_template: string
+              website_shop_template: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              website_id: string
+              website_name: string
+              website_url: string
+              website_template: string
+              website_shop_template: string
+              website_status?: string
+            }
+            Returns: undefined
+          }
+      update_website_status: {
         Args: {
           website_id: string
-          website_name: string
-          website_url: string
-          website_template: string
-          website_shop_template: string
+          website_status: string
         }
         Returns: undefined
       }
