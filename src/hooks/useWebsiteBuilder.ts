@@ -78,7 +78,9 @@ export function useWebsiteBuilder() {
       if (websiteId) {
         toast.success("Website wurde erstellt");
         setShowNewWebsiteDialog(false);
-        loadWebsites();
+        
+        // Immediately load websites after creation
+        await loadWebsites();
         setSelectedWebsite(websiteId);
       } else {
         toast.error("Fehler beim Erstellen der Website");

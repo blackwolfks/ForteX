@@ -34,6 +34,7 @@ export const websiteService = {
    */
   async getUserWebsites(): Promise<Website[]> {
     try {
+      console.log("Fetching user websites");
       const { data, error } = await supabase
         .rpc('get_user_websites');
       
@@ -42,6 +43,7 @@ export const websiteService = {
         throw error;
       }
       
+      console.log("Received websites data:", data);
       return data as Website[] || [];
     } catch (error) {
       console.error("Failed to fetch websites:", error);
@@ -55,6 +57,8 @@ export const websiteService = {
    */
   async getWebsiteById(id: string): Promise<{website: Website, content: WebsiteContent} | null> {
     try {
+      console.log("Fetching website by ID:", id);
+      
       // Get website data using RPC
       const { data: websiteData, error: websiteError } = await supabase
         .rpc('get_website_by_id', { website_id: id });
@@ -70,6 +74,8 @@ export const websiteService = {
         return null;
       }
 
+      console.log("Received website data:", websiteData[0]);
+
       // Get content data
       const { data: contentData, error: contentError } = await supabase
         .rpc('get_website_content', { website_id: id });
@@ -78,6 +84,8 @@ export const websiteService = {
         console.error("Error fetching website content:", contentError);
         throw contentError;
       }
+
+      console.log("Received content data:", contentData);
 
       const defaultContent: WebsiteContent = {
         title: websiteData[0].name || "Neue Website",

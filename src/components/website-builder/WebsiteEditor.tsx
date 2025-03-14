@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -215,25 +214,10 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
     }
   }, [shopTemplate, isInitialized]);
 
-  // Improved auto-save functionality
+  // Prompt user before leaving page with unsaved changes
   useEffect(() => {
-    if (!hasChanges || !isInitialized) return;
+    if (!hasChanges) return;
     
-    // Save immediately after 5 seconds of inactivity
-    const saveTimeout = setTimeout(() => {
-      console.log("Auto-saving website changes after inactivity...");
-      saveWebsiteData();
-    }, 5000);
-    
-    // Auto-save every 30 seconds if changes are made
-    const autoSaveInterval = setInterval(() => {
-      if (hasChanges) {
-        console.log("Auto-saving website changes...");
-        saveWebsiteData();
-      }
-    }, 30000);
-    
-    // Prompt user before leaving page with unsaved changes
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasChanges) {
         e.preventDefault();
@@ -245,15 +229,13 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
     window.addEventListener('beforeunload', handleBeforeUnload);
     
     return () => {
-      clearTimeout(saveTimeout);
-      clearInterval(autoSaveInterval);
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [hasChanges, isInitialized]);
+  }, [hasChanges]);
 
-  // Save on tab change
+  // Save on tab change ONLY if explicitly requested
   useEffect(() => {
-    if (hasChanges && activeTab !== "edit" && isInitialized) {
+    if (activeTab === "preview" && hasChanges) {
       saveWebsiteData();
     }
   }, [activeTab]);
