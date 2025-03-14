@@ -20,7 +20,7 @@ import {
   ShoppingBag, 
   Image as ImageIcon, 
   Type, 
-  LayoutHeader
+  Layout
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -64,7 +64,7 @@ export function WebsiteEditor() {
       <Card key={section.id} className="mb-4 border">
         <CardHeader className="flex flex-row items-center justify-between py-3">
           <CardTitle className="text-base flex items-center">
-            {section.type === 'hero' && <LayoutHeader className="h-4 w-4 mr-2" />}
+            {section.type === 'hero' && <Layout className="h-4 w-4 mr-2" />}
             {section.type === 'text' && <Type className="h-4 w-4 mr-2" />}
             {section.type === 'image' && <ImageIcon className="h-4 w-4 mr-2" />}
             {section.type === 'products' && <ShoppingBag className="h-4 w-4 mr-2" />}
@@ -153,7 +153,7 @@ export function WebsiteEditor() {
                 className="h-auto p-4 flex flex-col items-center justify-center"
                 onClick={() => handleAddSection('hero')}
               >
-                <LayoutHeader className="h-8 w-8 mb-2" />
+                <Layout className="h-8 w-8 mb-2" />
                 <span>Hero-Bereich</span>
               </Button>
               

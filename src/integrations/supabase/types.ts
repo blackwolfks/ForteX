@@ -186,7 +186,7 @@ export type Database = {
       }
       website_change_history: {
         Row: {
-          changed_at: string
+          changed_at: string | null
           changed_by: string
           changed_fields: string[]
           content_snapshot: Json
@@ -194,7 +194,7 @@ export type Database = {
           website_id: string
         }
         Insert: {
-          changed_at?: string
+          changed_at?: string | null
           changed_by: string
           changed_fields: string[]
           content_snapshot: Json
@@ -202,7 +202,7 @@ export type Database = {
           website_id: string
         }
         Update: {
-          changed_at?: string
+          changed_at?: string | null
           changed_by?: string
           changed_fields?: string[]
           content_snapshot?: Json
@@ -210,13 +210,6 @@ export type Database = {
           website_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "fk_website"
-            columns: ["website_id"]
-            isOneToOne: false
-            referencedRelation: "websites"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "website_change_history_website_id_fkey"
             columns: ["website_id"]
