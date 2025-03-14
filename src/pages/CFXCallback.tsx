@@ -9,6 +9,7 @@ import { Loader2 } from "lucide-react";
 const CFXCallback = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [processingState, setProcessingState] = useState<string>("Initialisierung...");
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -18,13 +19,33 @@ const CFXCallback = () => {
       try {
         const urlParams = new URLSearchParams(location.search);
         const code = urlParams.get("code");
+        const state = urlParams.get("state");
+        const error = urlParams.get("error");
+        const payload = urlParams.get("payload"); // Encrypted payload with API key
         
-        if (!code) {
-          throw new Error("Kein Autorisierungscode erhalten");
+        // Update processing state for better user feedback
+        setProcessingState("Autorisierungscode wird verarbeitet...");
+
+        // Check for authorization errors
+        if (error) {
+          throw new Error(`Autorisierungsfehler: ${error}`);
         }
         
+        if (!code && !payload) {
+          throw new Error("Kein Autorisierungscode oder API-Schlüssel erhalten");
+        }
+
+        // Check state parameter for CSRF protection
+        const storedState = localStorage.getItem("cfx_auth_state");
+        if (state && storedState && state !== storedState) {
+          throw new Error("Ungültiger State-Parameter (CSRF-Schutz)");
+        }
+
+        // Update processing state
+        setProcessingState("Authentifizierung mit CFX...");
+        
         // Handle CFX callback with the authorization code
-        const userData = await authService.handleCFXCallback(code);
+        const userData = await authService.handleCFXCallback(code || payload || "");
         
         // Check if we got user data back
         if (!userData) {
@@ -38,7 +59,10 @@ const CFXCallback = () => {
         });
         
         // Redirect to API keys page if coming from there, otherwise dashboard
-        const returnTo = urlParams.get("return_to");
+        const returnTo = urlParams.get("return_to") || localStorage.getItem("cfx_return_to");
+        localStorage.removeItem("cfx_auth_state");
+        localStorage.removeItem("cfx_return_to");
+        
         if (returnTo && returnTo === "api-keys") {
           navigate("/cfx-api-keys");
         } else {
@@ -81,7 +105,7 @@ const CFXCallback = () => {
         <CardContent className="pt-6">
           <div className="text-center space-y-4">
             <h2 className="text-xl font-medium text-gray-100">Anmeldung mit CFX</h2>
-            <p className="text-gray-400">Sie werden angemeldet, bitte warten...</p>
+            <p className="text-gray-400">{processingState}</p>
             <div className="flex justify-center">
               <Loader2 className="h-6 w-6 text-teal-500 animate-spin" />
             </div>
