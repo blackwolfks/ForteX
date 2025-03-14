@@ -516,6 +516,27 @@ export function useWebsiteBuilder() {
     }
   }, [selectedWebsite, websiteContent]);
   
+  // Website veröffentlichen
+  const publishWebsite = useCallback(async (websiteId: string): Promise<boolean> => {
+    setIsLoading(true);
+    try {
+      const success = await websiteService.publishWebsite(websiteId);
+      if (success && selectedWebsite && selectedWebsite.id === websiteId) {
+        setSelectedWebsite({
+          ...selectedWebsite,
+          status: 'published'
+        });
+      }
+      return success;
+    } catch (error) {
+      console.error('Error publishing website:', error);
+      toast.error('Fehler beim Veröffentlichen der Website');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedWebsite]);
+  
   // Initialisierung beim ersten Laden
   useEffect(() => {
     loadWebsites();
@@ -541,6 +562,7 @@ export function useWebsiteBuilder() {
     updateLayout,
     updateProductCategories,
     saveContent,
-    applyTemplate
+    applyTemplate,
+    publishWebsite
   };
 }

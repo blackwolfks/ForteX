@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useWebsiteBuilder } from '@/hooks/useWebsiteBuilder';
 import { Button } from '@/components/ui/button';
@@ -54,7 +53,6 @@ export function WebsiteBuilderView() {
   const [urlFormatError, setUrlFormatError] = useState('');
   
   const handleCreateWebsite = async () => {
-    // Validate URL format - lowercase, no spaces, no special characters except hyphens
     const urlRegex = /^[a-z0-9-]+$/;
     if (!urlRegex.test(newWebsiteData.url)) {
       setUrlFormatError('URL darf nur Kleinbuchstaben, Zahlen und Bindestriche enthalten.');
@@ -222,7 +220,7 @@ export function WebsiteBuilderView() {
               <div>
                 <div className="flex items-center space-x-2">
                   <CardTitle>{selectedWebsite.name}</CardTitle>
-                  <Badge variant={selectedWebsite.status === 'published' ? 'success' : 'default'}>
+                  <Badge variant={selectedWebsite.status === 'published' ? 'secondary' : 'default'}>
                     {selectedWebsite.status === 'published' ? 'Veröffentlicht' : 'Entwurf'}
                   </Badge>
                 </div>
