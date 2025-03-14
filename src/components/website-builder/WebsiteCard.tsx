@@ -21,7 +21,8 @@ export const WebsiteCard = ({ id, name, url, template, lastUpdated, onEdit, onDe
     locale: de
   });
 
-  const status = "entwurf"; // Default status for now, can be updated later
+  // Define status as a string literal type to avoid comparison errors
+  const status: "entwurf" | "veröffentlicht" = "entwurf"; // Default status for now, can be updated later
 
   return (
     <Card className="overflow-hidden">

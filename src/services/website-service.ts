@@ -41,7 +41,7 @@ export const websiteService = {
         throw error;
       }
       
-      return data || [];
+      return data as Website[] || [];
     } catch (error) {
       console.error("Failed to fetch websites:", error);
       toast.error("Fehler beim Laden der Websites");
@@ -63,7 +63,7 @@ export const websiteService = {
         throw websiteError;
       }
 
-      if (!websiteData || websiteData.length === 0) {
+      if (!websiteData || (websiteData as any[]).length === 0) {
         throw new Error("Website not found");
       }
 
@@ -77,15 +77,15 @@ export const websiteService = {
       }
 
       const defaultContent: WebsiteContent = {
-        title: websiteData[0].name || "Neue Website",
+        title: (websiteData as any[])[0].name || "Neue Website",
         subtitle: "Subtitle",
         description: "Beschreibung",
         sections: []
       };
       
       return {
-        website: websiteData[0] as Website,
-        content: (contentData && contentData[0]?.content as WebsiteContent) || defaultContent
+        website: (websiteData as any[])[0] as Website,
+        content: (contentData && (contentData as any[])[0]?.content as WebsiteContent) || defaultContent
       };
     } catch (error) {
       console.error("Failed to fetch website by ID:", error);
@@ -129,7 +129,7 @@ export const websiteService = {
         throw contentError;
       }
       
-      return websiteId;
+      return websiteId as string;
     } catch (error) {
       console.error("Failed to create website:", error);
       toast.error("Fehler beim Erstellen der Website");
