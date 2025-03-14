@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -110,8 +109,6 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
   const [changeHistory, setChangeHistory] = useState<WebsiteChangeHistory[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   
-  const { handleSaveWebsiteContent } = useWebsiteBuilder();
-  
   useEffect(() => {
     const loadWebsiteData = async () => {
       setIsLoading(true);
@@ -168,12 +165,20 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
       console.log("Saving content changes only...");
       console.log("Content being saved:", content);
       
-      const success = await handleSaveWebsiteContent(websiteId, content);
+      const success = await websiteService.updateWebsite(
+        websiteId, 
+        { 
+          name: websiteName,
+          url: websiteUrl,
+          template: websiteTemplate,
+          shop_template: shopTemplate
+        }, 
+        content
+      );
       
       if (success) {
         setOriginalContent({...content});
         
-        // Only reset content-related changes
         const websiteChanged = websiteService.compareWebsiteChanges(
           originalWebsite,
           {
@@ -186,7 +191,6 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
           content
         ).websiteChanged;
         
-        // Only mark as no changes if there are no website metadata changes
         if (!websiteChanged) {
           setHasChanges(false);
         }
@@ -232,7 +236,11 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
         shop_template: shopTemplate
       };
       
-      const success = await handleSaveWebsiteContent(websiteId, content);
+      const success = await websiteService.updateWebsite(
+        websiteId,
+        updatedWebsiteData,
+        content
+      );
       
       if (success) {
         setOriginalWebsite({...originalWebsite, ...updatedWebsiteData});
@@ -273,7 +281,6 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
   };
   
   const handlePreview = () => {
-    // Just switch tabs without saving
     setActiveTab("preview");
   };
 
