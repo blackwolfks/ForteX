@@ -116,15 +116,28 @@ export const authService = {
   // Anmeldung mit Google
   signInWithGoogle: async () => {
     try {
+      console.log("Starting Google OAuth sign-in process");
+      
       // Mit Supabase Google OAuth durchführen
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: GOOGLE_REDIRECT_URI
+          redirectTo: GOOGLE_REDIRECT_URI,
+          // Explizit code challenge setzen, um Authorization Code Flow zu erzwingen
+          flowType: 'pkce',
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'select_account',
+          }
         }
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase OAuth error:", error);
+        throw error;
+      }
+      
+      console.log("Redirecting to Google auth URL:", data.url);
       
       // Benutzer wird zu Google-Auth-Seite umgeleitet
       window.location.href = data.url;
@@ -132,11 +145,13 @@ export const authService = {
       // Diese Funktion kehrt nicht zurück, da wir umleiten
       return new Promise<any>(() => {});
     } catch (error) {
-      console.log('Supabase OAuth-Fehler, Fallback zu Mock-OAuth:', error);
+      console.error('Supabase OAuth-Fehler, Fallback zu Mock-OAuth:', error);
       
       // Fallback zu Mock-OAuth
-      // Google OAuth Redirect URL erstellen
+      // Google OAuth Redirect URL erstellen - hier verwenden wir ebenfalls Authorization Code Flow
       const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(GOOGLE_REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(GOOGLE_SCOPE)}&access_type=offline&prompt=select_account`;
+      
+      console.log("Fallback: Redirecting to Google auth URL:", googleAuthUrl);
       
       // Zu Google Auth-Seite umleiten
       window.location.href = googleAuthUrl;
@@ -149,16 +164,23 @@ export const authService = {
   // Google OAuth Callback verarbeiten
   handleGoogleCallback: async (code: string) => {
     try {
+      console.log("Processing Google callback with code:", code.substring(0, 5) + "...");
+      
       // In einer echten Supabase-App müssten wir hier nichts tun, da Supabase den Callback verarbeitet
       // Wir prüfen hier einfach, ob wir einen Benutzer haben
       const { data, error } = await supabase.auth.getSession();
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error getting session:", error);
+        throw error;
+      }
       
       if (!data.session) {
+        console.error("No valid session after OAuth login");
         throw new Error("Keine gültige Sitzung nach OAuth-Anmeldung");
       }
       
+      console.log("Session obtained successfully");
       const user = data.session.user;
       
       return {
@@ -167,7 +189,7 @@ export const authService = {
         email: user.email,
       };
     } catch (error) {
-      console.log('Supabase Session-Fehler, Fallback zu Mock-Auth:', error);
+      console.error('Supabase Session-Fehler, Fallback zu Mock-Auth:', error);
       
       // Fallback zu Mock-Auth
       // Simulierte API-Verzögerung

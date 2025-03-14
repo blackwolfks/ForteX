@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 const GoogleCallback = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -17,15 +18,21 @@ const GoogleCallback = () => {
   useEffect(() => {
     const handleCallback = async () => {
       try {
+        console.log("Google callback triggered, location:", location);
+        
         // Check if we got a token in the hash fragment (indicates Implicit flow)
         if (location.hash && location.hash.includes('access_token')) {
           console.error("Invalid callback format: Got token in hash fragment, need code parameter");
-          throw new Error("OAuth-Konfigurationsfehler: Bei Google ist der falsche OAuth-Typ eingestellt. Bitte auf 'Authorization Code' umstellen statt 'Implicit' oder 'Token'.");
+          setDebugInfo(`Hash fragment detected: ${location.hash.substring(0, 20)}...`);
+          throw new Error("OAuth-Konfigurationsfehler: Bei Google ist der falsche OAuth-Typ eingestellt. Bitte in der Google Cloud Console auf 'Authorization Code' umstellen statt 'Implicit' oder 'Token'.");
         }
         
         const urlParams = new URLSearchParams(location.search);
         const code = urlParams.get("code");
         const error = urlParams.get("error");
+        const state = urlParams.get("state");
+        
+        console.log("URL params:", { code: code ? "present" : "missing", error, state: state ? "present" : "missing" });
         
         if (error) {
           if (error === "access_denied") {
@@ -36,6 +43,7 @@ const GoogleCallback = () => {
         }
         
         if (!code) {
+          setDebugInfo(`URL search params: ${location.search}`);
           throw new Error("Kein Autorisierungscode erhalten");
         }
         
@@ -76,12 +84,17 @@ const GoogleCallback = () => {
                 <AlertCircle className="h-4 w-4 mr-2" />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
+              {debugInfo && (
+                <div className="text-xs text-gray-500 bg-gray-100 p-2 rounded mb-4 overflow-x-auto">
+                  <p className="font-mono">{debugInfo}</p>
+                </div>
+              )}
               <div className="flex flex-col mb-4 text-sm">
                 <p className="mb-2">Mögliche Lösungen:</p>
                 <ul className="text-left list-disc pl-5 space-y-1">
                   <li>Stellen Sie in der Google Cloud Console unter "OAuth 2.0-Konfiguration" den Rückgabetyp auf "Authorization code" ein, nicht auf "Implicit" oder "Token"</li>
-                  <li>Prüfen Sie, ob die Google Client-ID korrekt ist</li>
-                  <li>Prüfen Sie, ob die Weiterleitungs-URL (auth/google-callback) in Google Cloud Console konfiguriert ist</li>
+                  <li>Prüfen Sie, ob die Google Client-ID korrekt ist: {import.meta.env.VITE_GOOGLE_CLIENT_ID ? import.meta.env.VITE_GOOGLE_CLIENT_ID.substring(0, 10) + "..." : "Nicht gesetzt"}</li>
+                  <li>Prüfen Sie, ob die Weiterleitungs-URL (<code>{window.location.origin}/auth/google-callback</code>) in Google Cloud Console konfiguriert ist</li>
                   <li>Vergewissern Sie sich, dass Google als OAuth-Provider in Supabase aktiviert ist</li>
                 </ul>
                 <div className="flex flex-col mt-3">
