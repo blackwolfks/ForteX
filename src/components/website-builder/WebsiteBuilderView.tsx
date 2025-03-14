@@ -153,7 +153,7 @@ export function WebsiteBuilderView() {
             </div>
           </CardHeader>
           <CardContent>
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="mb-4">
                 <TabsTrigger value="editor" className="flex gap-2 items-center">
                   <Save className="h-4 w-4" />
@@ -169,15 +169,15 @@ export function WebsiteBuilderView() {
                 </TabsTrigger>
               </TabsList>
               
-              <TabsContent value="editor">
+              <TabsContent value="editor" className="mt-4">
                 <WebsiteEditor />
               </TabsContent>
               
-              <TabsContent value="preview">
+              <TabsContent value="preview" className="mt-4">
                 <WebsitePreview />
               </TabsContent>
               
-              <TabsContent value="settings">
+              <TabsContent value="settings" className="mt-4">
                 <WebsiteSettings />
               </TabsContent>
             </Tabs>
