@@ -6,7 +6,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { callRPC } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-// Demo-Daten für die Statistiken
+// Demo data for statistics
 const demoVisitData = [
   { name: '01.05', visits: 20 },
   { name: '02.05', visits: 15 },
@@ -29,26 +29,35 @@ const demoInteractionData = [
 
 export default function WebsiteStatsView() {
   const [hasPro, setHasPro] = useState<boolean>(false);
+  const [subscriptionTier, setSubscriptionTier] = useState<string>('free');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   
-  // Abrufen des Pro-Status beim Laden der Komponente
+  // Fetch user's subscription status when component loads
   useEffect(() => {
     const checkProStatus = async () => {
       try {
         setIsLoading(true);
-        // Use type assertion to tell TypeScript this is okay
-        const { data, error } = await callRPC('get_user_pro_status' as any, {});
+        const { data, error } = await callRPC('get_user_pro_status', {});
         
         if (error) {
           console.error('Fehler beim Abrufen des Pro-Status:', error);
           toast.error('Fehler beim Prüfen deines Pro-Status.');
           setHasPro(false);
+          setSubscriptionTier('free');
         } else {
-          setHasPro(!!data?.has_pro);
+          // Handle the new return type with has_pro and subscription_tier
+          if (data && data.length > 0) {
+            setHasPro(!!data[0].has_pro);
+            setSubscriptionTier(data[0].subscription_tier || 'free');
+          } else {
+            setHasPro(false);
+            setSubscriptionTier('free');
+          }
         }
       } catch (err) {
         console.error('Unerwarteter Fehler:', err);
         setHasPro(false);
+        setSubscriptionTier('free');
       } finally {
         setIsLoading(false);
       }
@@ -57,18 +66,18 @@ export default function WebsiteStatsView() {
     checkProStatus();
   }, []);
   
-  // Funktion zum Aktivieren des Pro-Zugriffs (für Demozwecke)
+  // Function to activate Pro access
   const enableProAccess = async () => {
     try {
       setIsLoading(true);
-      // Use type assertion to tell TypeScript this is okay
-      const { data, error } = await callRPC('enable_pro_access' as any, {});
+      const { data, error } = await callRPC('enable_pro_access', {});
       
       if (error) {
         console.error('Fehler beim Aktivieren des Pro-Zugriffs:', error);
         toast.error('Pro-Zugriff konnte nicht aktiviert werden.');
       } else {
         setHasPro(true);
+        setSubscriptionTier('pro');
         toast.success('Pro-Zugriff wurde erfolgreich aktiviert!');
       }
     } catch (err) {

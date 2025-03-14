@@ -208,6 +208,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_subscriptions: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          subscription_tier: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          subscription_tier?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          subscription_tier?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       website_change_history: {
         Row: {
           changed_at: string
@@ -356,10 +383,19 @@ export type Database = {
           success: boolean
         }[]
       }
+      enable_subscription: {
+        Args: {
+          tier_name: string
+        }
+        Returns: {
+          success: boolean
+        }[]
+      }
       get_user_pro_status: {
         Args: Record<PropertyKey, never>
         Returns: {
           has_pro: boolean
+          subscription_tier: string
         }[]
       }
       get_user_websites: {
