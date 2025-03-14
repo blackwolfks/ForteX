@@ -7,6 +7,7 @@ import { Website } from '@/services/website-service';
 import { useWebsiteBuilder } from '@/hooks/useWebsiteBuilder';
 import { Eye, Pencil, Trash, Globe, Copy } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { toast } from 'sonner';
 
 interface WebsiteListProps {
   websites: Website[];
@@ -32,6 +33,12 @@ export function WebsiteList({ websites, onSelect }: WebsiteListProps) {
   
   const handleCopyUrl = (url: string) => {
     navigator.clipboard.writeText(`https://${url}`);
+    toast.success('URL wurde in die Zwischenablage kopiert');
+  };
+  
+  const handleEditWebsite = (websiteId: string) => {
+    console.log('Selecting website with ID:', websiteId);
+    onSelect(websiteId);
   };
   
   return (
@@ -99,7 +106,7 @@ export function WebsiteList({ websites, onSelect }: WebsiteListProps) {
                 </Button>
                 
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={() => onSelect(website.id)}>
+                  <Button size="sm" onClick={() => handleEditWebsite(website.id)}>
                     <Pencil className="h-4 w-4 mr-1" />
                     Bearbeiten
                   </Button>

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useWebsiteBuilder } from '@/hooks/useWebsiteBuilder';
 import { Button } from '@/components/ui/button';
@@ -37,7 +38,8 @@ export function WebsiteBuilderView() {
     selectWebsite,
     createNewWebsite,
     saveContent,
-    publishWebsite
+    publishWebsite,
+    loadWebsites
   } = useWebsiteBuilder();
   
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -52,6 +54,26 @@ export function WebsiteBuilderView() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [urlFormatError, setUrlFormatError] = useState('');
   
+  // Lade Websites wenn die Komponente geladen wird
+  useEffect(() => {
+    console.log('WebsiteBuilderView: Loading websites');
+    loadWebsites();
+  }, [loadWebsites]);
+  
+  // Logge wenn eine Website ausgewählt wurde
+  useEffect(() => {
+    if (selectedWebsite) {
+      console.log('Selected website:', selectedWebsite);
+    }
+  }, [selectedWebsite]);
+  
+  // Logge wenn der Website-Inhalt geladen wurde
+  useEffect(() => {
+    if (websiteContent) {
+      console.log('Website content loaded:', !!websiteContent);
+    }
+  }, [websiteContent]);
+  
   const handleCreateWebsite = async () => {
     const urlRegex = /^[a-z0-9-]+$/;
     if (!urlRegex.test(newWebsiteData.url)) {
@@ -62,6 +84,7 @@ export function WebsiteBuilderView() {
     const websiteId = await createNewWebsite(newWebsiteData);
     if (websiteId) {
       setIsCreateDialogOpen(false);
+      console.log('Created website with ID:', websiteId);
       await selectWebsite(websiteId);
       setActiveTab('editor');
       setNewWebsiteData({
@@ -104,7 +127,17 @@ export function WebsiteBuilderView() {
     setActiveTab('editor');
   };
   
+  const handleWebsiteSelect = async (websiteId: string) => {
+    console.log('Selecting website with ID:', websiteId);
+    await selectWebsite(websiteId);
+  };
+  
   const showWebsiteEditor = selectedWebsite && websiteContent;
+  
+  // Zusätzliches Debugging
+  console.log('Render state: showWebsiteEditor =', showWebsiteEditor);
+  console.log('selectedWebsite =', selectedWebsite?.id);
+  console.log('websiteContent =', websiteContent ? 'exists' : 'null');
   
   return (
     <div className="space-y-6">
@@ -212,7 +245,7 @@ export function WebsiteBuilderView() {
       </div>
 
       {!showWebsiteEditor ? (
-        <WebsiteList websites={websites} onSelect={selectWebsite} />
+        <WebsiteList websites={websites} onSelect={handleWebsiteSelect} />
       ) : (
         <Card className="overflow-visible dark-card border-darkgray-400">
           <CardHeader className="pb-3">
