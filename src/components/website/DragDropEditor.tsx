@@ -5,7 +5,7 @@ import { useWebsiteBuilder, EditorMode } from '@/hooks/useWebsiteBuilder';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Save, Edit, Eye, Smartphone, ChevronUp, ChevronDown, Copy, Trash2, Layers } from 'lucide-react';
+import { Plus, Save, Edit, Eye, Smartphone, ChevronUp, ChevronDown, Copy, Trash2, Layers, Undo2, Redo2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import HeroSection from './sections/HeroSection';
 import TextSection from './sections/TextSection';
@@ -15,6 +15,8 @@ import ProductSection from './sections/ProductSection';
 import { toast } from 'sonner';
 import { websiteService } from '@/services/website-service';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
+import { Separator } from '@/components/ui/separator';
+import { useHotkeys } from '@/hooks/useHotkeys';
 
 interface DragDropEditorProps {
   websiteId: string;
@@ -28,6 +30,8 @@ export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
     saving,
     mode,
     selectedSectionId,
+    canUndo,
+    canRedo,
     setMode,
     setSelectedSectionId,
     saveContent,
@@ -36,11 +40,20 @@ export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
     reorderSections,
     deleteSection,
     duplicateSection,
-    publishWebsite
+    publishWebsite,
+    undo,
+    redo
   } = useWebsiteBuilder(websiteId);
   
   const [draggingSection, setDraggingSection] = useState<string | null>(null);
   const dragOverSectionRef = useRef<string | null>(null);
+  
+  // Set up keyboard shortcuts
+  useHotkeys([
+    { key: 'mod+z', callback: undo, enabled: canUndo },
+    { key: 'mod+shift+z', callback: redo, enabled: canRedo },
+    { key: 'mod+s', callback: () => saveContent(), preventDefault: true }
+  ]);
   
   if (loading) {
     return (
@@ -252,6 +265,44 @@ export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
             <Smartphone className="h-4 w-4 mr-2" />
             Mobil
           </Button>
+          
+          <Separator orientation="vertical" className="h-6" />
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={undo}
+                  disabled={!canUndo}
+                >
+                  <Undo2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Rückgängig (Strg+Z)</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={redo}
+                  disabled={!canRedo}
+                >
+                  <Redo2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Wiederherstellen (Strg+Shift+Z)</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
         
         <div className="flex items-center gap-2">

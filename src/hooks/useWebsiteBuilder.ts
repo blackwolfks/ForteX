@@ -9,17 +9,27 @@ import {
 import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import { getDefaultContent } from '@/utils/sectionDefaults';
+import { useUndoRedo } from './useUndoRedo';
 
 export type EditorMode = 'edit' | 'preview' | 'mobile-preview';
 
 export const useWebsiteBuilder = (websiteId?: string) => {
   const [website, setWebsite] = useState<Website | null>(null);
-  const [sections, setSections] = useState<WebsiteSection[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [mode, setMode] = useState<EditorMode>('edit');
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  
+  // Use the undo/redo hook for sections
+  const { 
+    state: sections, 
+    update: setSections, 
+    undo,
+    redo,
+    canUndo,
+    canRedo
+  } = useUndoRedo<WebsiteSection[]>([]);
   
   const loadWebsite = useCallback(async () => {
     if (!websiteId) return;
@@ -59,7 +69,7 @@ export const useWebsiteBuilder = (websiteId?: string) => {
     } finally {
       setLoading(false);
     }
-  }, [websiteId]);
+  }, [websiteId, setSections]);
   
   useEffect(() => {
     if (websiteId) {
@@ -115,6 +125,22 @@ export const useWebsiteBuilder = (websiteId?: string) => {
       sections.map(section => 
         section.id === id 
           ? { ...section, content: { ...section.content, ...content } }
+          : section
+      )
+    );
+  };
+  
+  const updateSectionSettings = (id: string, settings: Record<string, any>) => {
+    setSections(
+      sections.map(section => 
+        section.id === id 
+          ? { 
+              ...section, 
+              settings: { 
+                ...(section.settings || {}), 
+                ...settings 
+              } 
+            }
           : section
       )
     );
@@ -188,6 +214,8 @@ export const useWebsiteBuilder = (websiteId?: string) => {
     mode,
     selectedSectionId,
     isDragging,
+    canUndo,
+    canRedo,
     setMode,
     setSelectedSectionId,
     setIsDragging,
@@ -195,9 +223,12 @@ export const useWebsiteBuilder = (websiteId?: string) => {
     saveContent,
     addSection,
     updateSectionContent,
+    updateSectionSettings,
     reorderSections,
     deleteSection,
     duplicateSection,
-    publishWebsite
+    publishWebsite,
+    undo,
+    redo
   };
 };

@@ -23,6 +23,30 @@ export type Website = {
   user_id: string;
   created_at: string;
   last_saved: string;
+  settings?: WebsiteSettings;
+  seo?: WebsiteSEO;
+};
+
+export type WebsiteSettings = {
+  fonts?: {
+    headings?: string;
+    body?: string;
+  };
+  colors?: {
+    primary?: string;
+    secondary?: string;
+    background?: string;
+    text?: string;
+  };
+  layout?: "fixed" | "fluid";
+  animations?: boolean;
+};
+
+export type WebsiteSEO = {
+  title?: string;
+  description?: string;
+  keywords?: string[];
+  ogImage?: string;
 };
 
 export type WebsiteContent = {
@@ -38,6 +62,19 @@ export type WebsiteSection = {
   type: SectionType;
   content: Record<string, any>;
   order: number;
+  settings?: {
+    background?: {
+      type: "color" | "image" | "video";
+      value: string;
+    };
+    spacing?: {
+      top: number;
+      bottom: number;
+    };
+    layout?: "full-width" | "contained" | "custom";
+    animation?: string;
+    sticky?: boolean;
+  };
 };
 
 export type WebsiteTemplate = {
@@ -46,6 +83,7 @@ export type WebsiteTemplate = {
   thumbnail: string;
   description: string;
   category: string;
+  settings?: WebsiteSettings;
   sections?: WebsiteSection[];
 };
 
@@ -56,4 +94,21 @@ export type WebsiteChangeHistory = {
   changed_fields: string[];
   changed_at: string;
   changed_by: string;
+};
+
+export type UndoRedoAction = {
+  type: 'undo' | 'redo';
+  timestamp: number;
+};
+
+export type WebsitePage = {
+  id: string;
+  website_id: string;
+  slug: string;
+  title: string;
+  is_homepage: boolean;
+  sections: WebsiteSection[];
+  seo?: WebsiteSEO;
+  created_at: string;
+  updated_at: string;
 };
