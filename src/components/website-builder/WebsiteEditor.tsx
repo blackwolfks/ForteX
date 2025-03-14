@@ -11,6 +11,9 @@ import { ProductSection } from './sections/ProductSection';
 import { ImageSection } from './sections/ImageSection';
 import { HeroSection } from './sections/HeroSection';
 import { TextSection } from './sections/TextSection';
+import { FormSection } from './sections/FormSection';
+import { DragDropEditor } from './DragDropEditor';
+import { MediaManager } from './MediaManager';
 import { 
   ChevronUp, 
   ChevronDown, 
@@ -23,7 +26,11 @@ import {
   Layout,
   Palette,
   Copy,
-  Eye
+  Eye,
+  Save,
+  LayoutGrid,
+  FileText,
+  FormInput
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -39,19 +46,23 @@ export function WebsiteEditor() {
     removeSection, 
     reorderSections,
     updateProductCategories,
-    applyTemplate
+    applyTemplate,
+    saveContent
   } = useWebsiteBuilder();
   
   const [isAddSectionDialogOpen, setIsAddSectionDialogOpen] = useState(false);
   const [isTemplatePickerOpen, setIsTemplatePickerOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop');
+  const [activeTab, setActiveTab] = useState('editor');
+  const [editorMode, setEditorMode] = useState<'standard' | 'dragdrop'>('standard');
+  const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
   
   if (!websiteContent) {
     return <div className="text-center py-8">Keine Website-Inhalte gefunden</div>;
   }
   
-  const { sections, productCategories } = websiteContent;
+  const { sections, productCategories, forms = [] } = websiteContent;
   
   const handleAddSection = (type: string) => {
     if (type === 'products' && !selectedCategory) {
@@ -92,18 +103,29 @@ export function WebsiteEditor() {
     setIsTemplatePickerOpen(false);
   };
   
+  const activeSection = activeSectionId ? sections.find(s => s.id === activeSectionId) : null;
+  
   const renderSectionEditor = (section: WebsiteSection, index: number) => {
     return (
-      <Card key={section.id} className="mb-4 border">
+      <Card key={section.id} className={`mb-4 border ${activeSectionId === section.id ? 'border-primary' : ''}`}>
         <CardHeader className="flex flex-row items-center justify-between py-3">
           <CardTitle className="text-base flex items-center">
             {section.type === 'hero' && <Layout className="h-4 w-4 mr-2" />}
             {section.type === 'text' && <Type className="h-4 w-4 mr-2" />}
             {section.type === 'image' && <ImageIcon className="h-4 w-4 mr-2" />}
             {section.type === 'products' && <ShoppingBag className="h-4 w-4 mr-2" />}
+            {section.type === 'form' && <FormInput className="h-4 w-4 mr-2" />}
             {section.title || `${section.type.charAt(0).toUpperCase() + section.type.slice(1)}-Bereich`}
           </CardTitle>
           <div className="flex items-center gap-1">
+            <Button 
+              variant={activeSectionId === section.id ? "default" : "ghost"} 
+              size="sm" 
+              onClick={() => setActiveSectionId(activeSectionId === section.id ? null : section.id)}
+              title={activeSectionId === section.id ? "Schließen" : "Bearbeiten"}
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
             <Button 
               variant="ghost" 
               size="sm" 
@@ -140,38 +162,48 @@ export function WebsiteEditor() {
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {section.type === 'hero' && (
-              <HeroSection 
-                section={section} 
-                onUpdate={(updates) => updateSection(section.id, updates)} 
-              />
-            )}
-            
-            {section.type === 'text' && (
-              <TextSection 
-                section={section} 
-                onUpdate={(updates) => updateSection(section.id, updates)} 
-              />
-            )}
-            
-            {section.type === 'image' && (
-              <ImageSection 
-                section={section} 
-                onUpdate={(updates) => updateSection(section.id, updates)} 
-              />
-            )}
-            
-            {section.type === 'products' && (
-              <ProductSection 
-                section={section} 
-                productCategories={productCategories}
-                onUpdate={(updates) => updateSection(section.id, updates)} 
-              />
-            )}
-          </div>
-        </CardContent>
+        {activeSectionId === section.id && (
+          <CardContent>
+            <div className="space-y-4">
+              {section.type === 'hero' && (
+                <HeroSection 
+                  section={section} 
+                  onUpdate={(updates) => updateSection(section.id, updates)} 
+                />
+              )}
+              
+              {section.type === 'text' && (
+                <TextSection 
+                  section={section} 
+                  onUpdate={(updates) => updateSection(section.id, updates)} 
+                />
+              )}
+              
+              {section.type === 'image' && (
+                <ImageSection 
+                  section={section} 
+                  onUpdate={(updates) => updateSection(section.id, updates)} 
+                />
+              )}
+              
+              {section.type === 'products' && (
+                <ProductSection 
+                  section={section} 
+                  productCategories={productCategories}
+                  onUpdate={(updates) => updateSection(section.id, updates)} 
+                />
+              )}
+              
+              {section.type === 'form' && (
+                <FormSection
+                  section={section}
+                  forms={forms}
+                  onUpdate={(updates) => updateSection(section.id, updates)}
+                />
+              )}
+            </div>
+          </CardContent>
+        )}
       </Card>
     );
   };
@@ -222,6 +254,15 @@ export function WebsiteEditor() {
                 >
                   <ImageIcon className="h-8 w-8 mb-2" />
                   <span>Bild-Bereich</span>
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  className="h-auto p-4 flex flex-col items-center justify-center"
+                  onClick={() => handleAddSection('form')}
+                >
+                  <FormInput className="h-8 w-8 mb-2" />
+                  <span>Formular-Bereich</span>
                 </Button>
                 
                 <div className="col-span-2">
@@ -282,10 +323,36 @@ export function WebsiteEditor() {
       <Tabs defaultValue="editor" className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="editor">Editor</TabsTrigger>
+          <TabsTrigger value="media">Medien</TabsTrigger>
           <TabsTrigger value="preview">Live-Vorschau</TabsTrigger>
         </TabsList>
         
         <TabsContent value="editor" className="mt-4">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-2">
+              <Button 
+                variant={editorMode === 'standard' ? 'default' : 'outline'} 
+                size="sm"
+                onClick={() => setEditorMode('standard')}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Standard-Editor
+              </Button>
+              <Button 
+                variant={editorMode === 'dragdrop' ? 'default' : 'outline'} 
+                size="sm"
+                onClick={() => setEditorMode('dragdrop')}
+              >
+                <LayoutGrid className="h-4 w-4 mr-2" />
+                Drag & Drop
+              </Button>
+            </div>
+            <Button onClick={saveContent}>
+              <Save className="h-4 w-4 mr-2" />
+              Speichern
+            </Button>
+          </div>
+          
           {sections.length === 0 ? (
             <div className="text-center p-12 border rounded-md bg-muted/20">
               <Plus className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
@@ -299,9 +366,19 @@ export function WebsiteEditor() {
             </div>
           ) : (
             <div className="space-y-4">
-              {sections.map((section, index) => renderSectionEditor(section, index))}
+              {editorMode === 'standard' && (
+                sections.map((section, index) => renderSectionEditor(section, index))
+              )}
+              
+              {editorMode === 'dragdrop' && (
+                <DragDropEditor onShowSettings={(sectionId) => setActiveSectionId(sectionId)} />
+              )}
             </div>
           )}
+        </TabsContent>
+        
+        <TabsContent value="media" className="mt-4">
+          <MediaManager />
         </TabsContent>
         
         <TabsContent value="preview" className="mt-4 relative border rounded-lg p-4">

@@ -34,6 +34,43 @@ export type WebsiteContentData = {
     footer: FooterConfig;
   };
   productCategories: string[];
+  mediaFiles?: MediaFile[];
+  forms?: FormConfig[];
+  styles?: WebsiteStyles;
+};
+
+export type WebsiteStyles = {
+  primaryColor: string;
+  secondaryColor: string;
+  fontFamily: string;
+  customCSS?: string;
+};
+
+export type MediaFile = {
+  id: string;
+  url: string;
+  type: 'image' | 'video' | 'document';
+  name: string;
+  size: number;
+  uploadedAt: string;
+};
+
+export type FormConfig = {
+  id: string;
+  name: string;
+  fields: FormField[];
+  submitButtonText: string;
+  successMessage: string;
+  emailNotification?: string;
+};
+
+export type FormField = {
+  id: string;
+  type: 'text' | 'email' | 'textarea' | 'select' | 'checkbox' | 'radio';
+  label: string;
+  placeholder?: string;
+  required: boolean;
+  options?: string[]; // For select, checkbox, radio
 };
 
 export type HeaderConfig = {
@@ -62,6 +99,15 @@ export type WebsiteSection = {
   backgroundColor?: string;
   textColor?: string;
   alignment?: 'left' | 'center' | 'right';
+  // New properties for advanced sections
+  mediaGallery?: string[]; // Array of media URLs
+  formId?: string; // Reference to a form configuration
+  customHTML?: string; // For advanced users to add custom HTML
+  animation?: 'fade' | 'slide' | 'zoom' | 'none';
+  padding?: string;
+  margin?: string;
+  borderRadius?: string;
+  boxShadow?: string;
 };
 
 export type CreateWebsiteInput = {
@@ -175,7 +221,44 @@ export const websiteService = {
               ]
             }
           },
-          productCategories: ['scripts', 'vehicles', 'maps', 'characters', 'other']
+          productCategories: ['scripts', 'vehicles', 'maps', 'characters', 'other'],
+          mediaFiles: [],
+          forms: [
+            {
+              id: crypto.randomUUID(),
+              name: 'Kontaktformular',
+              fields: [
+                {
+                  id: crypto.randomUUID(),
+                  type: 'text',
+                  label: 'Name',
+                  placeholder: 'Ihr Name',
+                  required: true
+                },
+                {
+                  id: crypto.randomUUID(),
+                  type: 'email',
+                  label: 'E-Mail',
+                  placeholder: 'Ihre E-Mail Adresse',
+                  required: true
+                },
+                {
+                  id: crypto.randomUUID(),
+                  type: 'textarea',
+                  label: 'Nachricht',
+                  placeholder: 'Ihre Nachricht an uns',
+                  required: true
+                }
+              ],
+              submitButtonText: 'Absenden',
+              successMessage: 'Vielen Dank für Ihre Nachricht. Wir werden uns in Kürze bei Ihnen melden.'
+            }
+          ],
+          styles: {
+            primaryColor: '#3498db',
+            secondaryColor: '#2ecc71',
+            fontFamily: 'Arial, sans-serif'
+          }
         };
         
         await websiteService.saveWebsiteContent(data, defaultContent);
@@ -348,5 +431,140 @@ export const websiteService = {
       console.error('Error in getWebsiteChangeHistory:', error);
       return [];
     }
+  },
+  
+  // Neue Methoden für erweiterte Funktionen
+  uploadMedia: async (websiteId: string, file: File): Promise<MediaFile | null> => {
+    try {
+      // Hier würde normalerweise der Upload zur Supabase Storage erfolgen
+      // Für dieses Beispiel simulieren wir den Upload
+      const mediaFile: MediaFile = {
+        id: crypto.randomUUID(),
+        url: URL.createObjectURL(file), // In production this would be the Supabase storage URL
+        type: file.type.startsWith('image/') ? 'image' : 
+              file.type.startsWith('video/') ? 'video' : 'document',
+        name: file.name,
+        size: file.size,
+        uploadedAt: new Date().toISOString()
+      };
+      
+      // Update website content to include this media file
+      const content = await websiteService.getWebsiteContent(websiteId);
+      if (content) {
+        const mediaFiles = content.mediaFiles || [];
+        mediaFiles.push(mediaFile);
+        content.mediaFiles = mediaFiles;
+        await websiteService.saveWebsiteContent(websiteId, content);
+      }
+      
+      return mediaFile;
+    } catch (error) {
+      console.error('Error uploading media:', error);
+      toast.error('Fehler beim Hochladen der Mediendatei');
+      return null;
+    }
+  },
+  
+  deleteMedia: async (websiteId: string, mediaId: string): Promise<boolean> => {
+    try {
+      const content = await websiteService.getWebsiteContent(websiteId);
+      if (content && content.mediaFiles) {
+        content.mediaFiles = content.mediaFiles.filter(media => media.id !== mediaId);
+        await websiteService.saveWebsiteContent(websiteId, content);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error deleting media:', error);
+      toast.error('Fehler beim Löschen der Mediendatei');
+      return false;
+    }
+  },
+  
+  updateWebsiteStyles: async (websiteId: string, styles: WebsiteStyles): Promise<boolean> => {
+    try {
+      const content = await websiteService.getWebsiteContent(websiteId);
+      if (content) {
+        content.styles = styles;
+        await websiteService.saveWebsiteContent(websiteId, content);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error updating website styles:', error);
+      toast.error('Fehler beim Aktualisieren der Website-Stile');
+      return false;
+    }
+  },
+  
+  addForm: async (websiteId: string, form: FormConfig): Promise<string | null> => {
+    try {
+      const content = await websiteService.getWebsiteContent(websiteId);
+      if (content) {
+        const forms = content.forms || [];
+        const newForm = {
+          ...form,
+          id: crypto.randomUUID()
+        };
+        forms.push(newForm);
+        content.forms = forms;
+        await websiteService.saveWebsiteContent(websiteId, content);
+        return newForm.id;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error adding form:', error);
+      toast.error('Fehler beim Hinzufügen des Formulars');
+      return null;
+    }
+  },
+  
+  updateForm: async (websiteId: string, form: FormConfig): Promise<boolean> => {
+    try {
+      const content = await websiteService.getWebsiteContent(websiteId);
+      if (content && content.forms) {
+        content.forms = content.forms.map(f => f.id === form.id ? form : f);
+        await websiteService.saveWebsiteContent(websiteId, content);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error updating form:', error);
+      toast.error('Fehler beim Aktualisieren des Formulars');
+      return false;
+    }
+  },
+  
+  deleteForm: async (websiteId: string, formId: string): Promise<boolean> => {
+    try {
+      const content = await websiteService.getWebsiteContent(websiteId);
+      if (content && content.forms) {
+        content.forms = content.forms.filter(form => form.id !== formId);
+        await websiteService.saveWebsiteContent(websiteId, content);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error deleting form:', error);
+      toast.error('Fehler beim Löschen des Formulars');
+      return false;
+    }
+  },
+  
+  publishWebsite: async (websiteId: string): Promise<boolean> => {
+    try {
+      // Here would be the logic to publish the website to a hosting server
+      // For now, we'll just update the status to 'published'
+      return await websiteService.updateWebsiteStatus(websiteId, 'published');
+    } catch (error) {
+      console.error('Error publishing website:', error);
+      toast.error('Fehler beim Veröffentlichen der Website');
+      return false;
+    }
+  },
+  
+  generateWebsitePreviewUrl: (websiteId: string): string => {
+    // This would normally generate a URL for the published website preview
+    return `/website-preview/${websiteId}`;
   }
 };
