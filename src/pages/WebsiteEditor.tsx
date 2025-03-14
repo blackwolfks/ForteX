@@ -6,6 +6,8 @@ import DragDropEditor from '@/components/website/DragDropEditor';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Undo, Redo } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export default function WebsiteEditor() {
   const { websiteId } = useParams<{ websiteId: string }>();
@@ -15,12 +17,26 @@ export default function WebsiteEditor() {
   const navigate = useNavigate();
   
   useEffect(() => {
+    // Prüfen, ob der Benutzer angemeldet ist
+    const checkAuth = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        toast.error("Bitte melden Sie sich an, um den Website-Editor zu nutzen");
+        navigate('/signin?redirect=' + encodeURIComponent(window.location.pathname));
+        return false;
+      }
+      return true;
+    };
+
     const checkWebsite = async () => {
       if (!websiteId) {
         setError('Keine Website-ID angegeben');
         setLoading(false);
         return;
       }
+
+      const isAuthenticated = await checkAuth();
+      if (!isAuthenticated) return;
       
       try {
         const website = await websiteService.getWebsiteById(websiteId);
@@ -36,7 +52,7 @@ export default function WebsiteEditor() {
     };
     
     checkWebsite();
-  }, [websiteId]);
+  }, [websiteId, navigate]);
   
   if (loading) {
     return (

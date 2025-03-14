@@ -12,6 +12,14 @@ export const contentService = {
         return null;
       }
 
+      // Prüfen, ob der Benutzer angemeldet ist
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        console.error("User is not authenticated");
+        toast.error("Bitte melden Sie sich an, um den Website-Inhalt zu laden");
+        return null;
+      }
+
       console.log("Fetching website content for:", websiteId);
       const { data, error } = await callRPC('get_website_content', { website_id: websiteId });
       
@@ -43,6 +51,14 @@ export const contentService = {
       if (!websiteId) {
         console.error("Error saving website content: websiteId is required");
         toast.error("Fehler beim Speichern des Website-Inhalts");
+        return false;
+      }
+
+      // Prüfen, ob der Benutzer angemeldet ist
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        console.error("User is not authenticated");
+        toast.error("Bitte melden Sie sich an, um die Änderungen zu speichern");
         return false;
       }
 
@@ -80,6 +96,14 @@ export const contentService = {
         return null;
       }
 
+      // Prüfen, ob der Benutzer angemeldet ist
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        console.error("User is not authenticated");
+        toast.error("Bitte melden Sie sich an, um die Änderungshistorie zu speichern");
+        return null;
+      }
+
       console.log("Adding website change history:", websiteId, contentSnapshot, changedFields);
       
       const { data, error } = await callRPC('add_website_change_history', { 
@@ -107,6 +131,14 @@ export const contentService = {
       if (!websiteId) {
         console.error("Error fetching website change history: websiteId is required");
         toast.error("Fehler beim Laden der Änderungshistorie");
+        return [];
+      }
+
+      // Prüfen, ob der Benutzer angemeldet ist
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        console.error("User is not authenticated");
+        toast.error("Bitte melden Sie sich an, um die Änderungshistorie zu laden");
         return [];
       }
 

@@ -89,7 +89,7 @@ type RpcParams = {
   };
 };
 
-// Export an explicit function for RPC calls to ensure API key is always included
+// Verbesserte callRPC-Funktion mit zusätzlichem Logging und Fehlerbehandlung
 export const callRPC = async <F extends RpcFunctionName>(
   functionName: F,
   params: RpcParams[F]
@@ -97,14 +97,24 @@ export const callRPC = async <F extends RpcFunctionName>(
   console.log(`Calling RPC function: ${functionName} with params:`, params);
   
   try {
-    // Make sure the API key is included in every request
+    // Überprüfen, ob der Benutzer angemeldet ist
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+      console.error(`Error in RPC call to ${functionName}: User is not authenticated`);
+      return { data: null, error: new Error('User is not authenticated') };
+    }
+
+    // Verwende den Session-Token für die Authentifizierung
+    const authToken = sessionData.session.access_token;
+    
+    // Make sure the API key and auth token are included in every request
     const { data, error } = await supabase.rpc(functionName, params, {
       headers: {
         'apikey': SUPABASE_PUBLISHABLE_KEY,
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`
+        'Authorization': `Bearer ${authToken}`
       }
-    } as any); // Use type assertion to bypass the TypeScript error
+    } as any); // Type assertion for TypeScript compatibility
 
     if (error) {
       console.error(`Error in RPC call to ${functionName}:`, error);
