@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { 
   websiteService, 
@@ -221,7 +222,15 @@ export function useWebsiteBuilder() {
   }, []);
   
   // Website auswählen und Inhalt laden
-  const selectWebsite = useCallback(async (websiteId: string) => {
+  const selectWebsite = useCallback(async (websiteId: string | null) => {
+    // If websiteId is null, clear the selected website and content
+    if (websiteId === null) {
+      setSelectedWebsite(null);
+      setWebsiteContent(null);
+      setIsDirty(false);
+      return;
+    }
+    
     setIsLoading(true);
     try {
       const website = await websiteService.getWebsiteById(websiteId);

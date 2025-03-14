@@ -56,6 +56,13 @@ export function WebsiteBuilderView() {
     }
   };
   
+  const handleBackToList = () => {
+    // Instead of passing an empty string, we'll set selectedWebsite to null
+    // in the useWebsiteBuilder hook by passing null
+    selectWebsite(null);
+    setActiveTab('editor');
+  };
+  
   const showWebsiteEditor = selectedWebsite && websiteContent;
   
   return (
@@ -139,10 +146,7 @@ export function WebsiteBuilderView() {
                   • Zuletzt bearbeitet: {new Date(selectedWebsite.last_saved).toLocaleString()}
                 </CardDescription>
               </div>
-              <Button variant="outline" onClick={() => {
-                selectWebsite("");
-                setActiveTab('editor');
-              }}>
+              <Button variant="outline" onClick={handleBackToList}>
                 <List className="h-4 w-4 mr-2" />
                 Zurück zur Liste
               </Button>
@@ -180,9 +184,7 @@ export function WebsiteBuilderView() {
           </CardContent>
           <CardFooter className="border-t pt-6">
             <div className="flex justify-between w-full">
-              <Button variant="outline" onClick={() => {
-                selectWebsite("");
-              }}>
+              <Button variant="outline" onClick={handleBackToList}>
                 Zurück zur Liste
               </Button>
               <Button onClick={handleSave} disabled={!isDirty || isLoading}>
