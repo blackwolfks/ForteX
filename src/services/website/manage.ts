@@ -1,12 +1,20 @@
 
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, callRPC } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Website } from "@/types/website.types";
 
 export const websiteManageService = {
   async getUserWebsites(): Promise<Website[]> {
     try {
-      const { data, error } = await supabase.rpc('get_user_websites');
+      // Prüfen, ob der Benutzer angemeldet ist
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        console.error("User is not authenticated");
+        toast.error("Bitte melden Sie sich an, um Ihre Websites zu sehen");
+        return [];
+      }
+      
+      const { data, error } = await callRPC('get_user_websites', {});
       
       if (error) {
         throw error;
@@ -22,7 +30,15 @@ export const websiteManageService = {
   
   async getWebsiteById(id: string): Promise<Website | null> {
     try {
-      const { data, error } = await supabase.rpc('get_website_by_id', { website_id: id });
+      // Prüfen, ob der Benutzer angemeldet ist
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        console.error("User is not authenticated");
+        toast.error("Bitte melden Sie sich an, um Website-Details zu laden");
+        return null;
+      }
+      
+      const { data, error } = await callRPC('get_website_by_id', { website_id: id });
       
       if (error) {
         throw error;
@@ -44,7 +60,15 @@ export const websiteManageService = {
     status: string = "entwurf"
   ): Promise<string | null> {
     try {
-      const { data, error } = await supabase.rpc('create_website', { 
+      // Prüfen, ob der Benutzer angemeldet ist
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        console.error("User is not authenticated");
+        toast.error("Bitte melden Sie sich an, um eine Website zu erstellen");
+        return null;
+      }
+      
+      const { data, error } = await callRPC('create_website', { 
         website_name: name,
         website_url: url,
         website_template: template,
@@ -74,7 +98,15 @@ export const websiteManageService = {
     status?: string
   ): Promise<boolean> {
     try {
-      const { error } = await supabase.rpc('update_website', { 
+      // Prüfen, ob der Benutzer angemeldet ist
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        console.error("User is not authenticated");
+        toast.error("Bitte melden Sie sich an, um die Website zu aktualisieren");
+        return false;
+      }
+      
+      const { error } = await callRPC('update_website', { 
         website_id: id,
         website_name: name,
         website_url: url,
@@ -98,7 +130,15 @@ export const websiteManageService = {
   
   async updateWebsiteStatus(id: string, status: string): Promise<boolean> {
     try {
-      const { error } = await supabase.rpc('update_website_status', { 
+      // Prüfen, ob der Benutzer angemeldet ist
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        console.error("User is not authenticated");
+        toast.error("Bitte melden Sie sich an, um den Website-Status zu ändern");
+        return false;
+      }
+      
+      const { error } = await callRPC('update_website_status', { 
         website_id: id,
         website_status: status
       });
@@ -118,7 +158,15 @@ export const websiteManageService = {
   
   async deleteWebsite(id: string): Promise<boolean> {
     try {
-      const { error } = await supabase.rpc('delete_website', { website_id: id });
+      // Prüfen, ob der Benutzer angemeldet ist
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        console.error("User is not authenticated");
+        toast.error("Bitte melden Sie sich an, um die Website zu löschen");
+        return false;
+      }
+      
+      const { error } = await callRPC('delete_website', { website_id: id });
       
       if (error) {
         throw error;
