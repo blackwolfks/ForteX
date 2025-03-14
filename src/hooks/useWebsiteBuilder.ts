@@ -198,7 +198,7 @@ export function useWebsiteBuilder() {
     }
 
     try {
-      console.log("Saving website content:", content);
+      console.log("Saving website content to database:", content);
       
       // Aktuelle Website-Daten holen
       const websiteData = websites.find(w => w.id === websiteId);

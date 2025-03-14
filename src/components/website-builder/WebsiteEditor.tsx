@@ -84,6 +84,7 @@ const WEBSHOP_TEMPLATES = {
 
 export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
   const navigate = useNavigate();
+  const { handleSaveWebsiteContent } = useWebsiteBuilder();
   const [activeTab, setActiveTab] = useState("edit");
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -165,16 +166,7 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
       console.log("Saving content changes only...");
       console.log("Content being saved:", content);
       
-      const success = await websiteService.updateWebsite(
-        websiteId, 
-        { 
-          name: websiteName,
-          url: websiteUrl,
-          template: websiteTemplate,
-          shop_template: shopTemplate
-        }, 
-        content
-      );
+      const success = await handleSaveWebsiteContent(websiteId, content);
       
       if (success) {
         setOriginalContent({...content});
@@ -196,8 +188,6 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
         }
         
         setLastSaved(new Date().toISOString());
-        
-        await loadChangeHistory();
         
         console.log("Content changes saved successfully");
         toast.success("Inhalte wurden gespeichert");
@@ -249,7 +239,8 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
         setHasChanges(false);
         setLastSaved(new Date().toISOString());
         
-        await loadChangeHistory();
+        const history = await websiteService.getWebsiteChangeHistory(websiteId);
+        setChangeHistory(history);
         
         console.log("Full website data saved successfully");
         toast.success("Änderungen wurden gespeichert");
