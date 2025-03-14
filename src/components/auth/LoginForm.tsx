@@ -62,7 +62,7 @@ const LoginForm = ({ onOTPRequired, setError, error, onSuccess }: LoginFormProps
         if (onSuccess) {
           onSuccess();
         } else {
-          navigate("/dashboard");
+          navigate("/"); // Geändert von "/dashboard" zu "/"
         }
       }
     } catch (err) {

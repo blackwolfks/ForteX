@@ -37,17 +37,17 @@ const App = () => (
           
           {/* Authentifizierungsrouten */}
           <Route path="/sign-in" element={
-            <AuthGuard requireAuth={false} redirectTo="/dashboard">
+            <AuthGuard requireAuth={false} redirectTo="/">
               <SignIn />
             </AuthGuard>
           } />
           <Route path="/sign-up" element={
-            <AuthGuard requireAuth={false} redirectTo="/dashboard">
+            <AuthGuard requireAuth={false} redirectTo="/">
               <SignUp />
             </AuthGuard>
           } />
           <Route path="/forgot-password" element={
-            <AuthGuard requireAuth={false} redirectTo="/dashboard">
+            <AuthGuard requireAuth={false} redirectTo="/">
               <ForgotPassword />
             </AuthGuard>
           } />
