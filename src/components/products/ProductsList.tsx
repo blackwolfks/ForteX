@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { 
   Table, 
@@ -34,8 +35,7 @@ import {
   Tag
 } from "lucide-react";
 import { toast } from "sonner";
-import { productService } from "@/services/product-service";
-import { Product } from "@/lib/supabase";
+import { productService, Product } from "@/services/product";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 

@@ -41,7 +41,7 @@ import {
   ShoppingBag
 } from "lucide-react";
 import { toast } from "sonner";
-import { productService, CreateProductInput } from "@/services/product-service";
+import { productService, CreateProductInput } from "@/services/product";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 // Produktschema definieren
