@@ -38,7 +38,7 @@ export const websiteManageService = {
         return null;
       }
       
-      const { data, error } = await callRPC('get_website_by_id', { website_id: id });
+      const { data, error } = await callRPC('get_website_by_id', { site_id: id });
       
       if (error) {
         throw error;
@@ -107,7 +107,7 @@ export const websiteManageService = {
       }
       
       const { error } = await callRPC('update_website', { 
-        website_id: id,
+        site_id: id,
         website_name: name,
         website_url: url,
         website_template: template,
@@ -139,7 +139,7 @@ export const websiteManageService = {
       }
       
       const { error } = await callRPC('update_website_status', { 
-        website_id: id,
+        site_id: id,
         website_status: status
       });
       
@@ -166,7 +166,7 @@ export const websiteManageService = {
         return false;
       }
       
-      const { error } = await callRPC('delete_website', { website_id: id });
+      const { error } = await callRPC('delete_website', { site_id: id });
       
       if (error) {
         throw error;

@@ -294,7 +294,7 @@ export type Database = {
     Functions: {
       add_website_change_history: {
         Args: {
-          website_id: string
+          site_id: string
           content_snapshot: Json
           changed_fields: string[]
         }
@@ -322,7 +322,7 @@ export type Database = {
           }
       delete_website: {
         Args: {
-          website_id: string
+          site_id: string
         }
         Returns: undefined
       }
@@ -342,7 +342,7 @@ export type Database = {
       }
       get_website_by_id: {
         Args: {
-          website_id: string
+          site_id: string
         }
         Returns: {
           id: string
@@ -358,7 +358,7 @@ export type Database = {
       }
       get_website_change_history: {
         Args: {
-          website_id: string
+          site_id: string
         }
         Returns: {
           id: string
@@ -371,7 +371,7 @@ export type Database = {
       }
       get_website_content: {
         Args: {
-          website_id: string
+          site_id: string
         }
         Returns: {
           id: string
@@ -383,7 +383,7 @@ export type Database = {
       }
       save_website_content: {
         Args: {
-          website_id: string
+          site_id: string
           content_data: Json
         }
         Returns: undefined
@@ -391,17 +391,7 @@ export type Database = {
       update_website:
         | {
             Args: {
-              website_id: string
-              website_name: string
-              website_url: string
-              website_template: string
-              website_shop_template: string
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              website_id: string
+              site_id: string
               website_name: string
               website_url: string
               website_template: string
@@ -410,9 +400,19 @@ export type Database = {
             }
             Returns: undefined
           }
+        | {
+            Args: {
+              website_id: string
+              website_name: string
+              website_url: string
+              website_template: string
+              website_shop_template: string
+            }
+            Returns: undefined
+          }
       update_website_status: {
         Args: {
-          website_id: string
+          site_id: string
           website_status: string
         }
         Returns: undefined
