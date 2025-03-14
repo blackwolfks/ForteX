@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import { de } from "date-fns/locale";
 import { Edit, Trash, Eye, Globe } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
 
 export interface WebsiteCardProps {
   id: string;
@@ -11,20 +13,48 @@ export interface WebsiteCardProps {
   url: string;
   template: string;
   lastUpdated: string;
+  status?: "entwurf" | "veröffentlicht";
   onEdit: () => void;
   onDelete: () => void;
+  onPublish?: (id: string, shouldPublish: boolean) => Promise<boolean>;
 }
 
-export const WebsiteCard = ({ id, name, url, template, lastUpdated, onEdit, onDelete }: WebsiteCardProps) => {
+export const WebsiteCard = ({ 
+  id, 
+  name, 
+  url, 
+  template, 
+  lastUpdated, 
+  status = "entwurf", 
+  onEdit, 
+  onDelete,
+  onPublish 
+}: WebsiteCardProps) => {
   const formattedDate = formatDistanceToNow(new Date(lastUpdated), { 
     addSuffix: true,
     locale: de
   });
 
-  // Define status as a string and use a boolean for comparison
-  const status = "entwurf"; // Default status for now, can be updated later
-  // We'll use this boolean for comparisons to avoid type errors
+  // Use proper type definition to prevent errors
   const isPublished = status === "veröffentlicht";
+
+  const handlePublishToggle = async (checked: boolean) => {
+    if (!onPublish) return;
+    
+    try {
+      const newStatus = checked ? "veröffentlicht" : "entwurf";
+      const success = await onPublish(id, checked);
+      
+      if (success) {
+        toast.success(`Website wurde ${newStatus === "veröffentlicht" ? "veröffentlicht" : "zurückgezogen"}`);
+      } else {
+        toast.error(`Fehler beim ${newStatus === "veröffentlicht" ? "Veröffentlichen" : "Zurückziehen"} der Website`);
+      }
+    } catch (error) {
+      console.error("Fehler beim Umschalten des Veröffentlichungsstatus:", error);
+      toast.error("Es ist ein Fehler aufgetreten");
+    }
+  };
 
   return (
     <Card className="overflow-hidden">
@@ -58,6 +88,15 @@ export const WebsiteCard = ({ id, name, url, template, lastUpdated, onEdit, onDe
             <span className="text-muted-foreground">Zuletzt bearbeitet:</span>
             <span>{formattedDate}</span>
           </div>
+          {onPublish && (
+            <div className="flex justify-between items-center mt-3 pt-2 border-t">
+              <span className="text-muted-foreground">Veröffentlichen:</span>
+              <Switch 
+                checked={isPublished}
+                onCheckedChange={handlePublishToggle}
+              />
+            </div>
+          )}
         </div>
       </CardContent>
       <CardFooter className="flex justify-between">

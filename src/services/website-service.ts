@@ -8,6 +8,7 @@ export type Website = {
   url: string;
   template: string;
   shop_template: string;
+  status?: "entwurf" | "veröffentlicht";
   last_saved?: string;
   created_at?: string;
   user_id?: string;
@@ -105,7 +106,8 @@ export const websiteService = {
           website_name: websiteData.name,
           website_url: websiteData.url,
           website_template: websiteData.template,
-          website_shop_template: websiteData.shop_template
+          website_shop_template: websiteData.shop_template,
+          website_status: websiteData.status || "entwurf"
         });
       
       if (websiteError) {
@@ -149,7 +151,8 @@ export const websiteService = {
           website_name: websiteData.name,
           website_url: websiteData.url,
           website_template: websiteData.template,
-          website_shop_template: websiteData.shop_template
+          website_shop_template: websiteData.shop_template,
+          website_status: websiteData.status
         });
       
       if (websiteError) {
@@ -173,6 +176,36 @@ export const websiteService = {
     } catch (error) {
       console.error("Failed to update website:", error);
       toast.error("Fehler beim Speichern der Website-Daten");
+      return false;
+    }
+  },
+
+  /**
+   * Publish or unpublish a website
+   */
+  async publishWebsite(id: string, shouldPublish: boolean): Promise<boolean> {
+    try {
+      const status = shouldPublish ? "veröffentlicht" : "entwurf";
+      
+      const { error } = await supabase
+        .rpc('update_website_status', { 
+          website_id: id,
+          website_status: status
+        });
+      
+      if (error) {
+        console.error("Error publishing website:", error);
+        throw error;
+      }
+      
+      // Hier würde in einem realen System ein Webhook oder eine andere Funktion 
+      // ausgelöst werden, die die Webseite tatsächlich veröffentlicht
+      console.log(`Website mit ID ${id} wurde ${shouldPublish ? 'veröffentlicht' : 'zurückgezogen'}`);
+      
+      return true;
+    } catch (error) {
+      console.error("Failed to publish website:", error);
+      toast.error(`Fehler beim ${shouldPublish ? 'Veröffentlichen' : 'Zurückziehen'} der Website`);
       return false;
     }
   },
