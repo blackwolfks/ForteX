@@ -9,6 +9,7 @@ export const contentService = {
       const { data, error } = await supabase.rpc('get_website_content', { website_id: websiteId });
       
       if (error) {
+        console.error("Error from get_website_content RPC:", error);
         throw error;
       }
       
@@ -38,7 +39,7 @@ export const contentService = {
       });
       
       if (error) {
-        console.error("Error from RPC:", error);
+        console.error("Error from save_website_content RPC:", error);
         throw error;
       }
       
@@ -66,7 +67,7 @@ export const contentService = {
       });
       
       if (error) {
-        console.error("Error from RPC:", error);
+        console.error("Error from add_website_change_history RPC:", error);
         throw error;
       }
       
@@ -83,6 +84,7 @@ export const contentService = {
       const { data, error } = await supabase.rpc('get_website_change_history', { website_id: websiteId });
       
       if (error) {
+        console.error("Error from get_website_change_history RPC:", error);
         throw error;
       }
       
