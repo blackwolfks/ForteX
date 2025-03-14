@@ -11,6 +11,7 @@ let currentUser: {
   twoFactorEnabled: boolean;
   twoFactorMethod: "email" | "phone" | "authenticator" | null;
   phoneNumber: string | null;
+  cfxId?: string;
 } | null = null;
 
 let isEmailVerified = false;
@@ -29,6 +30,7 @@ const DISCORD_SCOPE = "identify email";
 const CFX_CLIENT_ID = import.meta.env.VITE_CFX_CLIENT_ID || "YOUR_CFX_CLIENT_ID";
 const CFX_REDIRECT_URI = `${window.location.origin}/auth/cfx-callback`;
 const CFX_SCOPE = "profile email";
+const CFX_INTERACTION_URL = "https://idms.fivem.net/interaction/";
 
 // Mock-Daten für schnelle Tests
 const MOCK_USERS = [
@@ -40,6 +42,7 @@ const MOCK_USERS = [
     twoFactorEnabled: false,
     twoFactorMethod: null,
     phoneNumber: null,
+    cfxId: "cfx12345"
   },
   {
     id: "2",
@@ -49,6 +52,7 @@ const MOCK_USERS = [
     twoFactorEnabled: false,
     twoFactorMethod: null,
     phoneNumber: null,
+    cfxId: null
   }
 ];
 
@@ -99,6 +103,7 @@ export const authService = {
         twoFactorEnabled: user.twoFactorEnabled,
         twoFactorMethod: user.twoFactorMethod,
         phoneNumber: user.phoneNumber,
+        cfxId: user.cfxId
       };
       
       if (user.twoFactorEnabled) {
@@ -185,6 +190,7 @@ export const authService = {
         twoFactorEnabled: false,
         twoFactorMethod: null,
         phoneNumber: null,
+        cfxId: null
       };
       
       localStorage.setItem("auth_token", "mock_google_jwt_token");
@@ -229,7 +235,7 @@ export const authService = {
   // Discord OAuth Callback verarbeiten
   handleDiscordCallback: async (code: string) => {
     try {
-      // In einer echten Supabase-App müssten wir hier nichts tun, da Supabase den Callback verarbeitet
+      // In einer echten App müssten wir hier nichts tun, da Supabase den Callback verarbeitet
       // Wir prüfen hier einfach, ob wir einen Benutzer haben
       const { data, error } = await supabase.auth.getSession();
       
@@ -261,6 +267,7 @@ export const authService = {
         twoFactorEnabled: false,
         twoFactorMethod: null,
         phoneNumber: null,
+        cfxId: null
       };
       
       localStorage.setItem("auth_token", "mock_discord_jwt_token");
@@ -270,38 +277,135 @@ export const authService = {
   },
   
   // Anmeldung mit CFX
-  signInWithCFX: async () => {
-    // CFX OAuth Redirect URL erstellen
-    const cfxAuthUrl = `https://cfx.re/oauth/authorize?client_id=${CFX_CLIENT_ID}&redirect_uri=${encodeURIComponent(CFX_REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(CFX_SCOPE)}`;
-    
-    // Zu CFX Auth-Seite umleiten
-    window.location.href = cfxAuthUrl;
-    
-    // Diese Funktion kehrt nicht zurück, da wir umleiten
-    return new Promise<any>(() => {});
+  signInWithCFX: async (returnTo: string = "dashboard") => {
+    try {
+      // Mit Supabase CFX OAuth durchführen
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'github',
+        options: {
+          redirectTo: CFX_REDIRECT_URI,
+          queryParams: {
+            return_to: returnTo
+          }
+        }
+      });
+      
+      if (error) throw error;
+      
+      // Umleitung zu CFX Auth-Seite - in einer echten Implementierung
+      window.location.href = data.url;
+      
+      // Diese Funktion kehrt nicht zurück, da wir umleiten
+      return new Promise<any>(() => {});
+    } catch (error) {
+      console.log('Supabase OAuth-Fehler, Fallback zu Mock-OAuth:', error);
+      
+      // Fallback zu Mock-OAuth
+      // CFX OAuth Redirect URL erstellen
+      const stateToken = Math.random().toString(36).substring(2, 15);
+      localStorage.setItem("cfx_auth_state", stateToken);
+      localStorage.setItem("cfx_return_to", returnTo);
+      
+      const cfxAuthUrl = `${CFX_INTERACTION_URL}authorize?client_id=${CFX_CLIENT_ID}&redirect_uri=${encodeURIComponent(CFX_REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(CFX_SCOPE)}&state=${stateToken}`;
+      
+      // Zu CFX Auth-Seite umleiten
+      window.location.href = cfxAuthUrl;
+      
+      // Diese Funktion kehrt nicht zurück, da wir umleiten
+      return new Promise<any>(() => {});
+    }
   },
   
   // CFX OAuth Callback verarbeiten
   handleCFXCallback: async (code: string) => {
-    // In einer echten App würden Sie den Code gegen ein Token austauschen
-    // und dann mit diesem Token Benutzerinformationen abrufen
-    
-    // Simulierte API-Verzögerung
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Simulierter erfolgreicher Login nach OAuth-Callback
-    currentUser = {
-      id: "cfx_user_id",
-      name: "CFX User",
-      email: "cfx_user@example.com",
-      twoFactorEnabled: false,
-      twoFactorMethod: null,
-      phoneNumber: null,
-    };
-    
-    localStorage.setItem("auth_token", "mock_cfx_jwt_token");
-    
-    return currentUser;
+    try {
+      // Prüfen auf den State-Parameter (würde in einer echten App für CSRF-Schutz verwendet)
+      const storedState = localStorage.getItem("cfx_auth_state");
+      localStorage.removeItem("cfx_auth_state");
+      
+      // In einer echten App würde hier ein Token-Austausch mit dem CFX-API-Endpunkt stattfinden
+      // In diesem simulierten Beispiel überspringe ich diesen Schritt
+      
+      // Simulierte API-Verzögerung
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Simulierter erfolgreicher Login nach OAuth-Callback
+      currentUser = {
+        id: "cfx_user_id",
+        name: "CFX User",
+        email: "cfx_user@example.com",
+        twoFactorEnabled: false,
+        twoFactorMethod: null,
+        phoneNumber: null,
+        cfxId: "cfx_" + Math.random().toString(36).substring(2, 10)
+      };
+      
+      localStorage.setItem("auth_token", "mock_cfx_jwt_token");
+      
+      return currentUser;
+    } catch (error) {
+      console.error("CFX Callback Error:", error);
+      throw new Error("CFX Auth fehlgeschlagen");
+    }
+  },
+  
+  // CFX API-Schlüssel abrufen
+  getCFXApiKeys: async () => {
+    try {
+      // In einer echten App würde hier ein API-Aufruf an CFX stattfinden
+      // Simulierte API-Verzögerung
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Simulierte API-Schlüssel
+      return [
+        {
+          id: "cfxkey_1",
+          name: "Development Key",
+          key: "cfx_" + Math.random().toString(36).substring(2, 15),
+          scopes: ["read", "write"],
+          createdAt: new Date().toISOString(),
+          lastUsed: new Date().toISOString()
+        }
+      ];
+    } catch (error) {
+      console.error("Failed to fetch API keys:", error);
+      throw new Error("API-Schlüssel konnten nicht abgerufen werden");
+    }
+  },
+  
+  // Neuen CFX API-Schlüssel erstellen
+  createCFXApiKey: async (name: string, scopes: string[]) => {
+    try {
+      // In einer echten App würde hier ein API-Aufruf an CFX stattfinden
+      // Simulierte API-Verzögerung
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Simulierter neuer API-Schlüssel
+      return {
+        id: "cfxkey_" + Date.now(),
+        name,
+        key: "cfx_" + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
+        scopes,
+        createdAt: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error("Failed to create API key:", error);
+      throw new Error("Der API-Schlüssel konnte nicht erstellt werden");
+    }
+  },
+  
+  // CFX API-Schlüssel widerrufen
+  revokeCFXApiKey: async (keyId: string) => {
+    try {
+      // In einer echten App würde hier ein API-Aufruf an CFX stattfinden
+      // Simulierte API-Verzögerung
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      return { success: true };
+    } catch (error) {
+      console.error("Failed to revoke API key:", error);
+      throw new Error("Der API-Schlüssel konnte nicht widerrufen werden");
+    }
   },
   
   // Registrierung
@@ -317,6 +421,7 @@ export const authService = {
             twoFactorEnabled: false,
             twoFactorMethod: null,
             phoneNumber: null,
+            cfxId: null
           }
         }
       });
@@ -345,6 +450,7 @@ export const authService = {
         twoFactorEnabled: false,
         twoFactorMethod: null as "email" | "phone" | "authenticator" | null,
         phoneNumber: null,
+        cfxId: null
       };
       
       MOCK_USERS.push(newUser);
@@ -530,6 +636,7 @@ export const authService = {
         twoFactorEnabled: user.user_metadata?.twoFactorEnabled || false,
         twoFactorMethod: user.user_metadata?.twoFactorMethod || null,
         phoneNumber: user.user_metadata?.phoneNumber || null,
+        cfxId: user.user_metadata?.cfxId || null
       };
     } catch (error) {
       console.log('Supabase Auth-Fehler, Fallback zu Mock-Auth:', error);

@@ -23,7 +23,13 @@ const CFXCallback = () => {
           throw new Error("Kein Autorisierungscode erhalten");
         }
         
-        await authService.handleCFXCallback(code);
+        // Handle CFX callback with the authorization code
+        const userData = await authService.handleCFXCallback(code);
+        
+        // Check if we got user data back
+        if (!userData) {
+          throw new Error("Keine Benutzerdaten erhalten");
+        }
         
         toast({
           title: "Erfolgreich angemeldet",
@@ -31,7 +37,13 @@ const CFXCallback = () => {
           variant: "default",
         });
         
-        navigate("/dashboard");
+        // Redirect to API keys page if coming from there, otherwise dashboard
+        const returnTo = urlParams.get("return_to");
+        if (returnTo && returnTo === "api-keys") {
+          navigate("/cfx-api-keys");
+        } else {
+          navigate("/dashboard");
+        }
       } catch (err) {
         console.error("CFX Auth Fehler:", err);
         setError("Bei der Anmeldung mit CFX ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.");
