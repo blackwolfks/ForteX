@@ -151,8 +151,8 @@ const CFXApiKeySpecification = () => {
 
   const handleCFXLogin = async () => {
     try {
-      // Add return_to parameter to redirect back to API keys page after auth
-      await authService.signInWithCFX("api-keys");
+      // Remove the "api-keys" parameter as the function doesn't expect arguments
+      await authService.signInWithCFX();
     } catch (err) {
       console.error("CFX Auth Error:", err);
       setError("Die Anmeldung mit CFX ist fehlgeschlagen. Bitte versuchen Sie es später erneut.");
