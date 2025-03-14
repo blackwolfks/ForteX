@@ -19,6 +19,7 @@ import Checkout from "./pages/Checkout";
 import Profile from "./pages/Profile";
 import AuthGuard from "./components/AuthGuard";
 import WebsiteEditor from "./pages/WebsiteEditor";
+import CreateWebsite from "./pages/CreateWebsite";
 
 const queryClient = new QueryClient();
 
@@ -78,7 +79,13 @@ const App = () => (
             </AuthGuard>
           } />
           
-          {/* Website Editor */}
+          {/* Website Builder Routes */}
+          <Route path="/dashboard/create-website" element={
+            <AuthGuard requireAuth={true}>
+              <CreateWebsite />
+            </AuthGuard>
+          } />
+          
           <Route path="/dashboard/website-editor/:websiteId" element={
             <AuthGuard requireAuth={true}>
               <WebsiteEditor />

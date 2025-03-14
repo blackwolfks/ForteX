@@ -1,274 +1,155 @@
 
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { websiteService, Website } from '@/services/website-service';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Edit, Trash2, Globe, Clock } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useNavigate } from 'react-router-dom';
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
+import { PlusCircle, Edit3, Trash2, Globe, EyeOff } from "lucide-react";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function WebsiteList() {
   const [websites, setWebsites] = useState<Website[]>([]);
   const [loading, setLoading] = useState(true);
-  const [newWebsiteOpen, setNewWebsiteOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [websiteToDelete, setWebsiteToDelete] = useState<Website | null>(null);
-  const [newWebsite, setNewWebsite] = useState({
-    name: '',
-    url: '',
-    template: 'business'
-  });
-  
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const navigate = useNavigate();
   
-  const loadWebsites = async () => {
-    setLoading(true);
-    try {
+  useEffect(() => {
+    const fetchWebsites = async () => {
+      setLoading(true);
       const data = await websiteService.getUserWebsites();
       setWebsites(data);
-    } catch (error) {
-      console.error('Error loading websites:', error);
-      toast.error('Fehler beim Laden der Websites');
-    } finally {
       setLoading(false);
-    }
-  };
-  
-  useEffect(() => {
-    loadWebsites();
+    };
+    
+    fetchWebsites();
   }, []);
   
-  const handleCreateWebsite = async () => {
-    if (!newWebsite.name || !newWebsite.url || !newWebsite.template) {
-      toast.error('Bitte füllen Sie alle Felder aus');
-      return;
-    }
-    
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
     try {
-      const websiteId = await websiteService.createWebsite(
-        newWebsite.name,
-        newWebsite.url,
-        newWebsite.template
-      );
-      
-      if (websiteId) {
-        setNewWebsiteOpen(false);
-        setNewWebsite({
-          name: '',
-          url: '',
-          template: 'business'
-        });
-        await loadWebsites();
-        navigate(`/dashboard/website-editor/${websiteId}`);
-      }
-    } catch (error) {
-      console.error('Error creating website:', error);
-      toast.error('Fehler beim Erstellen der Website');
-    }
-  };
-  
-  const confirmDelete = async () => {
-    if (!websiteToDelete) return;
-    
-    try {
-      const success = await websiteService.deleteWebsite(websiteToDelete.id);
+      const success = await websiteService.deleteWebsite(id);
       if (success) {
-        setDeleteDialogOpen(false);
-        setWebsiteToDelete(null);
-        loadWebsites();
+        setWebsites(websites.filter(website => website.id !== id));
       }
-    } catch (error) {
-      console.error('Error deleting website:', error);
-      toast.error('Fehler beim Löschen der Website');
+    } finally {
+      setDeletingId(null);
     }
   };
   
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'veröffentlicht':
-        return 'bg-green-500';
-      case 'entwurf':
-        return 'bg-amber-500';
-      default:
-        return 'bg-gray-500';
-    }
-  };
-  
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('de-DE', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+  if (loading) {
+    return (
+      <div className="flex justify-center p-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
   
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold">Meine Websites</h2>
-          <p className="text-muted-foreground">Verwalten Sie Ihre Websites</p>
-        </div>
-        <Dialog open={newWebsiteOpen} onOpenChange={setNewWebsiteOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Neue Website
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Neue Website erstellen</DialogTitle>
-              <DialogDescription>
-                Geben Sie die Details für Ihre neue Website ein.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="name">Website-Name</Label>
-                <Input 
-                  id="name" 
-                  placeholder="Meine Website" 
-                  value={newWebsite.name}
-                  onChange={(e) => setNewWebsite({...newWebsite, name: e.target.value})}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="url">URL</Label>
-                <Input 
-                  id="url" 
-                  placeholder="meine-website" 
-                  value={newWebsite.url}
-                  onChange={(e) => setNewWebsite({...newWebsite, url: e.target.value})}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="template">Vorlage</Label>
-                <select 
-                  id="template"
-                  className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  value={newWebsite.template}
-                  onChange={(e) => setNewWebsite({...newWebsite, template: e.target.value})}
-                >
-                  {websiteService.getTemplates().map(template => (
-                    <option key={template.id} value={template.id}>
-                      {template.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setNewWebsiteOpen(false)}>Abbrechen</Button>
-              <Button onClick={handleCreateWebsite}>Erstellen</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <h2 className="text-2xl font-bold">Meine Websites</h2>
+        <Button onClick={() => navigate('/dashboard/create-website')}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Neue Website erstellen
+        </Button>
       </div>
       
-      {loading ? (
+      {websites.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <p className="text-muted-foreground mb-4">Du hast noch keine Websites erstellt</p>
+            <Button onClick={() => navigate('/dashboard/create-website')}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Erste Website erstellen
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3].map(i => (
-            <Card key={i} className="overflow-hidden">
-              <CardHeader className="p-0">
-                <Skeleton className="w-full h-40" />
-              </CardHeader>
-              <CardContent className="p-6">
-                <Skeleton className="h-6 w-3/4 mb-2" />
-                <Skeleton className="h-4 w-1/2" />
-              </CardContent>
-              <CardFooter className="justify-between p-6 pt-0">
-                <Skeleton className="h-9 w-24" />
-                <Skeleton className="h-9 w-9" />
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      ) : websites.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {websites.map(website => (
+          {websites.map((website) => (
             <Card key={website.id} className="overflow-hidden">
-              <CardHeader className="p-6 pb-3">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle>{website.name}</CardTitle>
-                    <CardDescription>{website.url}</CardDescription>
-                  </div>
-                  <Badge 
-                    className={`${getStatusColor(website.status)} text-white`}
-                  >
-                    {website.status === 'veröffentlicht' ? 'Live' : 'Entwurf'}
-                  </Badge>
+              <div className="relative aspect-video bg-muted">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <img
+                    src="/placeholder.svg"
+                    alt={website.name}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
+                <div className="absolute top-2 right-2">
+                  {website.status === 'veröffentlicht' ? (
+                    <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full flex items-center">
+                      <Globe className="h-3 w-3 mr-1" />
+                      Live
+                    </span>
+                  ) : (
+                    <span className="bg-amber-100 text-amber-800 text-xs font-medium px-2.5 py-0.5 rounded-full flex items-center">
+                      <EyeOff className="h-3 w-3 mr-1" />
+                      Entwurf
+                    </span>
+                  )}
+                </div>
+              </div>
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="text-lg">{website.name}</CardTitle>
+                <CardDescription className="truncate">{website.url}</CardDescription>
               </CardHeader>
-              <CardContent className="p-6 pt-3 pb-3">
-                <div className="text-sm text-muted-foreground flex items-center gap-1">
-                  <Clock className="h-4 w-4" />
-                  Zuletzt bearbeitet: {formatDate(website.last_saved)}
-                </div>
+              <CardContent className="p-4 pt-0">
+                <p className="text-xs text-muted-foreground">
+                  Letzte Bearbeitung: {new Date(website.last_saved).toLocaleDateString()}
+                </p>
               </CardContent>
-              <CardFooter className="p-6 pt-3 flex justify-between">
-                <Button
-                  variant="default"
+              <CardFooter className="p-4 pt-0 flex justify-between">
+                <Button 
+                  variant="secondary" 
+                  size="sm"
                   onClick={() => navigate(`/dashboard/website-editor/${website.id}`)}
                 >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Bearbeiten
+                  <Edit3 className="h-4 w-4 mr-1" /> Bearbeiten
                 </Button>
-                <div className="flex gap-2">
-                  {website.status === 'veröffentlicht' && (
-                    <Button
-                      variant="outline"
-                      onClick={() => window.open(`/${website.url}`, '_blank')}
+                
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
                     >
-                      <Globe className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4 mr-1" /> Löschen
                     </Button>
-                  )}
-                  <Button
-                    variant="destructive"
-                    onClick={() => {
-                      setWebsiteToDelete(website);
-                      setDeleteDialogOpen(true);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Wirklich löschen?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Bist du sicher, dass du die Website "{website.name}" löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={() => handleDelete(website.id)}
+                        className="bg-red-500 hover:bg-red-600"
+                      >
+                        {deletingId === website.id ? 'Löschen...' : 'Löschen'}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </CardFooter>
             </Card>
           ))}
         </div>
-      ) : (
-        <Alert>
-          <AlertDescription>
-            Sie haben noch keine Websites erstellt. Klicken Sie auf "Neue Website", um zu beginnen.
-          </AlertDescription>
-        </Alert>
       )}
-      
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Website löschen</DialogTitle>
-            <DialogDescription>
-              Sind Sie sicher, dass Sie "{websiteToDelete?.name}" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Abbrechen</Button>
-            <Button variant="destructive" onClick={confirmDelete}>Löschen</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
