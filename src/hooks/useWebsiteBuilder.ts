@@ -10,6 +10,185 @@ import {
 import { toast } from 'sonner';
 import { Product } from '@/lib/supabase';
 
+// Template defintions
+const TEMPLATES = {
+  'business-standard': {
+    sections: [
+      {
+        id: crypto.randomUUID(),
+        type: 'hero',
+        title: 'Willkommen auf unserer Webseite',
+        content: 'Wir bieten professionelle Dienstleistungen für Ihr Unternehmen.',
+        imageUrl: '/placeholder.svg',
+        backgroundColor: '#f8f9fa',
+        textColor: '#212529',
+        alignment: 'left',
+        buttonText: 'Mehr erfahren',
+        buttonLink: '#services'
+      },
+      {
+        id: crypto.randomUUID(),
+        type: 'text',
+        title: 'Über uns',
+        content: 'Unser Unternehmen wurde gegründet, um erstklassige Dienstleistungen anzubieten. Wir haben uns auf die Bereitstellung hochwertiger Lösungen spezialisiert.',
+        backgroundColor: '#ffffff',
+        textColor: '#212529',
+        alignment: 'center'
+      },
+      {
+        id: crypto.randomUUID(),
+        type: 'image',
+        title: 'Unser Team',
+        content: 'Ein engagiertes Team von Experten steht Ihnen zur Verfügung.',
+        imageUrl: '/placeholder.svg',
+        backgroundColor: '#f8f9fa',
+        textColor: '#212529',
+        alignment: 'center'
+      }
+    ],
+    header: {
+      logoText: 'Mein Unternehmen',
+      navigation: [
+        { label: 'Home', link: '/' },
+        { label: 'Dienstleistungen', link: '/services' },
+        { label: 'Über uns', link: '/about' },
+        { label: 'Kontakt', link: '/contact' }
+      ]
+    },
+    footer: {
+      companyName: 'Mein Unternehmen GmbH',
+      copyrightText: `© ${new Date().getFullYear()} Alle Rechte vorbehalten`,
+      links: [
+        { label: 'Impressum', link: '/impressum' },
+        { label: 'Datenschutz', link: '/datenschutz' },
+        { label: 'AGB', link: '/agb' }
+      ],
+      socialMedia: [
+        { platform: 'Facebook', link: '#' },
+        { platform: 'Twitter', link: '#' },
+        { platform: 'LinkedIn', link: '#' }
+      ]
+    }
+  },
+  'shop-modern': {
+    sections: [
+      {
+        id: crypto.randomUUID(),
+        type: 'hero',
+        title: 'Entdecken Sie unsere Produkte',
+        content: 'Qualität und Stil zu einem fairen Preis.',
+        imageUrl: '/placeholder.svg',
+        backgroundColor: '#ffffff',
+        textColor: '#000000',
+        alignment: 'center',
+        buttonText: 'Jetzt einkaufen',
+        buttonLink: '#products'
+      },
+      {
+        id: crypto.randomUUID(),
+        type: 'products',
+        title: 'Beliebte Produkte',
+        content: 'Unsere meistverkauften Artikel.',
+        productCategory: 'vehicles',
+        columns: 3,
+        backgroundColor: '#f8f9fa',
+        textColor: '#212529',
+        alignment: 'center'
+      },
+      {
+        id: crypto.randomUUID(),
+        type: 'text',
+        title: 'Warum bei uns einkaufen?',
+        content: 'Wir bieten erstklassige Produkte, schnellen Versand und exzellenten Kundenservice.',
+        backgroundColor: '#ffffff',
+        textColor: '#212529',
+        alignment: 'center'
+      }
+    ],
+    header: {
+      logoText: 'Mein Shop',
+      navigation: [
+        { label: 'Home', link: '/' },
+        { label: 'Produkte', link: '/products' },
+        { label: 'Kategorien', link: '/categories' },
+        { label: 'Warenkorb', link: '/cart' }
+      ]
+    },
+    footer: {
+      companyName: 'Mein Shop',
+      copyrightText: `© ${new Date().getFullYear()} Alle Rechte vorbehalten`,
+      links: [
+        { label: 'Versand', link: '/shipping' },
+        { label: 'Rückgabe', link: '/returns' },
+        { label: 'FAQ', link: '/faq' }
+      ],
+      socialMedia: [
+        { platform: 'Instagram', link: '#' },
+        { platform: 'Facebook', link: '#' },
+        { platform: 'Pinterest', link: '#' }
+      ]
+    }
+  },
+  'portfolio-creative': {
+    sections: [
+      {
+        id: crypto.randomUUID(),
+        type: 'hero',
+        title: 'Kreative Lösungen für Ihr Unternehmen',
+        content: 'Design, Entwicklung und Beratung aus einer Hand.',
+        imageUrl: '/placeholder.svg',
+        backgroundColor: '#000000',
+        textColor: '#ffffff',
+        alignment: 'center',
+        buttonText: 'Meine Arbeiten',
+        buttonLink: '#works'
+      },
+      {
+        id: crypto.randomUUID(),
+        type: 'image',
+        title: 'Ausgewählte Projekte',
+        content: 'Sehen Sie einige unserer besten Arbeiten.',
+        imageUrl: '/placeholder.svg',
+        backgroundColor: '#ffffff',
+        textColor: '#000000',
+        alignment: 'center'
+      },
+      {
+        id: crypto.randomUUID(),
+        type: 'text',
+        title: 'Über mich',
+        content: 'Ich bin ein Designer und Entwickler mit über 10 Jahren Erfahrung in der Branche.',
+        backgroundColor: '#f8f9fa',
+        textColor: '#212529',
+        alignment: 'left'
+      }
+    ],
+    header: {
+      logoText: 'Mein Portfolio',
+      navigation: [
+        { label: 'Home', link: '/' },
+        { label: 'Projekte', link: '/projects' },
+        { label: 'Über mich', link: '/about' },
+        { label: 'Kontakt', link: '/contact' }
+      ]
+    },
+    footer: {
+      companyName: 'Max Mustermann',
+      copyrightText: `© ${new Date().getFullYear()} Alle Rechte vorbehalten`,
+      links: [
+        { label: 'GitHub', link: '#' },
+        { label: 'Dribbble', link: '#' },
+        { label: 'Behance', link: '#' }
+      ],
+      socialMedia: [
+        { platform: 'Instagram', link: '#' },
+        { platform: 'LinkedIn', link: '#' },
+        { platform: 'Twitter', link: '#' }
+      ]
+    }
+  }
+};
+
 export function useWebsiteBuilder() {
   const [websites, setWebsites] = useState<Website[]>([]);
   const [selectedWebsite, setSelectedWebsite] = useState<Website | null>(null);
@@ -74,6 +253,25 @@ export function useWebsiteBuilder() {
       setIsDirty(false);
     }
   }, []);
+  
+  // Template anwenden
+  const applyTemplate = useCallback((templateId: string) => {
+    if (!websiteContent || !TEMPLATES[templateId as keyof typeof TEMPLATES]) return;
+    
+    const template = TEMPLATES[templateId as keyof typeof TEMPLATES];
+    
+    setWebsiteContent({
+      ...websiteContent,
+      sections: [...template.sections],
+      layout: {
+        header: template.header,
+        footer: template.footer
+      }
+    });
+    
+    setIsDirty(true);
+    toast.success('Template erfolgreich angewendet');
+  }, [websiteContent]);
   
   // Neue Website erstellen
   const createNewWebsite = useCallback(async (data: CreateWebsiteInput) => {
@@ -323,6 +521,7 @@ export function useWebsiteBuilder() {
     updateMeta,
     updateLayout,
     updateProductCategories,
-    saveContent
+    saveContent,
+    applyTemplate
   };
 }
