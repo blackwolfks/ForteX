@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -41,8 +40,8 @@ const Dashboard = () => {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-slate-50 dark:bg-slate-900">
-        <Sidebar className="border-r border-slate-200 dark:border-slate-800">
+      <div className="flex min-h-screen w-full bg-darkgray-800">
+        <Sidebar className="border-r border-darkgray-700">
           <SidebarHeader>
             <div className="px-4 py-3">
               <h2 className="text-xl font-semibold">Admin</h2>
@@ -118,11 +117,11 @@ const Dashboard = () => {
 
         <SidebarInset className="w-full">
           <div className="w-full">
-            <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+            <header className="bg-darkgray-700 border-b border-darkgray-600">
               <div className="p-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <SidebarTrigger className="mr-2" />
-                  <h1 className="text-xl font-bold">
+                  <h1 className="text-xl font-bold text-white">
                     {activeTab === "overview" && "Dashboard"}
                     {activeTab === "products" && "Produkte"}
                     {activeTab === "website-builder" && "Website Builder"}
@@ -134,7 +133,7 @@ const Dashboard = () => {
                 </div>
                 <div>
                   {activeTab === "products" && (
-                    <Button onClick={() => navigateTo("products")}>
+                    <Button onClick={() => navigateTo("products")} className="bg-turquoise-500 hover:bg-turquoise-600">
                       <PlusCircle className="mr-2 h-4 w-4" />
                       Produkt hinzufügen
                     </Button>
@@ -143,7 +142,7 @@ const Dashboard = () => {
               </div>
             </header>
 
-            <div className="p-6">
+            <div className="p-6 bg-darkgray-800">
               {activeTab === "overview" && <DashboardOverview />}
               {activeTab === "products" && <ProductsView />}
               {activeTab === "website-builder" && <WebsiteBuilderView />}
