@@ -286,15 +286,15 @@ export type Database = {
       get_user_websites: {
         Args: Record<PropertyKey, never>
         Returns: {
-          created_at: string | null
           id: string
-          last_saved: string | null
           name: string
-          shop_template: string
-          status: string | null
-          template: string
           url: string
+          template: string
+          shop_template: string
+          status: string
           user_id: string
+          created_at: string
+          last_saved: string
         }[]
       }
       get_website_by_id: {
@@ -302,15 +302,15 @@ export type Database = {
           website_id: string
         }
         Returns: {
-          created_at: string | null
           id: string
-          last_saved: string | null
           name: string
-          shop_template: string
-          status: string | null
-          template: string
           url: string
+          template: string
+          shop_template: string
+          status: string
           user_id: string
+          created_at: string
+          last_saved: string
         }[]
       }
       get_website_content: {
