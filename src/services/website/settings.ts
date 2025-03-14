@@ -19,7 +19,23 @@ export const settingsService = {
         throw error;
       }
       
-      return data?.[0] || null;
+      // Fix the type conversion issue: ensure custom_domains is properly parsed as an array
+      if (data?.[0]) {
+        return {
+          id: data[0].id,
+          default_domain: data[0].default_domain || '',
+          // Parse JSON if it's a string, or use the value directly if it's already an array
+          custom_domains: typeof data[0].custom_domains === 'string' 
+            ? JSON.parse(data[0].custom_domains) 
+            : (data[0].custom_domains || []),
+          // Same for seo_settings, ensure it's an object
+          seo_settings: typeof data[0].seo_settings === 'string'
+            ? JSON.parse(data[0].seo_settings)
+            : (data[0].seo_settings || {})
+        };
+      }
+      
+      return null;
     } catch (error) {
       console.error("Error fetching website builder settings:", error);
       return null;
