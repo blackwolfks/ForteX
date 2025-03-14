@@ -78,10 +78,15 @@ export const useWebsiteBuilder = (websiteId?: string) => {
   }, [websiteId, loadWebsite]);
   
   const saveContent = async () => {
-    if (!websiteId || !website) return false;
+    if (!websiteId || !website) {
+      console.error('Cannot save: websiteId or website is missing', { websiteId, website });
+      return false;
+    }
     
     setSaving(true);
     try {
+      console.log('Saving sections:', sections);
+      
       const content = {
         sections,
         lastEdited: new Date().toISOString(),
@@ -98,6 +103,8 @@ export const useWebsiteBuilder = (websiteId?: string) => {
         toast.success('Änderungen gespeichert');
         return true;
       }
+      
+      console.error('Save was not successful');
       return false;
     } catch (error) {
       console.error('Error saving content:', error);

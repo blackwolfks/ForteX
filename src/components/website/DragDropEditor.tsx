@@ -1,4 +1,3 @@
-
 import { useState, useRef } from 'react';
 import { SectionType, WebsiteSection } from '@/services/website-service';
 import { useWebsiteBuilder, EditorMode } from '@/hooks/useWebsiteBuilder';
@@ -64,9 +63,18 @@ export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
   }
   
   const handleSave = async () => {
+    console.log('Save button clicked');
+    if (!websiteId) {
+      console.error('WebsiteId is missing');
+      toast.error('Fehler: Website-ID nicht gefunden');
+      return;
+    }
+    
     const success = await saveContent();
     if (success) {
       toast.success('Website erfolgreich gespeichert');
+    } else {
+      toast.error('Fehler beim Speichern der Website');
     }
   };
   

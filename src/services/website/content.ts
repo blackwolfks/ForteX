@@ -30,12 +30,15 @@ export const contentService = {
   
   async saveWebsiteContent(websiteId: string, content: Record<string, any>): Promise<boolean> {
     try {
+      console.log("Saving website content:", websiteId, content);
+      
       const { error } = await supabase.rpc('save_website_content', { 
         website_id: websiteId,
         content_data: content
       });
       
       if (error) {
+        console.error("Error from RPC:", error);
         throw error;
       }
       
@@ -54,6 +57,8 @@ export const contentService = {
     changedFields: string[]
   ): Promise<string | null> {
     try {
+      console.log("Adding website change history:", websiteId, contentSnapshot, changedFields);
+      
       const { data, error } = await supabase.rpc('add_website_change_history', { 
         website_id: websiteId,
         content_snapshot: contentSnapshot,
@@ -61,6 +66,7 @@ export const contentService = {
       });
       
       if (error) {
+        console.error("Error from RPC:", error);
         throw error;
       }
       
