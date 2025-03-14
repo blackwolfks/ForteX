@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { authService } from "@/services/auth-service";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 
 const CFXCallback = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -44,7 +44,8 @@ const CFXCallback = () => {
         // Update processing state
         setProcessingState("Authentifizierung mit CFX...");
         
-        // Handle CFX callback with the authorization code
+        // Handle CFX callback with the authorization code or encrypted payload
+        // The txAdmin approach handles both authentication code and API key payload
         const userData = await authService.handleCFXCallback(code || payload || "");
         
         // Check if we got user data back
@@ -70,7 +71,7 @@ const CFXCallback = () => {
         }
       } catch (err) {
         console.error("CFX Auth Fehler:", err);
-        setError("Bei der Anmeldung mit CFX ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.");
+        setError(err instanceof Error ? err.message : "Bei der Anmeldung mit CFX ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.");
         setIsLoading(false);
       }
     };
@@ -84,6 +85,7 @@ const CFXCallback = () => {
         <Card className="w-full max-w-md shadow-medium bg-gray-800 border-gray-700">
           <CardContent className="pt-6">
             <div className="text-center space-y-4">
+              <AlertCircle className="h-12 w-12 mx-auto mb-3 text-red-500 opacity-80" />
               <h2 className="text-xl font-medium text-gray-100">Anmeldefehler</h2>
               <p className="text-gray-400">{error}</p>
               <button 
