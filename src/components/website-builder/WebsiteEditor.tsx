@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -89,6 +90,7 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isPreviewSaving, setIsPreviewSaving] = useState(false);
   const [content, setContent] = useState<WebsiteContent>({
     title: "",
     subtitle: "",
@@ -164,10 +166,15 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
   };
   
   // Improved save function with error handling
-  const saveWebsiteData = async () => {
-    if (!websiteId || isSaving) return false;
+  const saveWebsiteData = async (isFromPreview = false) => {
+    if (!websiteId || (isFromPreview ? isPreviewSaving : isSaving)) return false;
     
-    setIsSaving(true);
+    if (isFromPreview) {
+      setIsPreviewSaving(true);
+    } else {
+      setIsSaving(true);
+    }
+    
     try {
       console.log("Saving website data...");
       console.log("Content being saved:", content);
@@ -179,7 +186,7 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
         shop_template: shopTemplate
       };
       
-      // Verwende die neue Funktion zum Speichern der Inhalte
+      // Use the function to save the content
       const success = await handleSaveWebsiteContent(websiteId, content);
       
       if (success) {
@@ -206,18 +213,22 @@ export const WebsiteEditor = ({ websiteId, onBack }: WebsiteEditorProps) => {
       toast.error("Fehler beim Speichern der Änderungen");
       return false;
     } finally {
-      setIsSaving(false);
+      if (isFromPreview) {
+        setIsPreviewSaving(false);
+      } else {
+        setIsSaving(false);
+      }
     }
   };
   
   const handleSave = async () => {
-    await saveWebsiteData();
+    await saveWebsiteData(false);
   };
   
   const handlePreview = async () => {
     // Save before preview to ensure latest changes are reflected
     if (hasChanges) {
-      const saved = await saveWebsiteData();
+      const saved = await saveWebsiteData(true);
       if (saved) {
         setActiveTab("preview");
       }
