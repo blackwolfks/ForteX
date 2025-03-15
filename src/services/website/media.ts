@@ -37,8 +37,7 @@ export const mediaService = {
 
       console.log("[MediaService] Uploading file:", sanitizedFilePath);
 
-      // Upload the file directly without trying to modify the content-type or create a new Blob
-      // Let the browser handle the proper content type based on the file object
+      // Upload the file directly
       const { data, error } = await supabase
         .storage
         .from('websites')
@@ -73,6 +72,19 @@ export const mediaService = {
         .getPublicUrl(data?.path || sanitizedFilePath);
       
       console.log("[MediaService] Upload successful, public URL:", publicUrl);
+      
+      // Test if the URL is accessible by attempting to fetch it
+      try {
+        const testFetch = await fetch(publicUrl, { method: 'HEAD' });
+        if (!testFetch.ok) {
+          console.warn("[MediaService] Generated URL might not be accessible:", publicUrl, "Status:", testFetch.status);
+        } else {
+          console.log("[MediaService] URL verified accessible:", publicUrl);
+        }
+      } catch (fetchError) {
+        console.warn("[MediaService] Could not verify URL accessibility:", fetchError);
+      }
+      
       return publicUrl || null;
     } catch (error) {
       console.error("[MediaService] Unexpected error uploading file:", error);

@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { websiteService } from '@/services/website-service';
@@ -77,10 +78,34 @@ export default function WebsiteEditor() {
     }
     
     try {
-      const uploadPath = `website-${websiteId}`;
+      // Standardize folder structure for website media
+      const uploadPath = `website-${websiteId.replace(/-/g, '_')}`;
       console.log("[WebsiteEditor] Uploading to path:", uploadPath);
       
-      return await mediaService.uploadMedia(file, uploadPath);
+      // Add a retry mechanism for uploads
+      let attempts = 0;
+      const maxAttempts = 2;
+      let result = null;
+      
+      while (attempts < maxAttempts && result === null) {
+        if (attempts > 0) {
+          console.log(`[WebsiteEditor] Retrying upload (attempt ${attempts + 1})`);
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second between retries
+        }
+        
+        result = await mediaService.uploadMedia(file, uploadPath);
+        attempts++;
+      }
+      
+      if (result) {
+        // If upload was successful, verify that the URL is accessible
+        console.log("[WebsiteEditor] Upload successful, URL:", result);
+        return result;
+      } else {
+        console.error("[WebsiteEditor] All upload attempts failed");
+        toast.error("Fehler beim Hochladen des Bildes nach mehreren Versuchen.");
+        return null;
+      }
     } catch (error) {
       console.error("[WebsiteEditor] Error in handleMediaUpload:", error);
       toast.error("Fehler beim Hochladen des Bildes");

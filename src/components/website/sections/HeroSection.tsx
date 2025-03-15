@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { WebsiteSection } from '@/services/website-service';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, AlertCircle } from 'lucide-react';
+import { Upload, AlertCircle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface HeroSectionProps {
@@ -34,12 +34,32 @@ export default function HeroSection({
   
   const [uploading, setUploading] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [loadingRetries, setLoadingRetries] = useState(0);
+  
+  // Reset error state when imageUrl changes
+  useEffect(() => {
+    setImageError(false);
+  }, [imageUrl]);
+  
+  // Attempt to reload the image if it fails initially
+  useEffect(() => {
+    if (imageError && loadingRetries < 2 && imageUrl && imageUrl !== '/placeholder.svg') {
+      const timer = setTimeout(() => {
+        console.log(`[HeroSection] Retrying image load (attempt ${loadingRetries + 1}):`, imageUrl);
+        setImageError(false);
+        setLoadingRetries(prev => prev + 1);
+      }, 2000); // Wait 2 seconds before retry
+      
+      return () => clearTimeout(timer);
+    }
+  }, [imageError, imageUrl, loadingRetries]);
   
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
     setImageError(false);
+    setLoadingRetries(0);
     
     console.log("[HeroSection] Selected file:", file.name, "type:", file.type, "size:", file.size);
     
@@ -66,6 +86,11 @@ export default function HeroSection({
       if (imageUrl) {
         console.log("[HeroSection] Upload successful, setting new hero image URL:", imageUrl);
         onUpdate({ imageUrl });
+        
+        // Pre-cache the image
+        const img = new Image();
+        img.src = imageUrl;
+        
         toast.success("Bild erfolgreich hochgeladen");
       } else {
         console.error("[HeroSection] Upload failed - no URL returned");
@@ -77,6 +102,29 @@ export default function HeroSection({
     } finally {
       setUploading(false);
     }
+  };
+  
+  const handleRetryLoad = () => {
+    if (imageUrl && imageUrl !== '/placeholder.svg') {
+      console.log("[HeroSection] Manually retrying image load:", imageUrl);
+      setImageError(false);
+      
+      // Force browser to reload the image by appending a cache-busting query parameter
+      const cacheBuster = `?cache=${Date.now()}`;
+      const urlWithoutCache = imageUrl.split('?')[0]; // Remove any existing query params
+      const newUrl = `${urlWithoutCache}${cacheBuster}`;
+      
+      onUpdate({ imageUrl: newUrl });
+      toast.info("Bild wird neu geladen...");
+    }
+  };
+  
+  // Function to create CSS background with fallback
+  const getBackgroundStyle = () => {
+    if (imageError || !imageUrl || imageUrl === '/placeholder.svg') {
+      return { backgroundColor: '#333' };
+    }
+    return { backgroundImage: `url(${imageUrl})` };
   };
   
   if (isEditing) {
@@ -142,8 +190,17 @@ export default function HeroSection({
             <div className="flex items-center gap-4">
               <div className="relative w-24 h-24 border rounded-md overflow-hidden bg-muted">
                 {imageError ? (
-                  <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                    <AlertCircle className="w-8 h-8 text-gray-400" />
+                  <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100">
+                    <AlertCircle className="w-6 h-6 text-gray-400 mb-1" />
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleRetryLoad}
+                      className="text-xs py-0"
+                    >
+                      <RefreshCw className="w-3 h-3 mr-1" />
+                      Neu laden
+                    </Button>
                   </div>
                 ) : (
                   <img 
@@ -176,7 +233,7 @@ export default function HeroSection({
                 </Button>
                 {imageUrl && imageUrl !== '/placeholder.svg' && (
                   <p className="text-xs mt-2 text-muted-foreground break-all max-w-[200px]">
-                    {imageUrl.split('/').pop()}
+                    {imageUrl.split('/').pop()?.split('?')[0]}
                   </p>
                 )}
               </div>
@@ -190,9 +247,23 @@ export default function HeroSection({
   return (
     <div 
       className="relative min-h-[400px] flex items-center overflow-hidden bg-cover bg-center"
-      style={{ backgroundImage: `url(${imageUrl})` }}
+      style={getBackgroundStyle()}
     >
       <div className="absolute inset-0 bg-black bg-opacity-40" />
+      
+      {imageError && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Button 
+            variant="outline" 
+            onClick={handleRetryLoad}
+            className="bg-white/80 z-10"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Bild neu laden
+          </Button>
+        </div>
+      )}
+      
       <div 
         className={`relative z-10 container mx-auto px-6 py-12 text-white ${
           alignment === 'center' ? 'text-center mx-auto' : 

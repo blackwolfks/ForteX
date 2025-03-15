@@ -1,12 +1,12 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { WebsiteSection } from '@/services/website-service';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, AlertCircle } from 'lucide-react';
+import { Upload, AlertCircle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ImageSectionProps {
@@ -30,12 +30,32 @@ export default function ImageSection({
   
   const [uploading, setUploading] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [loadingRetries, setLoadingRetries] = useState(0);
+  
+  // Reset error state when imageUrl changes
+  useEffect(() => {
+    setImageError(false);
+  }, [imageUrl]);
+  
+  // Attempt to reload the image if it fails initially
+  useEffect(() => {
+    if (imageError && loadingRetries < 2 && imageUrl && imageUrl !== '/placeholder.svg') {
+      const timer = setTimeout(() => {
+        console.log(`[ImageSection] Retrying image load (attempt ${loadingRetries + 1}):`, imageUrl);
+        setImageError(false);
+        setLoadingRetries(prev => prev + 1);
+      }, 2000); // Wait 2 seconds before retry
+      
+      return () => clearTimeout(timer);
+    }
+  }, [imageError, imageUrl, loadingRetries]);
   
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
     setImageError(false);
+    setLoadingRetries(0);
     
     console.log("[ImageSection] Selected file:", file.name, "type:", file.type, "size:", file.size);
     
@@ -62,6 +82,11 @@ export default function ImageSection({
       if (imageUrl) {
         console.log("[ImageSection] Upload successful, setting new image URL:", imageUrl);
         onUpdate({ imageUrl });
+        
+        // Pre-cache the image
+        const img = new Image();
+        img.src = imageUrl;
+        
         toast.success("Bild erfolgreich hochgeladen");
       } else {
         console.error("[ImageSection] Upload failed - no URL returned");
@@ -75,6 +100,21 @@ export default function ImageSection({
     }
   };
   
+  const handleRetryLoad = () => {
+    if (imageUrl && imageUrl !== '/placeholder.svg') {
+      console.log("[ImageSection] Manually retrying image load:", imageUrl);
+      setImageError(false);
+      
+      // Force browser to reload the image by appending a cache-busting query parameter
+      const cacheBuster = `?cache=${Date.now()}`;
+      const urlWithoutCache = imageUrl.split('?')[0]; // Remove any existing query params
+      const newUrl = `${urlWithoutCache}${cacheBuster}`;
+      
+      onUpdate({ imageUrl: newUrl });
+      toast.info("Bild wird neu geladen...");
+    }
+  };
+  
   if (isEditing) {
     return (
       <Card>
@@ -84,8 +124,17 @@ export default function ImageSection({
             <div className="flex items-center gap-4">
               <div className="relative w-32 h-32 border rounded-md overflow-hidden bg-muted">
                 {imageError ? (
-                  <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                    <AlertCircle className="w-8 h-8 text-gray-400" />
+                  <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100">
+                    <AlertCircle className="w-8 h-8 text-gray-400 mb-2" />
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleRetryLoad}
+                      className="text-xs"
+                    >
+                      <RefreshCw className="w-3 h-3 mr-1" />
+                      Neu laden
+                    </Button>
                   </div>
                 ) : (
                   <img 
@@ -118,7 +167,7 @@ export default function ImageSection({
                 </Button>
                 {imageUrl && imageUrl !== '/placeholder.svg' && (
                   <p className="text-xs mt-2 text-muted-foreground break-all max-w-[200px]">
-                    {imageUrl.split('/').pop()}
+                    {imageUrl.split('/').pop()?.split('?')[0]}
                   </p>
                 )}
               </div>
@@ -151,8 +200,15 @@ export default function ImageSection({
     <div className="container mx-auto px-6 py-12">
       <figure className="max-w-4xl mx-auto">
         {imageError ? (
-          <div className="w-full h-64 flex items-center justify-center bg-gray-100 rounded-lg">
-            <AlertCircle className="w-12 h-12 text-gray-400" />
+          <div className="w-full h-64 flex flex-col items-center justify-center bg-gray-100 rounded-lg">
+            <AlertCircle className="w-12 h-12 text-gray-400 mb-2" />
+            <Button 
+              variant="outline" 
+              onClick={handleRetryLoad}
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Bild neu laden
+            </Button>
           </div>
         ) : (
           <img 
