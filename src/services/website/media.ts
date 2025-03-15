@@ -33,9 +33,15 @@ export const mediaService = {
       console.log("[MediaService] Uploading file to path:", sanitizedFilePath);
 
       // Get proper content type based on file extension - this is critical
-      // Always prioritize the file.type from the browser if available
-      const contentType = file.type || imageUtils.getContentTypeFromExtension(file.name);
-      console.log("[MediaService] Using content type from file:", contentType);
+      // Always prioritize the file.type from the browser if available and valid
+      let contentType = '';
+      if (file.type && file.type.startsWith('image/')) {
+        contentType = file.type;
+      } else {
+        contentType = imageUtils.getContentTypeFromExtension(file.name);
+      }
+      
+      console.log("[MediaService] Using content type:", contentType);
       
       // Verify authentication before upload
       const { data: session } = await supabase.auth.getSession();
@@ -45,16 +51,17 @@ export const mediaService = {
         return null;
       }
 
-      // WICHTIG: Hier erstellen wir einen neuen Blob mit dem korrekten MIME-Type
+      // WICHTIG: Hier erzeugen wir einen neuen Blob mit dem korrekten MIME-Type
       // Dies verhindert das Problem mit application/json
-      const fileBlob = new Blob([await file.arrayBuffer()], { type: contentType });
+      const fileArrayBuffer = await file.arrayBuffer();
+      const fileBlob = new Blob([fileArrayBuffer], { type: contentType });
       console.log("[MediaService] Created new blob with explicit content type:", contentType);
 
       // Use the correct content type in the upload options
       const uploadOptions = {
         cacheControl: '3600',
         upsert: true,
-        contentType: contentType
+        contentType: contentType // Explizit den Content-Type setzen
       };
 
       console.log("[MediaService] Uploading with options:", uploadOptions);
@@ -63,7 +70,7 @@ export const mediaService = {
       console.log("[MediaService] File details before upload:", {
         name: file.name,
         type: contentType,
-        size: file.size
+        size: fileBlob.size
       });
 
       // Upload the blob with explicit contentType

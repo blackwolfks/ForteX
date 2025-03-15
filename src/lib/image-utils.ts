@@ -113,7 +113,8 @@ export const imageUtils = {
       case 'webp':
         return 'image/webp';
       default:
-        return 'application/octet-stream'; // Generic binary file as fallback
+        // Use a specific image type as fallback instead of generic binary
+        return 'image/png'; 
     }
   },
   
@@ -160,7 +161,7 @@ export const imageUtils = {
         mimeType = 'image/webp';
         break;
       default:
-        // If we can't determine the type, try to use png as fallback
+        // Wenn wir den Typ nicht bestimmen können, versuchen wir es mit PNG als Fallback
         mimeType = 'image/png';
     }
     
