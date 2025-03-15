@@ -18,7 +18,7 @@ export default function WebsiteEditor() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('editor');
-  const [bucketChecked, setBucketChecked] = useState(false);
+  const [bucketStatus, setBucketStatus] = useState<'unchecked' | 'checking' | 'exists' | 'error'>('unchecked');
   const navigate = useNavigate();
   
   useEffect(() => {
@@ -44,12 +44,16 @@ export default function WebsiteEditor() {
       
       try {
         // Check if the bucket exists before proceeding
+        setBucketStatus('checking');
         const bucketExists = await mediaService.ensureBucketExists('websites');
-        setBucketChecked(true);
+        setBucketStatus(bucketExists ? 'exists' : 'error');
         
         if (!bucketExists) {
           console.error("[WebsiteEditor] 'websites' bucket does not exist and could not be created");
-          toast.error("Fehler: Storage-Bucket konnte nicht erstellt werden. Bitte kontaktieren Sie den Administrator.");
+          toast.error("Fehler: Storage-Bucket konnte nicht erstellt werden. Bitte versuchen Sie es später erneut oder kontaktieren Sie den Administrator.", { 
+            duration: 6000,
+            important: true
+          });
         } else {
           console.log("[WebsiteEditor] 'websites' bucket exists or was created, website editor can use it");
         }
@@ -75,10 +79,10 @@ export default function WebsiteEditor() {
       return null;
     }
     
-    if (!bucketChecked) {
+    if (bucketStatus !== 'exists') {
       // Ensure bucket exists before attempting upload
       const bucketExists = await mediaService.ensureBucketExists('websites');
-      setBucketChecked(true);
+      setBucketStatus(bucketExists ? 'exists' : 'error');
       
       if (!bucketExists) {
         toast.error("Fehler: Storage-Bucket existiert nicht oder konnte nicht erstellt werden");

@@ -6,11 +6,27 @@ import { imageUtils } from "@/lib/image-utils";
 export const mediaService = {
   async ensureBucketExists(bucketName: string = 'websites'): Promise<boolean> {
     try {
+      console.log(`[MediaService] Checking if bucket '${bucketName}' exists...`);
+      
+      // Check if the user is authenticated
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        console.error("[MediaService] User is not authenticated, cannot check/create bucket");
+        return false;
+      }
+      
       // Check if the bucket exists
       const { data: buckets, error: listError } = await supabase.storage.listBuckets();
       
       if (listError) {
         console.error("[MediaService] Error checking buckets:", listError);
+        
+        // If permission error, provide specific feedback
+        if (listError.message.includes("permission") || listError.message.includes("not authorized")) {
+          toast.error("Keine Berechtigung zum Überprüfen des Speicher-Buckets. Bitte melden Sie sich an.");
+          return false;
+        }
+        
         return false;
       }
       
@@ -26,6 +42,18 @@ export const mediaService = {
         
         if (createError) {
           console.error(`[MediaService] Failed to create bucket '${bucketName}':`, createError);
+          
+          // Give more detailed error based on error type
+          if (createError.message.includes("already exists")) {
+            // This is not really an error, the bucket exists
+            console.log(`[MediaService] Bucket creation returned 'already exists', but this is fine`);
+            return true;
+          } else if (createError.message.includes("permission") || createError.message.includes("not authorized")) {
+            toast.error("Keine Berechtigung zum Erstellen des Speicher-Buckets. Bitte kontaktieren Sie den Administrator.");
+          } else {
+            toast.error(`Fehler beim Erstellen des Buckets: ${createError.message}`);
+          }
+          
           return false;
         }
         
@@ -36,7 +64,12 @@ export const mediaService = {
       console.log(`[MediaService] Bucket '${bucketName}' exists`);
       return true;
     } catch (error) {
-      console.error("[MediaService] Error ensuring bucket exists:", error);
+      console.error("[MediaService] Unexpected error ensuring bucket exists:", error);
+      
+      // Try to provide a more detailed error message to the user
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      toast.error(`Bucket-Fehler: ${errorMessage}`);
+      
       return false;
     }
   },
