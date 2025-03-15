@@ -1,3 +1,4 @@
+
 import { WebsiteTemplate, WebsiteSection, SectionType } from "@/types/website.types";
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/lib/supabase';
@@ -18,18 +19,27 @@ export const getTemplateDefaultContent = (templateId: string) => {
       if (data && data.length > 0 && data[0].content) {
         // Check if content has sections property and it's an array
         const contentObj = data[0].content;
-        if (typeof contentObj === 'object' && contentObj !== null && 'sections' in contentObj && Array.isArray(contentObj.sections)) {
-          // Make sure we process the sections to have the correct SectionType
-          const typedSections = contentObj.sections.map(section => ({
-            ...section,
-            type: section.type as SectionType,
-            id: section.id || uuidv4()
-          }));
+        if (typeof contentObj === 'object' && contentObj !== null && 'sections' in contentObj) {
+          const sectionsData = contentObj.sections;
           
-          return {
-            sections: typedSections,
-            lastEdited: new Date().toISOString()
-          };
+          if (Array.isArray(sectionsData)) {
+            // Make sure we process the sections to have the correct SectionType
+            const typedSections = sectionsData.map(section => {
+              if (typeof section === 'object' && section !== null) {
+                return {
+                  ...section,
+                  type: section.type as SectionType,
+                  id: section.id || uuidv4()
+                } as WebsiteSection;
+              }
+              return null;
+            }).filter((section): section is WebsiteSection => section !== null);
+            
+            return {
+              sections: typedSections,
+              lastEdited: new Date().toISOString()
+            };
+          }
         }
       }
       

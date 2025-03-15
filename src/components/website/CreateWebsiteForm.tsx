@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangleIcon, RocketIcon, PaintbrushIcon, CheckCircleIcon, LockIcon } from 'lucide-react';
+import { AlertTriangleIcon, RocketIcon, PaintbrushIcon, CheckCircleIcon, Lock } from 'lucide-react';
 import TemplatePicker from './TemplatePicker';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -107,7 +107,7 @@ export default function CreateWebsiteForm() {
       if (selectedTemplate?.proOnly && !isProUser) {
         toast.error("Diese Vorlage ist nur für Pro-Benutzer verfügbar", {
           description: "Upgraden Sie auf Pro, um Zugriff zu erhalten",
-          icon: <LockIcon className="h-5 w-5 text-orange-500" />
+          icon: <Lock className="h-5 w-5 text-orange-500" />
         });
         return;
       }

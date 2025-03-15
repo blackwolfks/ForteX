@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { LockIcon, StarIcon, CheckIcon } from 'lucide-react';
+import { Lock, Star, CheckIcon } from 'lucide-react';
 import { templateService } from '@/services/website/templates';
 import { WebsiteTemplate } from '@/types/website.types';
 import { Skeleton } from "@/components/ui/skeleton";
@@ -166,10 +166,11 @@ function TemplateGrid({ templates, onSelect, selectedTemplate, isProUser }: Temp
                         {isProTemplate && (
                           <div className="absolute top-2 right-2 z-10">
                             <Badge variant="secondary" className="font-semibold bg-gradient-to-r from-orange-500 to-pink-500 text-white">
-                              <StarIcon className="h-3 w-3 mr-1" /> Premium
+                              <Star className="h-3 w-3 mr-1" /> Premium
                             </Badge>
                           </div>
                         )}
+                        
                         <div className="aspect-video overflow-hidden bg-gradient-to-br from-darkgray-500 to-darkgray-700">
                           <img 
                             src={template.thumbnail || '/placeholder.svg'} 
@@ -194,7 +195,7 @@ function TemplateGrid({ templates, onSelect, selectedTemplate, isProUser }: Temp
                               />
                             )}
                             {!canSelect && (
-                              <LockIcon className="h-5 w-5 text-muted-foreground mt-1" />
+                              <Lock className="h-5 w-5 text-muted-foreground mt-1" />
                             )}
                           </div>
                         </CardHeader>
