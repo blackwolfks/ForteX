@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { websiteService } from '@/services/website-service';
@@ -64,24 +63,12 @@ export default function WebsiteEditor() {
     
     console.log("[WebsiteEditor] Handling media upload for file:", file.name, "type:", file.type, "size:", file.size);
     
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Datei ist zu groß. Die maximale Dateigröße beträgt 5MB.");
-      return null;
-    }
-    
-    const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
-    console.log("[WebsiteEditor] File extension:", fileExtension);
-    
-    if (!['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension)) {
-      toast.error(`Dateityp .${fileExtension} wird nicht unterstützt. Bitte nur Bilder im JPG, PNG oder WebP Format hochladen.`);
-      return null;
-    }
+    // Create a standardized folder path using the website ID
+    // Replace hyphens with underscores for consistency
+    const folderPath = `website_${websiteId.replace(/-/g, '_')}`;
+    console.log("[WebsiteEditor] Uploading to folder path:", folderPath);
     
     try {
-      // Standardize folder structure for website media
-      const uploadPath = `website-${websiteId.replace(/-/g, '_')}`;
-      console.log("[WebsiteEditor] Uploading to path:", uploadPath);
-      
       // Add a retry mechanism for uploads
       let attempts = 0;
       const maxAttempts = 2;
@@ -93,13 +80,12 @@ export default function WebsiteEditor() {
           await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second between retries
         }
         
-        result = await mediaService.uploadMedia(file, uploadPath);
+        result = await mediaService.uploadMedia(file, folderPath);
         attempts++;
       }
       
       if (result) {
-        // If upload was successful, verify that the URL is accessible
-        console.log("[WebsiteEditor] Upload successful, URL:", result);
+        // If upload was successful, return the URL
         return result;
       } else {
         console.error("[WebsiteEditor] All upload attempts failed");

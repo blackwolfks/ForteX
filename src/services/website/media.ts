@@ -37,13 +37,34 @@ export const mediaService = {
 
       console.log("[MediaService] Uploading file:", sanitizedFilePath);
 
-      // Upload the file directly
+      // Use a more explicit content type based on file extension
+      let contentType;
+      switch (fileExtension) {
+        case 'jpg':
+        case 'jpeg':
+          contentType = 'image/jpeg';
+          break;
+        case 'png':
+          contentType = 'image/png';
+          break;
+        case 'gif':
+          contentType = 'image/gif';
+          break;
+        case 'webp':
+          contentType = 'image/webp';
+          break;
+        default:
+          contentType = file.type;
+      }
+
+      // Upload the file with explicit content type
       const { data, error } = await supabase
         .storage
         .from('websites')
         .upload(sanitizedFilePath, file, {
           cacheControl: '3600',
-          upsert: true
+          upsert: true,
+          contentType: contentType // Explicitly set the content type
         });
       
       if (error) {
@@ -73,19 +94,27 @@ export const mediaService = {
       
       console.log("[MediaService] Upload successful, public URL:", publicUrl);
       
+      // Add a cache-busting parameter to ensure the browser doesn't use a cached version
+      const cachebustedUrl = `${publicUrl}?t=${timestamp}`;
+      console.log("[MediaService] Cache-busted URL:", cachebustedUrl);
+      
       // Test if the URL is accessible by attempting to fetch it
       try {
-        const testFetch = await fetch(publicUrl, { method: 'HEAD' });
+        const testFetch = await fetch(cachebustedUrl, { 
+          method: 'HEAD',
+          cache: 'no-cache'
+        });
+        
         if (!testFetch.ok) {
-          console.warn("[MediaService] Generated URL might not be accessible:", publicUrl, "Status:", testFetch.status);
+          console.warn("[MediaService] Generated URL might not be accessible:", cachebustedUrl, "Status:", testFetch.status);
         } else {
-          console.log("[MediaService] URL verified accessible:", publicUrl);
+          console.log("[MediaService] URL verified accessible:", cachebustedUrl);
         }
       } catch (fetchError) {
         console.warn("[MediaService] Could not verify URL accessibility:", fetchError);
       }
       
-      return publicUrl || null;
+      return cachebustedUrl || null;
     } catch (error) {
       console.error("[MediaService] Unexpected error uploading file:", error);
       toast.error("Fehler beim Hochladen der Datei");
