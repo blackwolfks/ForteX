@@ -63,7 +63,6 @@ export const imageUtils = {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => {
-        // Fix the type checking - result can be string, ArrayBuffer or null
         if (!reader.result || !(reader.result instanceof ArrayBuffer)) {
           resolve(false);
           return;
@@ -113,13 +112,13 @@ export const imageUtils = {
       case 'webp':
         return 'image/webp';
       default:
-        // Immer einen konkreten Bildtyp als Fallback verwenden
-        return 'image/png'; 
+        // Always use a specific image type as fallback
+        return 'application/octet-stream'; 
     }
   },
   
   /**
-   * Creates an img HTML element with proper attributes for preloading
+   * Preloads an image to test if it can be loaded
    */
   preloadImage: (url: string): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -132,7 +131,7 @@ export const imageUtils = {
       // Set the source last to trigger loading
       img.src = url;
       
-      // Timeout nach 5 Sekunden, falls das Bild nicht geladen wird
+      // Timeout after 5 seconds
       setTimeout(() => resolve(false), 5000);
     });
   },
@@ -164,11 +163,11 @@ export const imageUtils = {
         mimeType = 'image/webp';
         break;
       default:
-        // Wenn wir den Typ nicht bestimmen können, verwenden wir PNG als Fallback
-        mimeType = 'image/png';
+        // Fall back to octet-stream if we can't determine the type
+        mimeType = 'application/octet-stream';
     }
     
-    // Force both the cache bust and explicit content type
+    // Force both cache bust and explicit content type
     return `${urlWithoutCache}?t=${timestamp}&contentType=${encodeURIComponent(mimeType)}`;
   }
 };

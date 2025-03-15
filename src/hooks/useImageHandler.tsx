@@ -74,14 +74,14 @@ export function useImageHandler({ imageUrl, onUpdate, onUpload }: UseImageHandle
     try {
       console.log("[useImageHandler] Starting image upload for file:", file.name, "type:", file.type);
       
-      // Datei klonen, um sicherzustellen, dass wir eine frische Kopie haben
-      const clonedFile = new File([await file.arrayBuffer()], file.name, {
-        type: imageUtils.getContentTypeFromExtension(file.name)
-      });
-      console.log("[useImageHandler] Created cloned file with type:", clonedFile.type);
+      // Clone the file with correct MIME type to ensure proper upload
+      const fileArrayBuffer = await file.arrayBuffer();
+      const contentType = imageUtils.getContentTypeFromExtension(file.name);
+      const newFile = new File([fileArrayBuffer], file.name, { type: contentType });
+      console.log("[useImageHandler] Created file with explicit MIME type:", contentType);
       
-      // Die geklonte Datei mit korrektem MIME-Type hochladen
-      const imageUrl = await onUpload(clonedFile);
+      // Upload the file with correct MIME type
+      const imageUrl = await onUpload(newFile);
       
       if (imageUrl) {
         console.log("[useImageHandler] Upload successful, setting new image URL:", imageUrl);

@@ -32,9 +32,9 @@ export const mediaService = {
       const sanitizedFilePath = filePath.replace(/[^a-zA-Z0-9.-_\/]/g, '_');
       console.log("[MediaService] Uploading file to path:", sanitizedFilePath);
 
-      // WICHTIG: Ermittle den korrekten MIME-Type
+      // Explicitly determine the correct MIME type from the file extension
       const contentType = imageUtils.getContentTypeFromExtension(file.name);
-      console.log("[MediaService] Determined content type from extension:", contentType);
+      console.log("[MediaService] Using content type:", contentType);
       
       // Verify authentication before upload
       const { data: session } = await supabase.auth.getSession();
@@ -44,32 +44,26 @@ export const mediaService = {
         return null;
       }
 
-      // WICHTIG: Datei in einen binären ArrayBuffer konvertieren
+      // Convert file to ArrayBuffer and create a new Blob with the correct MIME type
       const fileArrayBuffer = await file.arrayBuffer();
-      
-      // Explizit einen neuen Blob mit dem korrekten MIME-Type erstellen
       const fileBlob = new Blob([fileArrayBuffer], { type: contentType });
-      console.log("[MediaService] Created new blob with explicit content type:", contentType);
-      console.log("[MediaService] Blob size:", fileBlob.size, "Original file size:", file.size);
+      console.log("[MediaService] Created new blob with explicit MIME type:", contentType);
 
-      // Korrekte Upload-Optionen mit contentType
+      // Upload options with explicit content type
       const uploadOptions = {
         cacheControl: '3600',
         upsert: true,
-        contentType: contentType // Expliziter Content-Type
+        contentType: contentType
       };
 
-      console.log("[MediaService] Uploading with options:", JSON.stringify(uploadOptions));
-
-      // Explizit die Details vor dem Upload loggen
-      console.log("[MediaService] File details before upload:", {
-        name: file.name,
-        type: contentType,
-        size: fileBlob.size,
-        blobType: fileBlob.type
+      // Log upload details for debugging
+      console.log("[MediaService] Upload details:", {
+        path: sanitizedFilePath,
+        contentType: contentType,
+        size: fileBlob.size
       });
 
-      // Den erstellten Blob mit explizitem contentType hochladen
+      // Upload the file with explicit content type
       const { data, error } = await supabase
         .storage
         .from('websites')
@@ -79,24 +73,26 @@ export const mediaService = {
         console.error("[MediaService] Storage upload error:", error);
         console.error("[MediaService] Full error details:", JSON.stringify(error));
         
-        // MIME-Type-Fehler spezifisch behandeln
-        if (error.message.includes("mime type") || error.message.includes("invalid_mime_type")) {
+        // Handle MIME type errors specifically
+        if (error.message && error.message.includes("mime type")) {
           console.error("[MediaService] MIME type error:", error.message);
           
-          // Alternativen Hochladeversuch mit fetch API
-          console.log("[MediaService] Attempting alternative upload method...");
-          
+          // Try an alternative approach - using fetch directly
           try {
+            // Create a FormData object with the correct content type
             const formData = new FormData();
-            formData.append('file', fileBlob, file.name);
+            const newFile = new File([fileArrayBuffer], file.name, { type: contentType });
+            formData.append('file', newFile);
             
+            // Get the URL for the file and add cache-busting
             const { data: { publicUrl } } = supabase
               .storage
               .from('websites')
               .getPublicUrl(sanitizedFilePath);
             
-            // Public URL als Fallback zurückgeben, wenn der Hochladeversuch fehlschlägt
-            return imageUtils.fixSupabaseImageUrl(publicUrl);
+            if (publicUrl) {
+              return imageUtils.fixSupabaseImageUrl(publicUrl);
+            }
           } catch (altError) {
             console.error("[MediaService] Alternative upload failed:", altError);
             toast.error("Dateiformatfehler. Bitte versuchen Sie es mit einem anderen Bildformat (JPG, PNG).");
@@ -104,18 +100,11 @@ export const mediaService = {
           }
         }
         
-        // Andere spezifische Fehlertypen behandeln
-        if (error.message.includes("permission")) {
-          toast.error("Keine Berechtigung zum Hochladen. Bitte prüfen Sie Ihre Zugriffsrechte.");
-        } else if (error.message.includes("network")) {
-          toast.error("Netzwerkfehler beim Hochladen. Bitte prüfen Sie Ihre Internetverbindung.");
-        } else {
-          toast.error(`Fehler beim Hochladen: ${error.message}`);
-        }
+        toast.error(`Fehler beim Hochladen: ${error.message}`);
         return null;
       }
       
-      // Public URL des hochgeladenen Files erhalten
+      // Get the public URL of the uploaded file
       const { data: { publicUrl } } = supabase
         .storage
         .from('websites')
@@ -123,7 +112,7 @@ export const mediaService = {
       
       console.log("[MediaService] Upload successful, public URL:", publicUrl);
       
-      // Cache-Busting und Content-Type-Parameter hinzufügen
+      // Add cache-busting and content type parameters
       const fixedUrl = imageUtils.fixSupabaseImageUrl(publicUrl);
       console.log("[MediaService] Fixed URL with content type:", fixedUrl);
       

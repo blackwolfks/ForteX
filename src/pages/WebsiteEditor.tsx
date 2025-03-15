@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { websiteService } from '@/services/website-service';
@@ -65,14 +66,13 @@ export default function WebsiteEditor() {
     console.log("[WebsiteEditor] Handling media upload for file:", file.name, "type:", file.type, "size:", file.size);
     
     // Create a standardized folder path using the website ID
-    // Replace hyphens with underscores for consistency
     const folderPath = `website_${websiteId.replace(/-/g, '_')}`;
     console.log("[WebsiteEditor] Uploading to folder path:", folderPath);
     
     try {
-      // Add a retry mechanism for uploads
+      // Try up to 3 attempts for upload
       let attempts = 0;
-      const maxAttempts = 2;
+      const maxAttempts = 3;
       let result = null;
       
       while (attempts < maxAttempts && result === null) {
@@ -80,7 +80,7 @@ export default function WebsiteEditor() {
           console.log(`[WebsiteEditor] Retrying upload (attempt ${attempts + 1})`);
           await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second between retries
           
-          // Für den Wiederholungsversuch einen neuen Blob mit explizitem MIME-Type erstellen
+          // For retry, create a new blob with explicit MIME type
           const fileArrayBuffer = await file.arrayBuffer();
           const contentType = imageUtils.getContentTypeFromExtension(file.name);
           const newFile = new File([fileArrayBuffer], file.name, { type: contentType });
@@ -88,8 +88,11 @@ export default function WebsiteEditor() {
           
           result = await mediaService.uploadMedia(newFile, folderPath);
         } else {
-          // Beim ersten Versuch die originale Datei verwenden
-          result = await mediaService.uploadMedia(file, folderPath);
+          // For first attempt, use original file but ensure it has correct MIME type
+          const contentType = imageUtils.getContentTypeFromExtension(file.name);
+          const fileArrayBuffer = await file.arrayBuffer();
+          const newFile = new File([fileArrayBuffer], file.name, { type: contentType });
+          result = await mediaService.uploadMedia(newFile, folderPath);
         }
         attempts++;
       }
