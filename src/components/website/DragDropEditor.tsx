@@ -1,3 +1,4 @@
+
 import { useState, useRef } from 'react';
 import { SectionType, WebsiteSection } from '@/services/website-service';
 import { useWebsiteBuilder, EditorMode } from '@/hooks/useWebsiteBuilder';
@@ -424,5 +425,35 @@ export default function DragDropEditor({ websiteId, onMediaUpload }: DragDropEdi
             </ResizablePanel>
           )}
           
-          {
-
+          <ResizablePanel defaultSize={80}>
+            <div className="h-full overflow-auto">
+              {mode === 'mobile-preview' ? (
+                <div className="flex justify-center p-4 h-full bg-darkgray-800">
+                  <div className="w-[375px] h-[667px] border border-darkgray-600 rounded-lg overflow-hidden shadow-lg">
+                    <div className="w-full h-full bg-white overflow-y-auto">
+                      {sections.map(section => renderSection(section))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="h-full">
+                  {selectedSectionId && mode === 'edit' ? (
+                    <div className="h-full overflow-y-auto">
+                      {renderEditingSection(
+                        sections.find(s => s.id === selectedSectionId) as WebsiteSection
+                      )}
+                    </div>
+                  ) : (
+                    <div className="h-full overflow-y-auto bg-white">
+                      {sections.map(section => renderSection(section))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      </div>
+    </div>
+  );
+}
