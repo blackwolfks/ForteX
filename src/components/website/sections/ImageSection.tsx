@@ -38,23 +38,7 @@ export default function ImageSection({
     
     console.log("Selected file:", file.name, "type:", file.type, "size:", file.size);
     
-    // Accept more image formats with more flexible checking
-    const acceptedFormats = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    
-    // Check file type more broadly
-    if (!file.type.startsWith('image/')) {
-      toast.error("Nur Bildformate sind erlaubt.");
-      return;
-    }
-    
-    // More flexible MIME type checking
-    if (!acceptedFormats.includes(file.type.toLowerCase())) {
-      toast.error("Bitte nur Bilder im JPG, PNG, GIF oder WebP Format hochladen.");
-      console.error("File type not accepted:", file.type);
-      return;
-    }
-    
-    // Prüfen der Dateigröße
+    // Check file size first
     if (file.size > 5 * 1024 * 1024) { // 5MB limit
       toast.error("Datei ist zu groß. Die maximale Dateigröße beträgt 5MB.");
       return;
@@ -110,7 +94,7 @@ export default function ImageSection({
                 <Input
                   id="imageUpload"
                   type="file"
-                  accept="image/jpeg, image/jpg, image/png, image/gif, image/webp"
+                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
                   className="hidden"
                   onChange={handleImageUpload}
                 />

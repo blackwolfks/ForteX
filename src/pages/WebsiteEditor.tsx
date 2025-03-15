@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { websiteService } from '@/services/website-service';
@@ -65,18 +64,9 @@ export default function WebsiteEditor() {
     
     console.log("WebsiteEditor: Handling media upload for file:", file.name, "type:", file.type, "size:", file.size);
     
-    // Validate file is an image with more permissive checking
-    const acceptedFormats = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    
-    if (!file.type.startsWith('image/')) {
-      toast.error("Nur Bildformate sind erlaubt.");
-      return null;
-    }
-    
-    // More flexible MIME type checking
-    if (!acceptedFormats.includes(file.type.toLowerCase())) {
-      toast.error("Bitte nur Bilder im JPG, PNG, GIF oder WebP Format hochladen.");
-      console.error("File type not accepted:", file.type);
+    // Check file size - do this check here too for extra safety
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      toast.error("Datei ist zu groß. Die maximale Dateigröße beträgt 5MB.");
       return null;
     }
     

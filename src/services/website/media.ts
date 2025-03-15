@@ -11,25 +11,21 @@ export const mediaService = {
         ? `${path}/${timestamp}_${file.name}` 
         : `${timestamp}_${file.name}`;
       
+      console.log("Upload starting for file:", file.name);
+      console.log("File details - Type:", file.type, "Size:", file.size);
+      
       // Check file size
       if (file.size > 5 * 1024 * 1024) { // 5MB limit
         toast.error("Datei ist zu groß. Die maximale Dateigröße beträgt 5MB.");
         return null;
       }
 
-      // Check file type - only allow images and use a more permissive check
+      // Simplified file type check - just check the MIME type directly without lowercase conversion
       const acceptedFormats = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
       
-      console.log("Checking file type:", file.type);
-      
-      if (!file.type.startsWith('image/')) {
-        toast.error("Nur Bildformate sind erlaubt.");
-        return null;
-      }
-      
-      if (!acceptedFormats.includes(file.type.toLowerCase())) {
-        toast.error("Bitte nur Bilder im JPG, PNG, GIF oder WebP Format hochladen.");
-        console.error("File type not in accepted formats:", file.type);
+      if (!acceptedFormats.includes(file.type)) {
+        toast.error(`Dateityp ${file.type} wird nicht unterstützt. Bitte nur Bilder im JPG, PNG, GIF oder WebP Format hochladen.`);
+        console.error("File type not accepted:", file.type);
         console.log("Accepted formats:", acceptedFormats);
         return null;
       }
@@ -42,11 +38,11 @@ export const mediaService = {
       // Add proper content type header based on file type
       const options = {
         cacheControl: '3600',
-        upsert: true, // Changed to true to overwrite existing files with same name
+        upsert: true,
         contentType: file.type // Set the correct MIME type
       };
         
-      // Upload to the websites bucket with JSON parsing for better error handling
+      // Upload to the websites bucket
       const { data, error } = await supabase
         .storage
         .from('websites')
@@ -54,6 +50,7 @@ export const mediaService = {
       
       if (error) {
         console.error("Storage upload error:", error);
+        console.error("Full error details:", JSON.stringify(error));
         
         // More specific error messages based on error type
         if (error.message.includes("JWT")) {
@@ -64,7 +61,6 @@ export const mediaService = {
           toast.error("Netzwerkfehler beim Hochladen. Bitte prüfen Sie Ihre Internetverbindung.");
         } else if (error.message.includes("mime type") || error.message.includes("not supported")) {
           toast.error("Dateityp wird nicht unterstützt. Bitte versuchen Sie ein anderes Bild im JPG, PNG oder WebP Format hochzuladen.");
-          console.error("Full error message:", error.message);
         } else {
           toast.error(`Fehler beim Hochladen: ${error.message}`);
         }
