@@ -30,7 +30,7 @@ export const mediaService = {
 
       // Sanitize filename by removing special characters
       const sanitizedFilePath = filePath.replace(/[^a-zA-Z0-9.-_\/]/g, '_');
-      console.log("[MediaService] Uploading file:", sanitizedFilePath);
+      console.log("[MediaService] Uploading file to path:", sanitizedFilePath);
 
       // Get proper content type based on file extension
       const contentType = imageUtils.getContentTypeFromExtension(file.name);
@@ -43,6 +43,14 @@ export const mediaService = {
         contentType: contentType // Critical for proper image display
       };
 
+      // Verify authentication before upload
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) {
+        console.error("[MediaService] User not authenticated");
+        toast.error("Sie müssen angemeldet sein, um Dateien hochzuladen");
+        return null;
+      }
+
       // Upload the file with explicit content type
       const { data, error } = await supabase
         .storage
@@ -53,10 +61,15 @@ export const mediaService = {
         console.error("[MediaService] Storage upload error:", error);
         console.error("[MediaService] Full error details:", JSON.stringify(error));
         
-        // More specific error messages based on error type
-        if (error.message.includes("JWT")) {
-          toast.error("Sitzung abgelaufen. Bitte neu anmelden und erneut versuchen.");
-        } else if (error.message.includes("permission")) {
+        // Handle specific authentication errors
+        if (error.message.includes("JWT") || error.message.includes("token") || error.message.includes("auth")) {
+          console.error("[MediaService] Authentication error:", error.message);
+          toast.error("Authentifizierungsfehler. Bitte neu anmelden und erneut versuchen.");
+          return null;
+        }
+        
+        // Handle other specific error types
+        if (error.message.includes("permission")) {
           toast.error("Keine Berechtigung zum Hochladen. Bitte prüfen Sie Ihre Zugriffsrechte.");
         } else if (error.message.includes("network")) {
           toast.error("Netzwerkfehler beim Hochladen. Bitte prüfen Sie Ihre Internetverbindung.");
