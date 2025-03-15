@@ -17,6 +17,7 @@ import { websiteService } from '@/services/website-service';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { Separator } from '@/components/ui/separator';
 import { useHotkeys } from '@/hooks/useHotkeys';
+import { mediaService } from '@/services/website/media';
 
 interface DragDropEditorProps {
   websiteId: string;
@@ -125,11 +126,15 @@ export default function DragDropEditor({ websiteId, onMediaUpload }: DragDropEdi
   };
   
   const handleFileUpload = async (file: File) => {
+    console.log("DragDropEditor: handleFileUpload called", file);
+    
     if (onMediaUpload) {
+      console.log("Using provided onMediaUpload function");
       return await onMediaUpload(file);
     }
     
-    return await websiteService.uploadMedia(file);
+    console.log("Using default mediaService.uploadMedia");
+    return await mediaService.uploadMedia(file, `website-${websiteId}`);
   };
   
   const renderSection = (section: WebsiteSection) => {
@@ -137,6 +142,7 @@ export default function DragDropEditor({ websiteId, onMediaUpload }: DragDropEdi
       case 'hero':
         return (
           <HeroSection 
+            key={section.id}
             section={section} 
             isEditing={false}
             onUpdate={(content) => updateSectionContent(section.id, content)} 
@@ -146,6 +152,7 @@ export default function DragDropEditor({ websiteId, onMediaUpload }: DragDropEdi
       case 'text':
         return (
           <TextSection 
+            key={section.id}
             section={section} 
             isEditing={false}
             onUpdate={(content) => updateSectionContent(section.id, content)} 
@@ -154,6 +161,7 @@ export default function DragDropEditor({ websiteId, onMediaUpload }: DragDropEdi
       case 'image':
         return (
           <ImageSection 
+            key={section.id}
             section={section} 
             isEditing={false}
             onUpdate={(content) => updateSectionContent(section.id, content)} 
@@ -163,6 +171,7 @@ export default function DragDropEditor({ websiteId, onMediaUpload }: DragDropEdi
       case 'form':
         return (
           <FormSection 
+            key={section.id}
             section={section} 
             isEditing={false}
             onUpdate={(content) => updateSectionContent(section.id, content)} 
@@ -171,13 +180,14 @@ export default function DragDropEditor({ websiteId, onMediaUpload }: DragDropEdi
       case 'product':
         return (
           <ProductSection 
+            key={section.id}
             section={section} 
             isEditing={false}
             onUpdate={(content) => updateSectionContent(section.id, content)} 
           />
         );
       default:
-        return <div>Unbekannter Abschnittstyp: {section.type}</div>;
+        return <div key={section.id}>Unbekannter Abschnittstyp: {section.type}</div>;
     }
   };
   

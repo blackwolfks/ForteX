@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { websiteService } from '@/services/website-service';
 import DragDropEditor from '@/components/website/DragDropEditor';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Undo, Redo } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -63,13 +63,27 @@ export default function WebsiteEditor() {
       return null;
     }
     
+    console.log("WebsiteEditor: Handling media upload for file:", file.name);
+    
     // Prüfen des Dateityps, nur Bilder erlauben
     if (!file.type.startsWith('image/')) {
       toast.error("Nur Bildformate sind erlaubt.");
       return null;
     }
     
-    return await mediaService.uploadMedia(file, `website-${websiteId}`);
+    try {
+      const uploadPath = `website-${websiteId}`;
+      console.log("Uploading to path:", uploadPath);
+      
+      const imageUrl = await mediaService.uploadMedia(file, uploadPath);
+      console.log("Upload result:", imageUrl);
+      
+      return imageUrl;
+    } catch (error) {
+      console.error("Error in handleMediaUpload:", error);
+      toast.error("Fehler beim Hochladen des Bildes");
+      return null;
+    }
   };
   
   if (loading) {

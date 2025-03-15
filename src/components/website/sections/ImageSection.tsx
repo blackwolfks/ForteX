@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload } from 'lucide-react';
+import { Upload, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ImageSectionProps {
@@ -29,10 +29,13 @@ export default function ImageSection({
   } = section.content;
   
   const [uploading, setUploading] = useState(false);
+  const [imageError, setImageError] = useState(false);
   
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    
+    setImageError(false);
     
     // Prüfen ob es sich um ein Bild handelt
     if (!file.type.startsWith('image/')) {
@@ -48,11 +51,15 @@ export default function ImageSection({
     
     setUploading(true);
     try {
+      console.log("Starting image upload for file:", file.name);
       const imageUrl = await onUpload(file);
+      
       if (imageUrl) {
+        console.log("Upload successful, setting new image URL:", imageUrl);
         onUpdate({ imageUrl });
         toast.success("Bild erfolgreich hochgeladen");
       } else {
+        console.error("Upload failed - no URL returned");
         toast.error("Fehler beim Hochladen des Bildes");
       }
     } catch (error) {
@@ -71,14 +78,22 @@ export default function ImageSection({
             <Label>Bild</Label>
             <div className="flex items-center gap-4">
               <div className="relative w-32 h-32 border rounded-md overflow-hidden bg-muted">
-                <img 
-                  src={imageUrl} 
-                  alt={altText} 
-                  className="w-full h-full object-cover" 
-                  onError={(e) => {
-                    e.currentTarget.src = '/placeholder.svg';
-                  }}
-                />
+                {imageError ? (
+                  <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                    <AlertCircle className="w-8 h-8 text-gray-400" />
+                  </div>
+                ) : (
+                  <img 
+                    src={imageUrl} 
+                    alt={altText} 
+                    className="w-full h-full object-cover" 
+                    onError={(e) => {
+                      console.error("Image failed to load:", imageUrl);
+                      setImageError(true);
+                      e.currentTarget.src = '/placeholder.svg';
+                    }}
+                  />
+                )}
               </div>
               <div>
                 <Input
@@ -96,6 +111,11 @@ export default function ImageSection({
                   <Upload className="w-4 h-4 mr-2" />
                   {uploading ? 'Wird hochgeladen...' : 'Bild hochladen'}
                 </Button>
+                {imageUrl && imageUrl !== '/placeholder.svg' && (
+                  <p className="text-xs mt-2 text-muted-foreground break-all max-w-[200px]">
+                    {imageUrl.split('/').pop()}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -126,14 +146,22 @@ export default function ImageSection({
   return (
     <div className="container mx-auto px-6 py-12">
       <figure className="max-w-4xl mx-auto">
-        <img 
-          src={imageUrl} 
-          alt={altText} 
-          className="w-full h-auto rounded-lg shadow-md" 
-          onError={(e) => {
-            e.currentTarget.src = '/placeholder.svg';
-          }}
-        />
+        {imageError ? (
+          <div className="w-full h-64 flex items-center justify-center bg-gray-100 rounded-lg">
+            <AlertCircle className="w-12 h-12 text-gray-400" />
+          </div>
+        ) : (
+          <img 
+            src={imageUrl} 
+            alt={altText} 
+            className="w-full h-auto rounded-lg shadow-md" 
+            onError={(e) => {
+              console.error("Image failed to load in preview:", imageUrl);
+              setImageError(true);
+              e.currentTarget.src = '/placeholder.svg';
+            }}
+          />
+        )}
         {caption && (
           <figcaption className="text-center text-sm mt-4 text-gray-600">
             {caption}
