@@ -1,6 +1,5 @@
 
 import { useState, useEffect } from 'react';
-import { websiteService, WebsiteTemplate } from '@/services/website-service';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,6 +10,8 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { LockIcon } from 'lucide-react';
+import { templateService } from '@/services/website/templates';
+import { WebsiteTemplate } from '@/types/website.types';
 
 interface TemplatePickerProps {
   onSelect: (templateId: string) => void;
@@ -39,14 +40,14 @@ export default function TemplatePicker({
   });
   
   useEffect(() => {
-    if (proStatus) {
-      setIsProUser(proStatus.is_pro || false);
+    if (proStatus && proStatus.length > 0) {
+      setIsProUser(proStatus[0].has_pro || false);
     }
   }, [proStatus]);
   
-  const templates = websiteService.getTemplates();
+  const templates = templateService.getTemplates();
   const shopTemplates = includeShopTemplates 
-    ? websiteService.getShopTemplates() 
+    ? templateService.getShopTemplates() 
     : [];
   
   const allTemplates = [...templates, ...shopTemplates];

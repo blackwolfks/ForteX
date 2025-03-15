@@ -41,8 +41,8 @@ export default function CreateWebsiteForm() {
   });
   
   useEffect(() => {
-    if (proStatus) {
-      setIsProUser(proStatus.is_pro || false);
+    if (proStatus && proStatus.length > 0) {
+      setIsProUser(proStatus[0].has_pro || false);
     }
   }, [proStatus]);
   
@@ -163,7 +163,7 @@ export default function CreateWebsiteForm() {
               />
               
               {!isProUser && (
-                <Alert variant="warning">
+                <Alert variant="destructive">
                   <AlertTriangleIcon className="h-4 w-4" />
                   <AlertTitle>Pro-Vorlagen nicht verfügbar</AlertTitle>
                   <AlertDescription>
