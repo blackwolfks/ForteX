@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { v4 as uuidv4 } from 'uuid';
 import { getDefaultContent } from '@/utils/sectionDefaults';
 import { useUndoRedo } from './useUndoRedo';
+import { templateService } from '@/services/website/templates';
 
 export type EditorMode = 'edit' | 'preview' | 'mobile-preview';
 
@@ -41,26 +42,34 @@ export const useWebsiteBuilder = (websiteId?: string) => {
         setWebsite(websiteData);
         
         const contentData = await websiteService.getWebsiteContent(websiteId);
-        if (contentData && contentData.content.sections) {
+        if (contentData && contentData.content.sections && contentData.content.sections.length > 0) {
+          // Use existing content if available
           setSections(contentData.content.sections);
         } else {
-          // Initialize with default sections based on template
-          const defaultSections: WebsiteSection[] = [];
-          if (websiteData.template === 'landing') {
-            defaultSections.push({
-              id: uuidv4(),
-              type: 'hero',
-              content: {
-                title: 'Willkommen auf Ihrer Website',
-                subtitle: 'Eine leistungsstarke Plattform für Ihre Online-Präsenz',
-                buttonText: 'Mehr erfahren',
-                buttonLink: '#',
-                imageUrl: '/placeholder.svg'
-              },
-              order: 0
-            });
+          // Get default content based on the template
+          const templateContent = templateService.getTemplateDefaultContent(websiteData.template);
+          if (templateContent && templateContent.sections && templateContent.sections.length > 0) {
+            setSections(templateContent.sections);
+            // Save the default content immediately to the website
+            await websiteService.saveWebsiteContent(websiteId, templateContent);
+          } else {
+            // Fallback to basic sections if no template content is available
+            const defaultSections: WebsiteSection[] = [
+              {
+                id: uuidv4(),
+                type: 'hero',
+                content: {
+                  title: 'Willkommen auf Ihrer Website',
+                  subtitle: 'Eine leistungsstarke Plattform für Ihre Online-Präsenz',
+                  buttonText: 'Mehr erfahren',
+                  buttonLink: '#',
+                  imageUrl: '/placeholder.svg'
+                },
+                order: 0
+              }
+            ];
+            setSections(defaultSections);
           }
-          setSections(defaultSections);
         }
       }
     } catch (error) {

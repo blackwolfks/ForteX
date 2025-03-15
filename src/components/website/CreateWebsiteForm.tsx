@@ -15,6 +15,7 @@ import { AlertTriangleIcon } from 'lucide-react';
 import TemplatePicker from './TemplatePicker';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { templateService } from '@/services/website/templates';
 
 const formSchema = z.object({
   name: z.string().min(3, "Name muss mindestens 3 Zeichen lang sein"),
@@ -57,7 +58,7 @@ export default function CreateWebsiteForm() {
   
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     // Check if user is trying to use a Pro-only template without Pro access
-    const selectedTemplateData = websiteService.getTemplate(values.template);
+    const selectedTemplateData = templateService.getTemplate(values.template);
     if (selectedTemplateData?.proOnly && !isProUser) {
       toast.error("Diese Vorlage ist nur für Pro-Benutzer verfügbar");
       return;
@@ -66,6 +67,7 @@ export default function CreateWebsiteForm() {
     setIsSubmitting(true);
     
     try {
+      // 1. Create the website
       const websiteId = await websiteService.createWebsite(
         values.name, 
         values.url,
@@ -73,6 +75,14 @@ export default function CreateWebsiteForm() {
       );
       
       if (websiteId) {
+        // 2. Get default content for the selected template
+        const defaultContent = templateService.getTemplateDefaultContent(values.template);
+        
+        // 3. Save the default content to the new website
+        if (defaultContent && Object.keys(defaultContent).length > 0) {
+          await websiteService.saveWebsiteContent(websiteId, defaultContent);
+        }
+        
         toast.success("Website erfolgreich erstellt");
         navigate(`/dashboard/website-editor/${websiteId}`);
       } else {
@@ -87,7 +97,7 @@ export default function CreateWebsiteForm() {
   };
   
   const handleTemplateSelect = (templateId: string) => {
-    const selectedTemplate = websiteService.getTemplate(templateId);
+    const selectedTemplate = templateService.getTemplate(templateId);
     
     if (selectedTemplate?.proOnly && !isProUser) {
       toast.error("Diese Vorlage ist nur für Pro-Benutzer verfügbar");
@@ -148,6 +158,9 @@ export default function CreateWebsiteForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Website-Vorlage</FormLabel>
+                    <FormDescription>
+                      Wählen Sie eine Vorlage aus, die mit vordefinierten Inhalten gefüllt wird
+                    </FormDescription>
                     <FormControl>
                       <div className="mt-2">
                         <TemplatePicker 
