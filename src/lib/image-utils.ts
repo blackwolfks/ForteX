@@ -50,6 +50,7 @@ export const imageUtils = {
    * Validates if the file extension is an accepted image format
    */
   isAcceptedImageFormat: (filename: string): boolean => {
+    if (!filename) return false;
     const extension = filename.split('.').pop()?.toLowerCase() || '';
     return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension);
   },
@@ -59,17 +60,25 @@ export const imageUtils = {
    * This performs a binary check for image file headers
    */
   isActuallyImage: async (file: File): Promise<boolean> => {
+    // Simple file type check based on MIME type
+    if (!file.type.startsWith('image/')) {
+      console.log("[imageUtils] File doesn't have an image MIME type:", file.type);
+      // We'll still do the binary check to be thorough
+    }
+    
     // Binary signature check for common image formats
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => {
         if (!reader.result || !(reader.result instanceof ArrayBuffer)) {
+          console.log("[imageUtils] Failed to read file as ArrayBuffer");
           resolve(false);
           return;
         }
         
-        const arr = new Uint8Array(reader.result).subarray(0, 8);
+        const arr = new Uint8Array(reader.result).subarray(0, 12);
         const header = Array.from(arr).map(byte => byte.toString(16).padStart(2, '0')).join('');
+        console.log("[imageUtils] File binary header:", header);
         
         // Magic number signatures for different image formats
         const isJpeg = header.startsWith('ffd8ffe0') || header.startsWith('ffd8ffe1') || 
@@ -78,9 +87,17 @@ export const imageUtils = {
         const isGif = header.startsWith('47494638');
         const isWebp = header.indexOf('57454250') > -1; // WEBP might not be at the start
         
-        resolve(isJpeg || isPng || isGif || isWebp);
+        const result = isJpeg || isPng || isGif || isWebp;
+        console.log("[imageUtils] Is file an actual image:", result, {
+          isJpeg, isPng, isGif, isWebp
+        });
+        
+        resolve(result);
       };
-      reader.onerror = () => resolve(false);
+      reader.onerror = () => {
+        console.error("[imageUtils] Error reading file");
+        resolve(false);
+      };
       reader.readAsArrayBuffer(file);
     });
   },
@@ -99,6 +116,8 @@ export const imageUtils = {
    * Gets the appropriate MIME content type based on file extension
    */
   getContentTypeFromExtension: (filename: string): string => {
+    if (!filename) return 'application/octet-stream';
+    
     const extension = filename.split('.').pop()?.toLowerCase() || '';
     
     switch (extension) {
@@ -125,14 +144,23 @@ export const imageUtils = {
       const img = new Image();
       img.crossOrigin = "anonymous";
       
-      img.onload = () => resolve(true);
-      img.onerror = () => resolve(false);
+      img.onload = () => {
+        console.log("[imageUtils] Image preloaded successfully:", url);
+        resolve(true);
+      };
+      img.onerror = () => {
+        console.error("[imageUtils] Failed to preload image:", url);
+        resolve(false);
+      };
       
       // Set the source last to trigger loading
       img.src = url;
       
-      // Timeout after 5 seconds
-      setTimeout(() => resolve(false), 5000);
+      // Timeout after 8 seconds (longer timeout for slow connections)
+      setTimeout(() => {
+        console.warn("[imageUtils] Image preload timed out:", url);
+        resolve(false);
+      }, 8000);
     });
   },
   
@@ -168,6 +196,7 @@ export const imageUtils = {
     }
     
     // Force both cache bust and explicit content type
-    return `${urlWithoutCache}?t=${timestamp}&contentType=${encodeURIComponent(mimeType)}`;
+    const fixedUrl = `${urlWithoutCache}?t=${timestamp}&contentType=${encodeURIComponent(mimeType)}`;
+    return fixedUrl;
   }
 };

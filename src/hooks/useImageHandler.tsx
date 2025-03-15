@@ -22,7 +22,7 @@ export function useImageHandler({ imageUrl, onUpdate, onUpload }: UseImageHandle
   
   // Attempt to reload the image if it fails initially
   useEffect(() => {
-    if (imageError && loadingRetries < 2 && imageUrl && imageUrl !== '/placeholder.svg') {
+    if (imageError && loadingRetries < 3 && imageUrl && imageUrl !== '/placeholder.svg') {
       const timer = setTimeout(() => {
         console.log(`[useImageHandler] Retrying image load (attempt ${loadingRetries + 1}):`, imageUrl);
         setImageError(false);
@@ -71,6 +71,8 @@ export function useImageHandler({ imageUrl, onUpdate, onUpload }: UseImageHandle
     }
     
     setUploading(true);
+    toast.info("Bild wird hochgeladen...");
+    
     try {
       console.log("[useImageHandler] Starting image upload for file:", file.name, "type:", file.type);
       
@@ -96,7 +98,7 @@ export function useImageHandler({ imageUrl, onUpdate, onUpload }: UseImageHandle
           toast.success("Bild erfolgreich hochgeladen");
         } else {
           console.warn("[useImageHandler] Image preload failed, but continuing");
-          toast.success("Bild hochgeladen, kann aber möglicherweise nicht angezeigt werden");
+          toast.success("Bild hochgeladen, kann aber möglicherweise nicht sofort angezeigt werden");
         }
       } else {
         console.error("[useImageHandler] Upload failed - no URL returned");

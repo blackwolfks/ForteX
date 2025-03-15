@@ -44,6 +44,17 @@ export const mediaService = {
         return null;
       }
 
+      // Check if the bucket exists before upload
+      const { data: buckets } = await supabase.storage.listBuckets();
+      const websitesBucketExists = buckets?.some(bucket => bucket.name === 'websites');
+      
+      if (!websitesBucketExists) {
+        console.error("[MediaService] 'websites' bucket does not exist");
+        toast.error("Fehler: Storage-Bucket existiert nicht. Bitte kontaktieren Sie den Administrator.");
+        return null;
+      }
+      console.log("[MediaService] 'websites' bucket exists, proceeding with upload");
+
       // Convert file to ArrayBuffer and create a new Blob with the correct MIME type
       const fileArrayBuffer = await file.arrayBuffer();
       const fileBlob = new Blob([fileArrayBuffer], { type: contentType });
@@ -74,46 +85,71 @@ export const mediaService = {
         console.error("[MediaService] Storage upload error:", error);
         console.error("[MediaService] Full error details:", JSON.stringify(error));
         
-        // Handle MIME type errors specifically
-        if (error.message && error.message.includes("mime type")) {
-          console.error("[MediaService] MIME type error:", error.message);
-          
-          // Try an alternative approach with a different MIME type
-          console.log("[MediaService] Trying alternative upload with application/octet-stream");
-          const fallbackContentType = "application/octet-stream";
-          const fallbackBlob = new Blob([fileArrayBuffer], { type: fallbackContentType });
-          
-          const fallbackOptions = {
-            cacheControl: '3600',
-            upsert: true,
-            contentType: fallbackContentType
-          };
-          
-          const fallbackResult = await supabase
-            .storage
-            .from('websites')
-            .upload(sanitizedFilePath, fallbackBlob, fallbackOptions);
+        // Handle specific errors
+        if (error.message) {
+          // Try different approaches based on the error
+          if (error.message.includes("mime type") || error.message.includes("content type") || error.message.includes("format")) {
+            console.error("[MediaService] MIME type or format error:", error.message);
             
-          if (fallbackResult.error) {
-            console.error("[MediaService] Fallback upload also failed:", fallbackResult.error);
-            toast.error("Fehler beim Hochladen. Bitte versuchen Sie es mit einem anderen Bildformat.");
-            return null;
+            // Try with a generic binary format
+            console.log("[MediaService] Trying alternative upload with application/octet-stream");
+            const fallbackContentType = "application/octet-stream";
+            const fallbackBlob = new Blob([fileArrayBuffer], { type: fallbackContentType });
+            
+            const fallbackOptions = {
+              cacheControl: '3600',
+              upsert: true,
+              contentType: fallbackContentType
+            };
+            
+            const fallbackResult = await supabase
+              .storage
+              .from('websites')
+              .upload(sanitizedFilePath, fallbackBlob, fallbackOptions);
+              
+            if (fallbackResult.error) {
+              console.error("[MediaService] Fallback upload also failed:", fallbackResult.error);
+              
+              // Try one more time with binary content and without content type option
+              console.log("[MediaService] Trying final fallback upload without content type");
+              const lastAttemptOptions = {
+                cacheControl: '3600',
+                upsert: true
+              };
+              
+              const lastAttemptResult = await supabase
+                .storage
+                .from('websites')
+                .upload(sanitizedFilePath, fileArrayBuffer, lastAttemptOptions);
+                
+              if (lastAttemptResult.error) {
+                console.error("[MediaService] All upload attempts failed:", lastAttemptResult.error);
+                toast.error("Fehler beim Hochladen. Bitte versuchen Sie es später erneut oder kontaktieren Sie den Support.");
+                return null;
+              }
+              
+              // Get the public URL if the last attempt was successful
+              const { data: { publicUrl } } = supabase
+                .storage
+                .from('websites')
+                .getPublicUrl(lastAttemptResult.data?.path || sanitizedFilePath);
+              
+              console.log("[MediaService] Final fallback upload successful, public URL:", publicUrl);
+              return imageUtils.fixSupabaseImageUrl(publicUrl);
+            }
+            
+            // Get the public URL if first fallback was successful
+            const { data: { publicUrl } } = supabase
+              .storage
+              .from('websites')
+              .getPublicUrl(fallbackResult.data?.path || sanitizedFilePath);
+            
+            console.log("[MediaService] Fallback upload successful, public URL:", publicUrl);
+            return imageUtils.fixSupabaseImageUrl(publicUrl);
           }
-          
-          // Get the public URL if fallback was successful
-          const { data: { publicUrl } } = supabase
-            .storage
-            .from('websites')
-            .getPublicUrl(fallbackResult.data?.path || sanitizedFilePath);
-          
-          console.log("[MediaService] Fallback upload successful, public URL:", publicUrl);
-          
-          // Add cache-busting and content type parameters
-          const fixedUrl = imageUtils.fixSupabaseImageUrl(publicUrl);
-          return fixedUrl;
         }
         
-        toast.error(`Fehler beim Hochladen: ${error.message}`);
+        toast.error(`Fehler beim Hochladen: ${error.message || 'Unbekannter Fehler'}`);
         return null;
       }
       

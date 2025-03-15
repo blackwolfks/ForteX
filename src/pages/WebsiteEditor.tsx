@@ -42,6 +42,17 @@ export default function WebsiteEditor() {
       if (!isAuthenticated) return;
       
       try {
+        // Check if the bucket exists before proceeding
+        const { data: buckets } = await supabase.storage.listBuckets();
+        const websitesBucketExists = buckets?.some(bucket => bucket.name === 'websites');
+        
+        if (!websitesBucketExists) {
+          console.error("[WebsiteEditor] 'websites' bucket does not exist");
+          toast.error("Fehler: Storage-Bucket existiert nicht. Bitte kontaktieren Sie den Administrator.");
+        } else {
+          console.log("[WebsiteEditor] 'websites' bucket exists, website editor can use it");
+        }
+        
         const website = await websiteService.getWebsiteById(websiteId);
         if (!website) {
           setError('Website nicht gefunden');
