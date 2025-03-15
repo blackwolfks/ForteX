@@ -58,6 +58,7 @@ export const mediaService = {
 
       // Log upload details for debugging
       console.log("[MediaService] Upload details:", {
+        bucket: 'websites',
         path: sanitizedFilePath,
         contentType: contentType,
         size: fileBlob.size
@@ -77,27 +78,39 @@ export const mediaService = {
         if (error.message && error.message.includes("mime type")) {
           console.error("[MediaService] MIME type error:", error.message);
           
-          // Try an alternative approach - using fetch directly
-          try {
-            // Create a FormData object with the correct content type
-            const formData = new FormData();
-            const newFile = new File([fileArrayBuffer], file.name, { type: contentType });
-            formData.append('file', newFile);
+          // Try an alternative approach with a different MIME type
+          console.log("[MediaService] Trying alternative upload with application/octet-stream");
+          const fallbackContentType = "application/octet-stream";
+          const fallbackBlob = new Blob([fileArrayBuffer], { type: fallbackContentType });
+          
+          const fallbackOptions = {
+            cacheControl: '3600',
+            upsert: true,
+            contentType: fallbackContentType
+          };
+          
+          const fallbackResult = await supabase
+            .storage
+            .from('websites')
+            .upload(sanitizedFilePath, fallbackBlob, fallbackOptions);
             
-            // Get the URL for the file and add cache-busting
-            const { data: { publicUrl } } = supabase
-              .storage
-              .from('websites')
-              .getPublicUrl(sanitizedFilePath);
-            
-            if (publicUrl) {
-              return imageUtils.fixSupabaseImageUrl(publicUrl);
-            }
-          } catch (altError) {
-            console.error("[MediaService] Alternative upload failed:", altError);
-            toast.error("Dateiformatfehler. Bitte versuchen Sie es mit einem anderen Bildformat (JPG, PNG).");
+          if (fallbackResult.error) {
+            console.error("[MediaService] Fallback upload also failed:", fallbackResult.error);
+            toast.error("Fehler beim Hochladen. Bitte versuchen Sie es mit einem anderen Bildformat.");
             return null;
           }
+          
+          // Get the public URL if fallback was successful
+          const { data: { publicUrl } } = supabase
+            .storage
+            .from('websites')
+            .getPublicUrl(fallbackResult.data?.path || sanitizedFilePath);
+          
+          console.log("[MediaService] Fallback upload successful, public URL:", publicUrl);
+          
+          // Add cache-busting and content type parameters
+          const fixedUrl = imageUtils.fixSupabaseImageUrl(publicUrl);
+          return fixedUrl;
         }
         
         toast.error(`Fehler beim Hochladen: ${error.message}`);
