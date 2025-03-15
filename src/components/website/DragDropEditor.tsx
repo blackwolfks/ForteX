@@ -425,17 +425,21 @@ export default function DragDropEditor({ websiteId, onMediaUpload }: DragDropEdi
               
               <ResizableHandle withHandle />
               
-              <ResizablePanel defaultSize={80}>
-                <div className="h-full overflow-auto">
-                  {selectedSectionId ? (
+              <ResizablePanel defaultSize={60}>
+                <div className="h-full overflow-auto bg-white">
+                  {sections.map(section => renderSection(section))}
+                </div>
+              </ResizablePanel>
+              
+              <ResizableHandle withHandle />
+              
+              <ResizablePanel defaultSize={20} minSize={15}>
+                <div className="h-full overflow-y-auto">
+                  {selectedSectionId && (
                     <div className="h-full overflow-y-auto">
                       {renderEditingSection(
                         sections.find(s => s.id === selectedSectionId) as WebsiteSection
                       )}
-                    </div>
-                  ) : (
-                    <div className="h-full overflow-y-auto bg-white">
-                      {sections.map(section => renderSection(section))}
                     </div>
                   )}
                 </div>
