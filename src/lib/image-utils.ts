@@ -55,6 +55,44 @@ export const imageUtils = {
   },
   
   /**
+   * Checks if a file is actually an image by inspecting the file content
+   */
+  isActuallyImage: async (file: File): Promise<boolean> => {
+    // Simple check based on first few bytes of common image formats
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (!reader.result || typeof reader.result !== 'string') {
+          resolve(false);
+          return;
+        }
+        
+        const arr = new Uint8Array(reader.result as unknown as ArrayBuffer).subarray(0, 4);
+        const header = Array.from(arr).map(byte => byte.toString(16)).join('');
+        
+        // Magic numbers for different image formats
+        const jpgMagic = ['ffd8ff'];  // JPEG
+        const pngMagic = ['89504e47']; // PNG
+        const gifMagic = ['47494638']; // GIF
+        const webpMagic = ['52494646']; // WEBP
+        
+        if (
+          jpgMagic.some(m => header.startsWith(m)) ||
+          pngMagic.some(m => header.startsWith(m)) ||
+          gifMagic.some(m => header.startsWith(m)) ||
+          webpMagic.some(m => header.startsWith(m))
+        ) {
+          resolve(true);
+        } else {
+          resolve(false);
+        }
+      };
+      reader.onerror = () => resolve(false);
+      reader.readAsArrayBuffer(file.slice(0, 4));
+    });
+  },
+  
+  /**
    * Returns the image CSS classes with optional additional classes
    */
   getImageClasses: (additionalClasses?: string): string => {

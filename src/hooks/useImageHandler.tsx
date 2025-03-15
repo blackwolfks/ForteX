@@ -54,6 +54,13 @@ export function useImageHandler({ imageUrl, onUpdate, onUpload }: UseImageHandle
       return;
     }
     
+    // Validate that file is actually an image
+    const isImage = await imageUtils.isActuallyImage(file);
+    if (!isImage) {
+      toast.error("Die ausgewählte Datei scheint kein gültiges Bild zu sein. Bitte wählen Sie eine echte Bilddatei aus.");
+      return;
+    }
+    
     setUploading(true);
     try {
       console.log("[useImageHandler] Starting image upload for file:", file.name, "type:", file.type);

@@ -32,17 +32,10 @@ export const mediaService = {
       const sanitizedFilePath = filePath.replace(/[^a-zA-Z0-9.-_\/]/g, '_');
       console.log("[MediaService] Uploading file to path:", sanitizedFilePath);
 
-      // Get proper content type based on file extension
+      // Get proper content type based on file extension - this is critical
       const contentType = imageUtils.getContentTypeFromExtension(file.name);
       console.log("[MediaService] Setting content type:", contentType);
       
-      // Set explicit upload options with the correct content type
-      const uploadOptions = {
-        cacheControl: '3600',
-        upsert: true,
-        contentType: contentType // Critical for proper image display
-      };
-
       // Verify authentication before upload
       const { data: session } = await supabase.auth.getSession();
       if (!session.session) {
@@ -51,11 +44,22 @@ export const mediaService = {
         return null;
       }
 
-      // Upload the file with explicit content type
+      // Create a Blob with the correct content type to ensure proper MIME type
+      const blob = new Blob([await file.arrayBuffer()], { type: contentType });
+      console.log("[MediaService] Created blob with explicit content type:", contentType);
+      
+      // Set explicit upload options with the correct content type
+      const uploadOptions = {
+        cacheControl: '3600',
+        upsert: true,
+        contentType: contentType // Critical for proper image display
+      };
+
+      // Upload the blob with explicit content type
       const { data, error } = await supabase
         .storage
         .from('websites')
-        .upload(sanitizedFilePath, file, uploadOptions);
+        .upload(sanitizedFilePath, blob, uploadOptions);
       
       if (error) {
         console.error("[MediaService] Storage upload error:", error);
@@ -68,13 +72,18 @@ export const mediaService = {
           return null;
         }
         
+        // Handle MIME type errors specifically
+        if (error.message.includes("mime type") || error.message.includes("invalid_mime_type")) {
+          console.error("[MediaService] MIME type error:", error.message);
+          toast.error("Dateiformatfehler. Bitte versuchen Sie es mit einem anderen Bildformat (JPG, PNG).");
+          return null;
+        }
+        
         // Handle other specific error types
         if (error.message.includes("permission")) {
           toast.error("Keine Berechtigung zum Hochladen. Bitte prüfen Sie Ihre Zugriffsrechte.");
         } else if (error.message.includes("network")) {
           toast.error("Netzwerkfehler beim Hochladen. Bitte prüfen Sie Ihre Internetverbindung.");
-        } else if (error.message.includes("mime type") || error.message.includes("not supported")) {
-          toast.error("Dateityp wird nicht unterstützt. Bitte versuchen Sie ein anderes Bild im JPG, PNG oder WebP Format hochzuladen.");
         } else {
           toast.error(`Fehler beim Hochladen: ${error.message}`);
         }
