@@ -18,6 +18,7 @@ export default function WebsiteEditor() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('editor');
+  const [bucketChecked, setBucketChecked] = useState(false);
   const navigate = useNavigate();
   
   useEffect(() => {
@@ -43,14 +44,14 @@ export default function WebsiteEditor() {
       
       try {
         // Check if the bucket exists before proceeding
-        const { data: buckets } = await supabase.storage.listBuckets();
-        const websitesBucketExists = buckets?.some(bucket => bucket.name === 'websites');
+        const bucketExists = await mediaService.ensureBucketExists('websites');
+        setBucketChecked(true);
         
-        if (!websitesBucketExists) {
-          console.error("[WebsiteEditor] 'websites' bucket does not exist");
-          toast.error("Fehler: Storage-Bucket existiert nicht. Bitte kontaktieren Sie den Administrator.");
+        if (!bucketExists) {
+          console.error("[WebsiteEditor] 'websites' bucket does not exist and could not be created");
+          toast.error("Fehler: Storage-Bucket konnte nicht erstellt werden. Bitte kontaktieren Sie den Administrator.");
         } else {
-          console.log("[WebsiteEditor] 'websites' bucket exists, website editor can use it");
+          console.log("[WebsiteEditor] 'websites' bucket exists or was created, website editor can use it");
         }
         
         const website = await websiteService.getWebsiteById(websiteId);
@@ -72,6 +73,17 @@ export default function WebsiteEditor() {
     if (!websiteId) {
       toast.error("Keine Website-ID verfügbar");
       return null;
+    }
+    
+    if (!bucketChecked) {
+      // Ensure bucket exists before attempting upload
+      const bucketExists = await mediaService.ensureBucketExists('websites');
+      setBucketChecked(true);
+      
+      if (!bucketExists) {
+        toast.error("Fehler: Storage-Bucket existiert nicht oder konnte nicht erstellt werden");
+        return null;
+      }
     }
     
     console.log("[WebsiteEditor] Handling media upload for file:", file.name, "type:", file.type, "size:", file.size);

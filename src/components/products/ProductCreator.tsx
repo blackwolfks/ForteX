@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { 
   Card, 
@@ -43,8 +42,8 @@ import {
 import { toast } from "sonner";
 import { productService, CreateProductInput } from "@/services/product";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { mediaService } from "@/services/website/media";
 
-// Produktschema definieren
 const productSchema = z.object({
   name: z.string().min(3, "Name muss mindestens 3 Zeichen lang sein"),
   description: z.string().min(10, "Beschreibung muss mindestens 10 Zeichen lang sein"),
@@ -61,6 +60,7 @@ const ProductCreator = () => {
   const [activeTab, setActiveTab] = useState("details");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const queryClient = useQueryClient();
   
   const form = useForm<ProductFormValues>({
@@ -78,7 +78,6 @@ const ProductCreator = () => {
   
   const isSubscription = form.watch("isSubscription");
   
-  // Mutation zum Erstellen eines Produkts
   const createProductMutation = useMutation({
     mutationFn: (data: CreateProductInput) => productService.createProduct(data),
     onSuccess: () => {
@@ -92,19 +91,45 @@ const ProductCreator = () => {
     }
   });
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
-      const reader = new FileReader();
       
-      reader.onload = (e) => {
-        if (e.target?.result) {
-          setSelectedImage(file.name);
-          setPreviewImage(e.target.result as string);
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Datei ist zu groß. Die maximale Dateigröße beträgt 5MB.");
+        return;
+      }
+      
+      const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+      if (!['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension)) {
+        toast.error(`Dateityp .${fileExtension} wird nicht unterstützt. Bitte nur Bilder im JPG, PNG, GIF oder WebP Format hochladen.`);
+        return;
+      }
+      
+      try {
+        setUploading(true);
+        
+        const bucketExists = await mediaService.ensureBucketExists('websites');
+        if (!bucketExists) {
+          toast.error("Fehler: Storage-Bucket existiert nicht oder konnte nicht erstellt werden");
+          setUploading(false);
+          return;
         }
-      };
-      
-      reader.readAsDataURL(file);
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (e.target?.result) {
+            setSelectedImage(file.name);
+            setPreviewImage(e.target.result as string);
+            setUploading(false);
+          }
+        };
+        reader.readAsDataURL(file);
+      } catch (error) {
+        console.error("Error handling image:", error);
+        toast.error("Fehler beim Verarbeiten des Bildes");
+        setUploading(false);
+      }
     }
   };
   
@@ -115,7 +140,6 @@ const ProductCreator = () => {
   };
   
   const onSubmit = (data: ProductFormValues) => {
-    // Produktdaten mit Bild erstellen
     const productData: CreateProductInput = {
       name: data.name,
       description: data.description,

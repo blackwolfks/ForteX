@@ -4,6 +4,43 @@ import { toast } from "sonner";
 import { imageUtils } from "@/lib/image-utils";
 
 export const mediaService = {
+  async ensureBucketExists(bucketName: string = 'websites'): Promise<boolean> {
+    try {
+      // Check if the bucket exists
+      const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+      
+      if (listError) {
+        console.error("[MediaService] Error checking buckets:", listError);
+        return false;
+      }
+      
+      const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
+      
+      if (!bucketExists) {
+        console.log(`[MediaService] Bucket '${bucketName}' does not exist, attempting to create it...`);
+        
+        // Try to create the bucket
+        const { error: createError } = await supabase.storage.createBucket(bucketName, {
+          public: true
+        });
+        
+        if (createError) {
+          console.error(`[MediaService] Failed to create bucket '${bucketName}':`, createError);
+          return false;
+        }
+        
+        console.log(`[MediaService] Bucket '${bucketName}' created successfully`);
+        return true;
+      }
+      
+      console.log(`[MediaService] Bucket '${bucketName}' exists`);
+      return true;
+    } catch (error) {
+      console.error("[MediaService] Error ensuring bucket exists:", error);
+      return false;
+    }
+  },
+  
   async uploadMedia(file: File, path?: string): Promise<string | null> {
     try {
       // Create a more optimized file path with timestamp
@@ -44,13 +81,11 @@ export const mediaService = {
         return null;
       }
 
-      // Check if the bucket exists before upload
-      const { data: buckets } = await supabase.storage.listBuckets();
-      const websitesBucketExists = buckets?.some(bucket => bucket.name === 'websites');
-      
-      if (!websitesBucketExists) {
-        console.error("[MediaService] 'websites' bucket does not exist");
-        toast.error("Fehler: Storage-Bucket existiert nicht. Bitte kontaktieren Sie den Administrator.");
+      // Ensure the bucket exists before attempting upload
+      const bucketExists = await this.ensureBucketExists('websites');
+      if (!bucketExists) {
+        console.error("[MediaService] 'websites' bucket does not exist and could not be created");
+        toast.error("Fehler: Storage-Bucket konnte nicht erstellt werden. Bitte kontaktieren Sie den Administrator.");
         return null;
       }
       console.log("[MediaService] 'websites' bucket exists, proceeding with upload");
