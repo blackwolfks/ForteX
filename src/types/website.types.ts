@@ -83,6 +83,7 @@ export type WebsiteTemplate = {
   thumbnail: string;
   description: string;
   category: string;
+  proOnly?: boolean;
   settings?: WebsiteSettings;
   sections?: WebsiteSection[];
 };
