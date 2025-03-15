@@ -48,10 +48,8 @@ export function useImageHandler({ imageUrl, onUpdate, onUpload }: UseImageHandle
     }
     
     // Check file extension
-    const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
-    console.log("[useImageHandler] File extension:", fileExtension);
-    
-    if (!['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension)) {
+    if (!imageUtils.isAcceptedImageFormat(file.name)) {
+      const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
       toast.error(`Dateityp .${fileExtension} wird nicht unterstützt. Bitte nur Bilder im JPG, PNG, GIF oder WebP Format hochladen.`);
       return;
     }
@@ -63,27 +61,19 @@ export function useImageHandler({ imageUrl, onUpdate, onUpload }: UseImageHandle
       
       if (imageUrl) {
         console.log("[useImageHandler] Upload successful, setting new image URL:", imageUrl);
-        onUpdate({ imageUrl });
+        // Use our fixed URL to ensure proper content type
+        const fixedImageUrl = imageUtils.fixSupabaseImageUrl(imageUrl);
+        onUpdate({ imageUrl: fixedImageUrl });
         
-        // Force content type in the image preload
-        const img = new Image();
-        img.crossOrigin = "anonymous"; // Try to handle CORS issues
-        
-        // Add listener to handle successful load
-        img.onload = () => {
+        // Preload image to catch any issues early
+        const preloadSuccess = await imageUtils.preloadImage(fixedImageUrl);
+        if (preloadSuccess) {
           console.log("[useImageHandler] Image preloaded successfully");
-        };
-        
-        // Add error listener to catch preload issues
-        img.onerror = (error) => {
-          console.error("[useImageHandler] Error preloading image:", error);
-          // We don't set error state here to give the component's image a chance to load
-        };
-        
-        // Set the source last to trigger loading
-        img.src = imageUrl;
-        
-        toast.success("Bild erfolgreich hochgeladen");
+          toast.success("Bild erfolgreich hochgeladen");
+        } else {
+          console.warn("[useImageHandler] Image preload failed, but continuing");
+          toast.success("Bild hochgeladen, kann aber möglicherweise nicht angezeigt werden");
+        }
       } else {
         console.error("[useImageHandler] Upload failed - no URL returned");
         toast.error("Fehler beim Hochladen des Bildes");
@@ -101,33 +91,10 @@ export function useImageHandler({ imageUrl, onUpdate, onUpload }: UseImageHandle
       console.log("[useImageHandler] Manually retrying image load:", imageUrl);
       setImageError(false);
       
-      // Force browser to reload the image by appending a cache-busting query parameter
-      const cacheBuster = `?t=${Date.now()}`;
-      const urlWithoutCache = imageUrl.split('?')[0]; // Remove any existing query params
+      // Use our utility to create a fixed URL
+      const fixedImageUrl = imageUtils.fixSupabaseImageUrl(imageUrl);
       
-      // Add the proper content type hint based on file extension
-      const fileExtension = urlWithoutCache.split('.').pop()?.toLowerCase() || '';
-      let contentTypeHint = '';
-      
-      switch (fileExtension) {
-        case 'jpg':
-        case 'jpeg':
-          contentTypeHint = '&contentType=image/jpeg';
-          break;
-        case 'png':
-          contentTypeHint = '&contentType=image/png';
-          break;
-        case 'gif':
-          contentTypeHint = '&contentType=image/gif';
-          break;
-        case 'webp':
-          contentTypeHint = '&contentType=image/webp';
-          break;
-      }
-      
-      const newUrl = `${urlWithoutCache}${cacheBuster}${contentTypeHint}`;
-      
-      onUpdate({ imageUrl: newUrl });
+      onUpdate({ imageUrl: fixedImageUrl });
       toast.info("Bild wird neu geladen...");
     }
   };

@@ -21,51 +21,26 @@ export const mediaService = {
         return null;
       }
 
-      // Get file extension from filename
-      const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
-      const acceptedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-      
-      console.log("[MediaService] File extension detected:", fileExtension);
-      
-      if (!acceptedExtensions.includes(fileExtension)) {
+      // Validate file extension and type
+      if (!imageUtils.isAcceptedImageFormat(file.name)) {
+        const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
         toast.error(`Dateityp .${fileExtension} wird nicht unterstützt. Bitte nur Bilder im JPG, PNG, GIF oder WebP Format hochladen.`);
-        console.error("[MediaService] File extension not accepted:", fileExtension);
         return null;
       }
 
       // Sanitize filename by removing special characters
       const sanitizedFilePath = filePath.replace(/[^a-zA-Z0-9.-_\/]/g, '_');
-
       console.log("[MediaService] Uploading file:", sanitizedFilePath);
 
-      // Determine the correct MIME type based on file extension
-      let contentType;
-      switch (fileExtension) {
-        case 'jpg':
-        case 'jpeg':
-          contentType = 'image/jpeg';
-          break;
-        case 'png':
-          contentType = 'image/png';
-          break;
-        case 'gif':
-          contentType = 'image/gif';
-          break;
-        case 'webp':
-          contentType = 'image/webp';
-          break;
-        default:
-          // Use the browser-detected MIME type as fallback
-          contentType = file.type;
-      }
-
+      // Get proper content type based on file extension
+      const contentType = imageUtils.getContentTypeFromExtension(file.name);
       console.log("[MediaService] Setting content type:", contentType);
-
+      
       // Set explicit upload options with the correct content type
       const uploadOptions = {
         cacheControl: '3600',
         upsert: true,
-        contentType: contentType // This is critical for proper image display
+        contentType: contentType // Critical for proper image display
       };
 
       // Upload the file with explicit content type
@@ -101,33 +76,11 @@ export const mediaService = {
       
       console.log("[MediaService] Upload successful, public URL:", publicUrl);
       
-      // Add a cache-busting parameter to ensure the browser doesn't use a cached version
-      // and to force content type recognition
-      const cachebustedUrl = `${publicUrl}?t=${timestamp}&contentType=${encodeURIComponent(contentType)}`;
-      console.log("[MediaService] Cache-busted URL:", cachebustedUrl);
+      // Add cache-busting and content-type parameters
+      const fixedUrl = imageUtils.fixSupabaseImageUrl(publicUrl);
+      console.log("[MediaService] Fixed URL with content type:", fixedUrl);
       
-      // Test if the URL is accessible by attempting to fetch it
-      try {
-        const testFetch = await fetch(cachebustedUrl, { 
-          method: 'HEAD',
-          cache: 'no-cache',
-          headers: {
-            'Accept': contentType
-          }
-        });
-        
-        if (!testFetch.ok) {
-          console.warn("[MediaService] Generated URL might not be accessible:", cachebustedUrl, "Status:", testFetch.status);
-          console.warn("[MediaService] Response headers:", JSON.stringify(Object.fromEntries([...testFetch.headers])));
-        } else {
-          console.log("[MediaService] URL verified accessible:", cachebustedUrl);
-          console.log("[MediaService] Content-Type received:", testFetch.headers.get('content-type'));
-        }
-      } catch (fetchError) {
-        console.warn("[MediaService] Could not verify URL accessibility:", fetchError);
-      }
-      
-      return cachebustedUrl || null;
+      return fixedUrl;
     } catch (error) {
       console.error("[MediaService] Unexpected error uploading file:", error);
       toast.error("Fehler beim Hochladen der Datei");

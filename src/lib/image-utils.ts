@@ -99,5 +99,40 @@ export const imageUtils = {
       // Set the source last to trigger loading
       img.src = url;
     });
+  },
+  
+  /**
+   * Ensures proper content type by adding direct headers to the URL
+   * This is especially useful for Supabase storage URLs
+   */
+  fixSupabaseImageUrl: (url: string): string => {
+    if (!url || url === '/placeholder.svg') return url;
+    
+    const urlWithoutCache = url.split('?')[0];
+    const fileExtension = urlWithoutCache.split('.').pop()?.toLowerCase() || '';
+    const timestamp = Date.now();
+    
+    let mimeType = '';
+    switch (fileExtension) {
+      case 'jpg':
+      case 'jpeg':
+        mimeType = 'image/jpeg';
+        break;
+      case 'png':
+        mimeType = 'image/png';
+        break;
+      case 'gif':
+        mimeType = 'image/gif';
+        break;
+      case 'webp':
+        mimeType = 'image/webp';
+        break;
+      default:
+        // If we can't determine the type, try to use png as fallback
+        mimeType = 'image/png';
+    }
+    
+    // Force both the cache bust and explicit content type
+    return `${urlWithoutCache}?t=${timestamp}&contentType=${encodeURIComponent(mimeType)}`;
   }
 };
