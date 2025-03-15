@@ -33,8 +33,8 @@ export const mediaService = {
       console.log("[MediaService] Uploading file to path:", sanitizedFilePath);
 
       // Get proper content type based on file extension - this is critical
-      const contentType = imageUtils.getContentTypeFromExtension(file.name);
-      console.log("[MediaService] Setting content type:", contentType);
+      const contentType = file.type || imageUtils.getContentTypeFromExtension(file.name);
+      console.log("[MediaService] Using content type from file:", contentType);
       
       // Verify authentication before upload
       const { data: session } = await supabase.auth.getSession();
@@ -44,25 +44,21 @@ export const mediaService = {
         return null;
       }
 
-      // Read the file as an ArrayBuffer
-      const fileArrayBuffer = await file.arrayBuffer();
-      
-      // Create a Blob with the correct content type
-      const blob = new Blob([fileArrayBuffer], { type: contentType });
-      console.log("[MediaService] Created blob with explicit content type:", contentType);
-      
-      // Set explicit upload options with the correct content type
+      // Use the file directly instead of creating a new Blob
+      // This preserves the original MIME type
       const uploadOptions = {
         cacheControl: '3600',
         upsert: true,
-        contentType: contentType // Critical for proper image display
+        contentType: contentType
       };
 
-      // Upload the blob with explicit content type
+      console.log("[MediaService] Uploading with options:", uploadOptions);
+
+      // Upload the file directly
       const { data, error } = await supabase
         .storage
         .from('websites')
-        .upload(sanitizedFilePath, blob, uploadOptions);
+        .upload(sanitizedFilePath, file, uploadOptions);
       
       if (error) {
         console.error("[MediaService] Storage upload error:", error);

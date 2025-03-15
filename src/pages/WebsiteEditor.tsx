@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { websiteService } from '@/services/website-service';
@@ -80,6 +81,7 @@ export default function WebsiteEditor() {
           await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second between retries
         }
         
+        // Use the file directly without modification to preserve MIME type
         result = await mediaService.uploadMedia(file, folderPath);
         attempts++;
       }
