@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { WebsiteSection } from '@/services/website-service';
 import { Input } from "@/components/ui/input";
@@ -41,16 +40,21 @@ export default function HeroSection({
     
     setImageError(false);
     
-    // Validate file is an image
+    console.log("Selected hero image file:", file.name, "type:", file.type, "size:", file.size);
+    
+    // Accept more image formats with more flexible checking
+    const acceptedFormats = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    
+    // Check file type more broadly
     if (!file.type.startsWith('image/')) {
       toast.error("Nur Bildformate sind erlaubt.");
       return;
     }
     
-    // Validate accepted image formats
-    const acceptedFormats = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    if (!acceptedFormats.includes(file.type)) {
+    // More flexible MIME type checking
+    if (!acceptedFormats.includes(file.type.toLowerCase())) {
       toast.error("Bitte nur Bilder im JPG, PNG, GIF oder WebP Format hochladen.");
+      console.error("File type not accepted:", file.type);
       return;
     }
     
@@ -164,7 +168,7 @@ export default function HeroSection({
                 <Input
                   id="imageUpload"
                   type="file"
-                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  accept="image/jpeg, image/jpg, image/png, image/gif, image/webp"
                   className="hidden"
                   onChange={handleImageUpload}
                 />
@@ -189,7 +193,6 @@ export default function HeroSection({
     );
   }
   
-  // The rendering view of the section
   return (
     <div 
       className="relative min-h-[400px] flex items-center overflow-hidden bg-cover bg-center"

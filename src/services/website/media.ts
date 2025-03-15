@@ -17,9 +17,20 @@ export const mediaService = {
         return null;
       }
 
-      // Check file type - only allow images
+      // Check file type - only allow images and use a more permissive check
+      const acceptedFormats = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      
+      console.log("Checking file type:", file.type);
+      
       if (!file.type.startsWith('image/')) {
         toast.error("Nur Bildformate sind erlaubt.");
+        return null;
+      }
+      
+      if (!acceptedFormats.includes(file.type.toLowerCase())) {
+        toast.error("Bitte nur Bilder im JPG, PNG, GIF oder WebP Format hochladen.");
+        console.error("File type not in accepted formats:", file.type);
+        console.log("Accepted formats:", acceptedFormats);
         return null;
       }
 
@@ -52,7 +63,8 @@ export const mediaService = {
         } else if (error.message.includes("network")) {
           toast.error("Netzwerkfehler beim Hochladen. Bitte prüfen Sie Ihre Internetverbindung.");
         } else if (error.message.includes("mime type") || error.message.includes("not supported")) {
-          toast.error("Dateityp wird nicht unterstützt. Bitte nur Bilder im JPG, PNG oder WebP Format hochladen.");
+          toast.error("Dateityp wird nicht unterstützt. Bitte versuchen Sie ein anderes Bild im JPG, PNG oder WebP Format hochzuladen.");
+          console.error("Full error message:", error.message);
         } else {
           toast.error(`Fehler beim Hochladen: ${error.message}`);
         }
