@@ -63,7 +63,8 @@ export const imageUtils = {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => {
-        if (!reader.result || typeof reader.result !== 'arraybuffer') {
+        // Fix the type checking - result can be string, ArrayBuffer or null
+        if (!reader.result || !(reader.result instanceof ArrayBuffer)) {
           resolve(false);
           return;
         }
