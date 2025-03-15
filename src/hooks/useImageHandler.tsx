@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { imageUtils } from '@/lib/image-utils';
+import { supabase } from '@/integrations/supabase/client';
 
 interface UseImageHandlerProps {
   imageUrl: string;
@@ -35,6 +36,14 @@ export function useImageHandler({ imageUrl, onUpdate, onUpload }: UseImageHandle
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    
+    // Check if user is authenticated
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+      console.error("[useImageHandler] User not authenticated");
+      toast.error("Sie müssen angemeldet sein, um Bilder hochzuladen");
+      return;
+    }
     
     setImageError(false);
     setLoadingRetries(0);

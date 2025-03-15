@@ -44,8 +44,11 @@ export const mediaService = {
         return null;
       }
 
-      // Create a Blob with the correct content type to ensure proper MIME type
-      const blob = new Blob([await file.arrayBuffer()], { type: contentType });
+      // Read the file as an ArrayBuffer
+      const fileArrayBuffer = await file.arrayBuffer();
+      
+      // Create a Blob with the correct content type
+      const blob = new Blob([fileArrayBuffer], { type: contentType });
       console.log("[MediaService] Created blob with explicit content type:", contentType);
       
       // Set explicit upload options with the correct content type
