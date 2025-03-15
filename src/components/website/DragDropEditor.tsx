@@ -1,3 +1,4 @@
+
 import { useState, useRef } from 'react';
 import { SectionType, WebsiteSection } from '@/services/website-service';
 import { useWebsiteBuilder, EditorMode } from '@/hooks/useWebsiteBuilder';
@@ -12,6 +13,7 @@ import ImageSection from './sections/ImageSection';
 import FormSection from './sections/FormSection';
 import ProductSection from './sections/ProductSection';
 import { toast } from 'sonner';
+import { websiteService } from '@/services/website-service';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { Separator } from '@/components/ui/separator';
 import { useHotkeys } from '@/hooks/useHotkeys';
@@ -19,9 +21,10 @@ import { mediaService } from '@/services/website/media';
 
 interface DragDropEditorProps {
   websiteId: string;
+  onMediaUpload?: (file: File) => Promise<string | null>;
 }
 
-export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
+export default function DragDropEditor({ websiteId, onMediaUpload }: DragDropEditorProps) {
   const {
     website,
     sections,
@@ -122,19 +125,16 @@ export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
     }
   };
   
-  const handleImageUpload = async (file: File) => {
-    try {
-      await mediaService.ensureBucketExists('websites');
-      const result = await mediaService.uploadMedia(file);
-      if (result) {
-        return result;
-      }
-      return null;
-    } catch (error) {
-      console.error('Image upload error:', error);
-      toast.error('Fehler beim Hochladen des Bildes');
-      return null;
+  const handleFileUpload = async (file: File) => {
+    console.log("DragDropEditor: handleFileUpload called", file);
+    
+    if (onMediaUpload) {
+      console.log("Using provided onMediaUpload function");
+      return await onMediaUpload(file);
     }
+    
+    console.log("Using default mediaService.uploadMedia");
+    return await mediaService.uploadMedia(file, `website-${websiteId}`);
   };
   
   const renderSection = (section: WebsiteSection) => {
@@ -146,7 +146,7 @@ export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
             section={section} 
             isEditing={false}
             onUpdate={(content) => updateSectionContent(section.id, content)} 
-            onUpload={handleImageUpload}
+            onUpload={handleFileUpload}
           />
         );
       case 'text':
@@ -165,6 +165,7 @@ export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
             section={section} 
             isEditing={false}
             onUpdate={(content) => updateSectionContent(section.id, content)} 
+            onUpload={handleFileUpload}
           />
         );
       case 'form':
@@ -198,7 +199,7 @@ export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
             section={section} 
             isEditing={true}
             onUpdate={(content) => updateSectionContent(section.id, content)} 
-            onUpload={handleImageUpload}
+            onUpload={handleFileUpload}
           />
         );
       case 'text':
@@ -215,6 +216,7 @@ export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
             section={section} 
             isEditing={true}
             onUpdate={(content) => updateSectionContent(section.id, content)} 
+            onUpload={handleFileUpload}
           />
         );
       case 'form':

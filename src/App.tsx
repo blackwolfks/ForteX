@@ -1,158 +1,118 @@
 
-import React, { useEffect } from 'react';
-import {
-  BrowserRouter as Router,
-  Route,
-  Routes,
-  Navigate,
-} from 'react-router-dom';
-import { useAuth } from './contexts/AuthContext';
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import Index from "./pages/Index";
+import Dashboard from "./pages/Dashboard";
+import NotFound from "./pages/NotFound";
+import Navbar from "./components/Navbar";
+import SignIn from "./pages/SignIn";
+import SignUp from "./pages/SignUp";
+import ForgotPassword from "./pages/ForgotPassword";
+import Verification from "./pages/Verification";
+import TwoFactorSetup from "./pages/TwoFactorSetup";
+import GoogleCallback from "./pages/GoogleCallback";
+import DiscordCallback from "./pages/DiscordCallback";
+import Checkout from "./pages/Checkout";
+import Profile from "./pages/Profile";
+import AuthGuard from "./components/AuthGuard";
+import WebsiteEditor from "./pages/WebsiteEditor";
+import CreateWebsite from "./pages/CreateWebsite";
 
-// Correct the import paths
-import Dashboard from './pages/Dashboard';
-import Signin from './pages/SignIn';
-import Signup from './pages/SignUp';
-import Profile from './pages/Profile';
-import ForgotPassword from './pages/ForgotPassword';
-import UpdateProfile from './pages/Profile';
-import TwoFactorAuth from './pages/TwoFactorSetup';
-import AdminDashboard from './pages/Dashboard';
-import WebsiteBuilderDashboard from './pages/Dashboard';
-import WebsiteEditor from './pages/WebsiteEditor';
-import ProductManagement from './pages/Dashboard';
-import ProductEditor from './pages/Dashboard';
-import OrdersPage from './pages/Dashboard';
-import MediaManager from './pages/MediaManager';
+const queryClient = new QueryClient();
 
-function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { currentUser } = useAuth();
-  
-  if (!currentUser) {
-    return <Navigate to="/signin" />;
-  }
-  
-  return <>{children}</>;
-}
-
-function AdminGuard({ children }: { children: React.ReactNode }) {
-  const { currentUser, isAdmin } = useAuth();
-  
-  if (!currentUser || !isAdmin) {
-    return <Navigate to="/dashboard" />;
-  }
-  
-  return <>{children}</>;
-}
-
-function App() {
-  const { checkSession } = useAuth();
-
-  useEffect(() => {
-    checkSession();
-  }, [checkSession]);
-
-  return (
-    <Router>
-      <Routes>
-        <Route path="/signin" element={<Signin />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        
-        <Route
-          path="/profile"
-          element={
-            <AuthGuard>
-              <Profile />
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={
+            <>
+              <Navbar />
+              <Index />
+            </>
+          } />
+          
+          {/* Authentifizierungsrouten */}
+          <Route path="/sign-in" element={
+            <AuthGuard requireAuth={false} redirectTo="/">
+              <SignIn />
             </AuthGuard>
-          }
-        />
-        <Route
-          path="/update-profile"
-          element={
-            <AuthGuard>
-              <UpdateProfile />
+          } />
+          <Route path="/sign-up" element={
+            <AuthGuard requireAuth={false} redirectTo="/">
+              <SignUp />
             </AuthGuard>
-          }
-        />
-        <Route
-          path="/two-factor-auth"
-          element={
-            <AuthGuard>
-              <TwoFactorAuth />
+          } />
+          <Route path="/forgot-password" element={
+            <AuthGuard requireAuth={false} redirectTo="/">
+              <ForgotPassword />
             </AuthGuard>
-          }
-        />
-        
-        <Route
-          path="/dashboard"
-          element={
-            <AuthGuard>
-              <Dashboard />
+          } />
+          <Route path="/verification" element={<Verification />} />
+          <Route path="/auth/google-callback" element={<GoogleCallback />} />
+          <Route path="/auth/discord-callback" element={<DiscordCallback />} />
+          <Route path="/two-factor-setup" element={
+            <AuthGuard requireAuth={true}>
+              <TwoFactorSetup />
             </AuthGuard>
-          }
-        />
-        <Route
-          path="/admin"
-          element={
-            <AdminGuard>
-              <AdminDashboard />
-            </AdminGuard>
-          }
-        />
-        
-        <Route
-          path="/dashboard/website-builder"
-          element={
-            <AuthGuard>
-              <WebsiteBuilderDashboard />
+          } />
+          
+          {/* Checkout Route */}
+          <Route path="/checkout" element={
+            <AuthGuard requireAuth={true}>
+              <Checkout />
             </AuthGuard>
-          }
-        />
-        <Route
-          path="/dashboard/website-editor/:websiteId"
-          element={
-            <AuthGuard>
+          } />
+          
+          {/* Profile Route */}
+          <Route path="/profile" element={
+            <AuthGuard requireAuth={true}>
+              <>
+                <Navbar />
+                <Profile />
+              </>
+            </AuthGuard>
+          } />
+          
+          {/* Website Builder Routes */}
+          <Route path="/dashboard/create-website" element={
+            <AuthGuard requireAuth={true}>
+              <CreateWebsite />
+            </AuthGuard>
+          } />
+          
+          <Route path="/dashboard/website-editor/:websiteId" element={
+            <AuthGuard requireAuth={true}>
               <WebsiteEditor />
             </AuthGuard>
-          }
-        />
-        <Route
-          path="/dashboard/product-management"
-          element={
-            <AuthGuard>
-              <ProductManagement />
+          } />
+          
+          {/* Geschützte Routen */}
+          <Route path="/dashboard" element={
+            <AuthGuard requireAuth={true}>
+              <Dashboard />
             </AuthGuard>
-          }
-        />
-        <Route
-          path="/dashboard/product-editor/:productId?"
-          element={
-            <AuthGuard>
-              <ProductEditor />
+          } />
+          <Route path="/dashboard/:tab" element={
+            <AuthGuard requireAuth={true}>
+              <Dashboard />
             </AuthGuard>
-          }
-        />
-        <Route
-          path="/dashboard/orders"
-          element={
-            <AuthGuard>
-              <OrdersPage />
-            </AuthGuard>
-          }
-        />
-        <Route
-          path="/dashboard/media"
-          element={
-            <AuthGuard>
-              <MediaManager />
-            </AuthGuard>
-          }
-        />
-        
-        <Route path="/" element={<Navigate to="/dashboard" />} />
-      </Routes>
-    </Router>
-  );
-}
+          } />
+          
+          {/* Redirect from old dashboard path to new dashboard path */}
+          <Route path="/dashboard/*" element={<Navigate to="/dashboard" replace />} />
+          
+          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
 
 export default App;
