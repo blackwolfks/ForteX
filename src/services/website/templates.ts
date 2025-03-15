@@ -2,6 +2,7 @@
 import { WebsiteTemplate, WebsiteSection, SectionType } from "@/types/website.types";
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/lib/supabase';
+import { Json } from '@/integrations/supabase/types';
 
 // Get template default content function - remains as a utility function
 export const getTemplateDefaultContent = (templateId: string) => {
@@ -25,11 +26,13 @@ export const getTemplateDefaultContent = (templateId: string) => {
           if (Array.isArray(sectionsData)) {
             // Make sure we process the sections to have the correct SectionType
             const typedSections = sectionsData.map(section => {
-              if (typeof section === 'object' && section !== null) {
+              // Check if the section is an object with the expected properties
+              if (typeof section === 'object' && section !== null && 
+                  'type' in section && typeof section.type === 'string') {
                 return {
                   ...section,
                   type: section.type as SectionType,
-                  id: section.id || uuidv4()
+                  id: ('id' in section && section.id) ? section.id : uuidv4()
                 } as WebsiteSection;
               }
               return null;
