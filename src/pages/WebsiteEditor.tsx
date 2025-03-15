@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { websiteService } from '@/services/website-service';
@@ -11,6 +10,7 @@ import { toast } from 'sonner';
 import WebsiteSettingsPanel from '@/components/website/WebsiteSettingsPanel';
 import SeoSettings from '@/components/website/SeoSettings';
 import { mediaService } from '@/services/website/media';
+import { imageUtils } from '@/lib/image-utils';
 
 export default function WebsiteEditor() {
   const { websiteId } = useParams<{ websiteId: string }>();
