@@ -50,11 +50,18 @@ export const useWebsiteBuilder = (websiteId?: string) => {
           // Get default content based on the template
           const templateContent = templateService.getTemplateDefaultContent(websiteData.template);
           if (templateContent && templateContent.sections && templateContent.sections.length > 0) {
-            // Make sure we cast sections to the correct type
-            const templateSections = templateContent.sections as WebsiteSection[];
+            // Explicitly cast each section to ensure 'type' is treated as SectionType
+            const templateSections = templateContent.sections.map(section => ({
+              ...section,
+              type: section.type as SectionType
+            })) as WebsiteSection[];
+            
             setSections(templateSections);
             // Save the default content immediately to the website
-            await websiteService.saveWebsiteContent(websiteId, templateContent);
+            await websiteService.saveWebsiteContent(websiteId, {
+              sections: templateSections,
+              lastEdited: new Date().toISOString()
+            });
           } else {
             // Fallback to basic sections if no template content is available
             const defaultSections: WebsiteSection[] = [
