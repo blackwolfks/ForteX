@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { 
   websiteService, 
@@ -11,6 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { getDefaultContent } from '@/utils/sectionDefaults';
 import { useUndoRedo } from './useUndoRedo';
 import { templateService } from '@/services/website/templates';
+import { mediaService } from '@/services/website/media';
 
 export type EditorMode = 'edit' | 'preview' | 'mobile-preview';
 
@@ -22,7 +22,6 @@ export const useWebsiteBuilder = (websiteId?: string) => {
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   
-  // Use the undo/redo hook for sections
   const { 
     state: sections, 
     update: setSections, 
@@ -43,7 +42,6 @@ export const useWebsiteBuilder = (websiteId?: string) => {
         
         const contentData = await websiteService.getWebsiteContent(websiteId);
         if (contentData && contentData.content.sections && contentData.content.sections.length > 0) {
-          // Make sure we cast sections to the correct type
           const typedSections = contentData.content.sections.map(section => ({
             ...section,
             type: section.type as SectionType
@@ -52,25 +50,21 @@ export const useWebsiteBuilder = (websiteId?: string) => {
           setSections(typedSections);
         } else {
           try {
-            // Get default content based on the template
             const getContentFn = templateService.getTemplateDefaultContent(websiteData.template);
             const templateContent = await getContentFn();
             
             if (templateContent && templateContent.sections && templateContent.sections.length > 0) {
-              // Explicitly cast each section to ensure 'type' is treated as SectionType
               const templateSections = templateContent.sections.map(section => ({
                 ...section,
                 type: section.type as SectionType
               })) as WebsiteSection[];
               
               setSections(templateSections);
-              // Save the default content immediately to the website
               await websiteService.saveWebsiteContent(websiteId, {
                 sections: templateSections,
                 lastEdited: new Date().toISOString()
               });
             } else {
-              // Fallback to basic sections if no template content is available
               const defaultSections: WebsiteSection[] = [
                 {
                   id: uuidv4(),
@@ -89,7 +83,6 @@ export const useWebsiteBuilder = (websiteId?: string) => {
             }
           } catch (error) {
             console.error('Error loading template content:', error);
-            // Set fallback sections
             const fallbackSections: WebsiteSection[] = [
               {
                 id: uuidv4(),
@@ -139,7 +132,6 @@ export const useWebsiteBuilder = (websiteId?: string) => {
       
       const success = await websiteService.saveWebsiteContent(websiteId, content);
       if (success) {
-        // Also save to change history
         await websiteService.addWebsiteChangeHistory(
           websiteId,
           content,
@@ -203,7 +195,6 @@ export const useWebsiteBuilder = (websiteId?: string) => {
     const [removed] = result.splice(startIndex, 1);
     result.splice(endIndex, 0, removed);
     
-    // Update order values
     const reordered = result.map((section, index) => ({
       ...section,
       order: index
@@ -237,10 +228,8 @@ export const useWebsiteBuilder = (websiteId?: string) => {
     if (!websiteId || !website) return false;
     
     try {
-      // First save content
       await saveContent();
       
-      // Then update status
       const success = await websiteService.updateWebsiteStatus(websiteId, 'veröffentlicht');
       if (success) {
         setWebsite({
@@ -255,6 +244,21 @@ export const useWebsiteBuilder = (websiteId?: string) => {
       console.error('Error publishing website:', error);
       toast.error('Fehler beim Veröffentlichen der Website');
       return false;
+    }
+  };
+  
+  const uploadMedia = async (file: File): Promise<string | null> => {
+    if (!websiteId) {
+      toast.error("Fehler: Keine Website-ID gefunden");
+      return null;
+    }
+    
+    try {
+      return await mediaService.uploadMedia(file, `website-${websiteId}`);
+    } catch (error) {
+      console.error("Error uploading media:", error);
+      toast.error("Fehler beim Hochladen der Datei");
+      return null;
     }
   };
   
@@ -280,6 +284,7 @@ export const useWebsiteBuilder = (websiteId?: string) => {
     deleteSection,
     duplicateSection,
     publishWebsite,
+    uploadMedia,
     undo,
     redo
   };

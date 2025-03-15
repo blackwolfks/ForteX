@@ -8,16 +8,27 @@ export const mediaService = {
       const filePath = path 
         ? `${path}/${file.name}` 
         : `${Date.now()}_${file.name}`;
+      
+      // Check file size
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast.error("Datei ist zu groß. Die maximale Dateigröße beträgt 5MB.");
+        return null;
+      }
+
+      // Add proper content type header based on file type
+      const options = {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: file.type // Set the correct MIME type
+      };
         
       const { data, error } = await supabase
         .storage
         .from('websites')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
+        .upload(filePath, file, options);
       
       if (error) {
+        console.error("Storage upload error:", error);
         throw error;
       }
       

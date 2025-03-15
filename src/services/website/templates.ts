@@ -1,4 +1,3 @@
-
 import { WebsiteTemplate, WebsiteSection, SectionType } from "@/types/website.types";
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/lib/supabase';
@@ -18,8 +17,10 @@ export const getTemplateDefaultContent = (templateId: string) => {
       }
       
       if (data && data.length > 0 && data[0].content) {
-        // Check if content has sections property and it's an array
+        // Check if content has sections property and it's an object
         const contentObj = data[0].content;
+        
+        // Make sure we have a valid content object
         if (typeof contentObj === 'object' && contentObj !== null && 'sections' in contentObj) {
           const sectionsData = contentObj.sections;
           
@@ -77,6 +78,25 @@ const getFallbackContent = () => {
   };
 };
 
+// Function to ensure thumbnail URLs are absolute
+const ensureAbsoluteUrl = (url: string | null | undefined): string => {
+  if (!url) return '/placeholder.svg';
+  
+  // Check if the URL is already absolute
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  
+  // Check if it's a local path in the public folder
+  if (url.startsWith('/')) {
+    return url;
+  }
+  
+  // Otherwise, assume it's a relative path in the storage bucket
+  const { data } = supabase.storage.from('websites').getPublicUrl(url);
+  return data.publicUrl || '/placeholder.svg';
+};
+
 // Template service with database fetching methods
 export const templateService = {
   // Get all templates from database
@@ -93,7 +113,7 @@ export const templateService = {
         id: template.id,
         name: template.name,
         description: template.description || '',
-        thumbnail: template.thumbnail || '/placeholder.svg',
+        thumbnail: ensureAbsoluteUrl(template.thumbnail),
         category: template.category,
         proOnly: template.pro_only || false
       })) as WebsiteTemplate[];
@@ -119,7 +139,7 @@ export const templateService = {
           id: template.id,
           name: template.name,
           description: template.description || '',
-          thumbnail: template.thumbnail || '/placeholder.svg',
+          thumbnail: ensureAbsoluteUrl(template.thumbnail),
           category: template.category,
           proOnly: template.pro_only || false
         })) as WebsiteTemplate[];
@@ -144,7 +164,7 @@ export const templateService = {
         id: template.id,
         name: template.name,
         description: template.description || '',
-        thumbnail: template.thumbnail || '/placeholder.svg',
+        thumbnail: ensureAbsoluteUrl(template.thumbnail),
         category: template.category,
         proOnly: template.pro_only || false
       };

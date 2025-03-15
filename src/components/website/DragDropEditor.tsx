@@ -19,9 +19,10 @@ import { useHotkeys } from '@/hooks/useHotkeys';
 
 interface DragDropEditorProps {
   websiteId: string;
+  onMediaUpload?: (file: File) => Promise<string | null>;
 }
 
-export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
+export default function DragDropEditor({ websiteId, onMediaUpload }: DragDropEditorProps) {
   const {
     website,
     sections,
@@ -47,7 +48,6 @@ export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
   const [draggingSection, setDraggingSection] = useState<string | null>(null);
   const dragOverSectionRef = useRef<string | null>(null);
   
-  // Set up keyboard shortcuts
   useHotkeys([
     { key: 'mod+z', callback: undo, enabled: canUndo },
     { key: 'mod+shift+z', callback: redo, enabled: canRedo },
@@ -124,19 +124,22 @@ export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
   };
   
   const handleFileUpload = async (file: File) => {
+    if (onMediaUpload) {
+      return await onMediaUpload(file);
+    }
+    
     return await websiteService.uploadMedia(file);
   };
   
   const renderSection = (section: WebsiteSection) => {
     const isEditing = mode === 'edit' && selectedSectionId === section.id;
     
-    // Only render the preview version in the center area, editing is now only done in the right sidebar
     switch (section.type) {
       case 'hero':
         return (
           <HeroSection 
             section={section} 
-            isEditing={false} // Always false in center area
+            isEditing={false}
             onUpdate={(content) => updateSectionContent(section.id, content)} 
             onUpload={handleFileUpload}
           />
@@ -145,7 +148,7 @@ export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
         return (
           <TextSection 
             section={section} 
-            isEditing={false} // Always false in center area
+            isEditing={false}
             onUpdate={(content) => updateSectionContent(section.id, content)} 
           />
         );
@@ -153,7 +156,7 @@ export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
         return (
           <ImageSection 
             section={section} 
-            isEditing={false} // Always false in center area
+            isEditing={false}
             onUpdate={(content) => updateSectionContent(section.id, content)} 
             onUpload={handleFileUpload}
           />
@@ -162,7 +165,7 @@ export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
         return (
           <FormSection 
             section={section} 
-            isEditing={false} // Always false in center area
+            isEditing={false}
             onUpdate={(content) => updateSectionContent(section.id, content)} 
           />
         );
@@ -170,7 +173,7 @@ export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
         return (
           <ProductSection 
             section={section} 
-            isEditing={false} // Always false in center area
+            isEditing={false}
             onUpdate={(content) => updateSectionContent(section.id, content)} 
           />
         );
@@ -179,7 +182,6 @@ export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
     }
   };
   
-  // For the right sidebar editor, we need to render the actual editing version
   const renderEditingSection = (section: WebsiteSection) => {
     switch (section.type) {
       case 'hero':
@@ -246,7 +248,6 @@ export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
   
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Toolbar */}
       <div className="bg-darkgray-700 border-b border-darkgray-600 p-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button
@@ -336,9 +337,7 @@ export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
       </div>
       
       <div className="flex flex-1">
-        {/* Haupt-Editor-Bereich mit resizable Panels */}
         <ResizablePanelGroup direction="horizontal" className="flex-1">
-          {/* Linke Sidebar für Abschnitte hinzufügen (nur im Edit-Modus) */}
           {mode === 'edit' && (
             <ResizablePanel defaultSize={20} minSize={15} className="flex flex-col">
               <div className="w-full h-full bg-darkgray-700 border-r border-darkgray-600 p-4 overflow-y-auto">
@@ -425,72 +424,5 @@ export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
             </ResizablePanel>
           )}
           
-          {/* Trennleiste zwischen linker Sidebar und Hauptbereich */}
-          {mode === 'edit' && (
-            <ResizableHandle withHandle className="bg-darkgray-600" />
-          )}
-          
-          {/* Hauptbereich für die Website-Vorschau */}
-          <ResizablePanel defaultSize={mode === 'edit' ? 55 : 100} minSize={30}>
-            <div className={`flex-1 bg-background overflow-auto h-full ${
-              mode === 'mobile-preview' ? 'flex justify-center p-4' : ''
-            }`}>
-              <div 
-                className={`
-                  ${mode === 'mobile-preview' ? 'w-[375px] border border-gray-300 rounded-xl overflow-hidden shadow-lg' : 'w-full'}
-                  bg-white
-                `}
-              >
-                {sections.length > 0 ? (
-                  sections.map(section => (
-                    <div 
-                      key={section.id} 
-                      className={`relative ${mode === 'edit' ? 'hover:outline hover:outline-2 hover:outline-primary/20' : ''}`}
-                      onClick={() => mode === 'edit' ? setSelectedSectionId(section.id) : null}
-                    >
-                      {renderSection(section)}
-                    </div>
-                  ))
-                ) : (
-                  <div className="flex flex-col items-center justify-center min-h-[400px] p-6">
-                    <p className="text-muted-foreground mb-4">Fügen Sie Abschnitte hinzu, um Ihre Website zu gestalten</p>
-                    {mode === 'edit' && (
-                      <Button onClick={() => addSection('hero')}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Ersten Abschnitt hinzufügen
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </ResizablePanel>
-          
-          {/* Trennleiste zwischen Hauptbereich und rechter Sidebar */}
-          {mode === 'edit' && selectedSectionId && (
-            <ResizableHandle withHandle className="bg-darkgray-600" />
-          )}
-          
-          {/* Rechte Sidebar für Abschnittsbearbeitung (nur im Edit-Modus und wenn ein Abschnitt ausgewählt ist) */}
-          {mode === 'edit' && selectedSectionId && (
-            <ResizablePanel defaultSize={25} minSize={20} className="flex flex-col">
-              <div className="w-full h-full bg-darkgray-700 border-l border-darkgray-600 p-4 overflow-y-auto">
-                <h3 className="font-medium text-lg mb-4">
-                  {selectedSectionId && sections.find(s => s.id === selectedSectionId)?.type 
-                    ? `${sectionTypeMap[sections.find(s => s.id === selectedSectionId)?.type as SectionType]} bearbeiten` 
-                    : 'Bearbeiten'}
-                </h3>
-                
-                {selectedSectionId && sections.find(s => s.id === selectedSectionId) && (
-                  <div className="space-y-4">
-                    {renderEditingSection(sections.find(s => s.id === selectedSectionId) as WebsiteSection)}
-                  </div>
-                )}
-              </div>
-            </ResizablePanel>
-          )}
-        </ResizablePanelGroup>
-      </div>
-    </div>
-  );
-}
+          {
+

@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import WebsiteSettingsPanel from '@/components/website/WebsiteSettingsPanel';
 import SeoSettings from '@/components/website/SeoSettings';
+import { mediaService } from '@/services/website/media';
 
 export default function WebsiteEditor() {
   const { websiteId } = useParams<{ websiteId: string }>();
@@ -56,6 +57,10 @@ export default function WebsiteEditor() {
     checkWebsite();
   }, [websiteId, navigate]);
   
+  const handleMediaUpload = async (file: File): Promise<string | null> => {
+    return await mediaService.uploadMedia(file);
+  };
+  
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -88,7 +93,10 @@ export default function WebsiteEditor() {
         </TabsList>
         
         <TabsContent value="editor" className="h-[calc(100vh-48px)] p-0">
-          <DragDropEditor websiteId={websiteId} />
+          <DragDropEditor 
+            websiteId={websiteId} 
+            onMediaUpload={handleMediaUpload} 
+          />
         </TabsContent>
         
         <TabsContent value="pages" className="h-[calc(100vh-48px)] p-4">
