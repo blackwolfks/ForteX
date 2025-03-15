@@ -1,500 +1,140 @@
-
 import { WebsiteTemplate, WebsiteSection, SectionType } from "@/types/website.types";
 import { v4 as uuidv4 } from 'uuid';
+import { supabase } from '@/lib/supabase';
 
-const DEFAULT_TEMPLATES: WebsiteTemplate[] = [
-  // Business Templates
-  {
-    id: "business-corporate",
-    name: "Corporate Business",
-    thumbnail: "/lovable-uploads/04119b21-ad59-4fb6-b050-64fb8b45a7fa.png",
-    description: "Professionelles Design für Unternehmen und Firmen",
-    category: "business",
-  },
-  {
-    id: "business-agency",
-    name: "Digital Agency",
-    thumbnail: "/lovable-uploads/04119b21-ad59-4fb6-b050-64fb8b45a7fa.png",
-    description: "Modernes Layout für Agenturen und Dienstleister",
-    category: "business",
-  },
-  {
-    id: "business-consulting",
-    name: "Consulting",
-    thumbnail: "/lovable-uploads/04119b21-ad59-4fb6-b050-64fb8b45a7fa.png",
-    description: "Elegantes Design für Beratungsunternehmen",
-    category: "business",
-    proOnly: true,
-  },
-
-  // Shop Templates
-  {
-    id: "shop-standard",
-    name: "Standard Shop",
-    thumbnail: "/lovable-uploads/04119b21-ad59-4fb6-b050-64fb8b45a7fa.png",
-    description: "Klassischer Online-Shop für alle Produktarten",
-    category: "shop",
-  },
-  {
-    id: "shop-digital",
-    name: "Digital Products",
-    thumbnail: "/lovable-uploads/04119b21-ad59-4fb6-b050-64fb8b45a7fa.png",
-    description: "Spezialisiert für digitale Produkte und Downloads",
-    category: "shop",
-  },
-  {
-    id: "shop-premium",
-    name: "Premium Shop",
-    thumbnail: "/lovable-uploads/04119b21-ad59-4fb6-b050-64fb8b45a7fa.png",
-    description: "Hochwertiges Design für Luxusprodukte",
-    category: "shop",
-    proOnly: true,
-  },
-
-  // Portfolio Templates
-  {
-    id: "portfolio-minimal",
-    name: "Minimal Portfolio",
-    thumbnail: "/lovable-uploads/04119b21-ad59-4fb6-b050-64fb8b45a7fa.png",
-    description: "Schlichtes Design zur Präsentation Ihrer Arbeiten",
-    category: "portfolio",
-  },
-  {
-    id: "portfolio-creative",
-    name: "Creative Portfolio",
-    thumbnail: "/lovable-uploads/04119b21-ad59-4fb6-b050-64fb8b45a7fa.png",
-    description: "Kreatives Layout für Designer und Künstler",
-    category: "portfolio",
-  },
-  {
-    id: "portfolio-gallery",
-    name: "Gallery Portfolio",
-    thumbnail: "/lovable-uploads/04119b21-ad59-4fb6-b050-64fb8b45a7fa.png",
-    description: "Bildorientiertes Design für Fotografen",
-    category: "portfolio",
-    proOnly: true,
-  },
-
-  // Blog Templates
-  {
-    id: "blog-standard",
-    name: "Standard Blog",
-    thumbnail: "/lovable-uploads/04119b21-ad59-4fb6-b050-64fb8b45a7fa.png",
-    description: "Klassisches Blog-Layout für regelmäßige Inhalte",
-    category: "blog",
-  },
-  {
-    id: "blog-magazine",
-    name: "Magazine Blog",
-    thumbnail: "/lovable-uploads/04119b21-ad59-4fb6-b050-64fb8b45a7fa.png",
-    description: "Magazin-Stil für vielfältige Inhalte und Kategorien",
-    category: "blog",
-  },
-  {
-    id: "blog-premium",
-    name: "Premium Content",
-    thumbnail: "/lovable-uploads/04119b21-ad59-4fb6-b050-64fb8b45a7fa.png",
-    description: "Optimiert für Premium-Inhalte und Abonnements",
-    category: "blog",
-    proOnly: true,
-  },
-
-  // Landing Page Templates
-  {
-    id: "landing-product",
-    name: "Product Launch",
-    thumbnail: "/lovable-uploads/04119b21-ad59-4fb6-b050-64fb8b45a7fa.png",
-    description: "Optimiert für Produkteinführungen",
-    category: "landing",
-  },
-  {
-    id: "landing-event",
-    name: "Event Landing",
-    thumbnail: "/lovable-uploads/04119b21-ad59-4fb6-b050-64fb8b45a7fa.png",
-    description: "Perfekt für Events und Veranstaltungen",
-    category: "landing",
-  },
-
-  // Custom Template (Pro Only)
-  {
-    id: "custom",
-    name: "Leeres Template",
-    thumbnail: "/lovable-uploads/04119b21-ad59-4fb6-b050-64fb8b45a7fa.png",
-    description: "Starten Sie mit einem leeren Template (nur Pro-Nutzer)",
-    category: "custom",
-    proOnly: true,
-  },
-];
-
-const DEFAULT_SHOP_TEMPLATES: WebsiteTemplate[] = [
-  {
-    id: "shop-gaming",
-    name: "Gaming Shop",
-    thumbnail: "/lovable-uploads/04119b21-ad59-4fb6-b050-64fb8b45a7fa.png",
-    description: "Spezialisiert für Gaming-Produkte und Server",
-    category: "shop",
-  },
-  {
-    id: "shop-subscription",
-    name: "Subscription Shop",
-    thumbnail: "/lovable-uploads/04119b21-ad59-4fb6-b050-64fb8b45a7fa.png",
-    description: "Optimiert für Abonnement-basierte Produkte",
-    category: "shop",
-  },
-  {
-    id: "shop-marketplace",
-    name: "Marketplace",
-    thumbnail: "/lovable-uploads/04119b21-ad59-4fb6-b050-64fb8b45a7fa.png",
-    description: "Multi-Vendor Marketplace für verschiedene Anbieter",
-    category: "shop",
-    proOnly: true,
-  },
-];
-
-// This function returns default content for each template type
+// Get template default content function - remains as a utility function
 export const getTemplateDefaultContent = (templateId: string) => {
-  // Business templates
-  if (templateId === "business-corporate") {
-    return {
-      sections: [
-        {
-          id: uuidv4(),
-          type: "hero" as SectionType,
-          content: {
-            title: "Willkommen bei Ihrem Unternehmen",
-            subtitle: "Professionelle Lösungen für Ihre Geschäftsanforderungen",
-            buttonText: "Unsere Dienstleistungen",
-            buttonLink: "#services",
-            imageUrl: "/placeholder.svg",
-            alignment: "center"
-          },
-          order: 0
-        },
-        {
-          id: uuidv4(),
-          type: "text" as SectionType,
-          content: {
-            title: "Über uns",
-            content: "Wir sind ein etabliertes Unternehmen mit jahrelanger Erfahrung in der Branche. Unser Team aus Experten ist darauf spezialisiert, maßgeschneiderte Lösungen für Ihr Unternehmen zu entwickeln.",
-            alignment: "left"
-          },
-          order: 1
-        },
-        {
-          id: uuidv4(),
-          type: "image" as SectionType,
-          content: {
-            imageUrl: "/placeholder.svg",
-            caption: "Unser Hauptsitz",
-            altText: "Bürogebäude des Unternehmens"
-          },
-          order: 2
-        },
-        {
-          id: uuidv4(),
-          type: "form" as SectionType,
-          content: {
-            title: "Kontaktieren Sie uns",
-            fields: [
-              { id: uuidv4(), type: "text", label: "Name", required: true },
-              { id: uuidv4(), type: "email", label: "E-Mail", required: true },
-              { id: uuidv4(), type: "textarea", label: "Nachricht", required: true }
-            ],
-            buttonText: "Anfrage senden"
-          },
-          order: 3
-        }
-      ],
-      lastEdited: new Date().toISOString()
-    };
-  }
+  // This function will be called after we get template data from the database
+  // It processes the template content from the database to return correctly typed sections
+  return async () => {
+    try {
+      const { data, error } = await supabase.rpc('get_template_by_id', { template_id: templateId });
+      
+      if (error) {
+        console.error('Error fetching template content:', error);
+        return getFallbackContent();
+      }
+      
+      if (data && data.length > 0 && data[0].content && data[0].content.sections) {
+        // Make sure we process the sections to have the correct SectionType
+        const typedSections = data[0].content.sections.map(section => ({
+          ...section,
+          type: section.type as SectionType,
+          id: section.id || uuidv4()
+        }));
+        
+        return {
+          sections: typedSections,
+          lastEdited: new Date().toISOString()
+        };
+      }
+      
+      return getFallbackContent();
+    } catch (error) {
+      console.error('Failed to fetch template content:', error);
+      return getFallbackContent();
+    }
+  };
+};
+
+// Fallback content if database fetch fails
+const getFallbackContent = () => {
+  const defaultSections: WebsiteSection[] = [
+    {
+      id: uuidv4(),
+      type: 'hero' as SectionType,
+      content: {
+        title: 'Willkommen auf Ihrer Website',
+        subtitle: 'Eine leistungsstarke Plattform für Ihre Online-Präsenz',
+        buttonText: 'Mehr erfahren',
+        buttonLink: '#',
+        imageUrl: '/placeholder.svg'
+      },
+      order: 0
+    }
+  ];
   
-  else if (templateId === "business-agency") {
-    return {
-      sections: [
-        {
-          id: uuidv4(),
-          type: "hero" as SectionType,
-          content: {
-            title: "Kreative Digitalagentur",
-            subtitle: "Wir gestalten digitale Erlebnisse, die begeistern und Ergebnisse liefern",
-            buttonText: "Portfolio entdecken",
-            buttonLink: "#portfolio",
-            imageUrl: "/placeholder.svg",
-            alignment: "center"
-          },
-          order: 0
-        },
-        {
-          id: uuidv4(),
-          type: "text" as SectionType,
-          content: {
-            title: "Unsere Expertise",
-            content: "Als führende Digitalagentur bieten wir umfassende Dienstleistungen von der Webentwicklung über Branding bis hin zu digitalen Marketingstrategien. Wir arbeiten mit Kunden jeder Größe zusammen, um ihre Online-Präsenz zu stärken.",
-            alignment: "left"
-          },
-          order: 1
-        },
-        {
-          id: uuidv4(),
-          type: "image" as SectionType,
-          content: {
-            imageUrl: "/placeholder.svg",
-            caption: "Unser neuestes Projekt",
-            altText: "Screenshot eines Webdesign-Projekts"
-          },
-          order: 2
-        }
-      ],
-      lastEdited: new Date().toISOString()
-    };
-  }
-  
-  else if (templateId === "business-consulting") {
-    return {
-      sections: [
-        {
-          id: uuidv4(),
-          type: "hero" as SectionType,
-          content: {
-            title: "Strategische Beratung für Ihr Unternehmen",
-            subtitle: "Maßgeschneiderte Lösungen für komplexe Geschäftsherausforderungen",
-            buttonText: "Beratungsgespräch vereinbaren",
-            buttonLink: "#contact",
-            imageUrl: "/placeholder.svg",
-            alignment: "center"
-          },
-          order: 0
-        },
-        {
-          id: uuidv4(),
-          type: "text" as SectionType,
-          content: {
-            title: "Unsere Beratungsphilosophie",
-            content: "Unsere Berater bringen jahrzehntelange Erfahrung in verschiedenen Branchen mit. Wir analysieren Ihr Unternehmen gründlich und entwickeln Strategien, die zu messbaren Ergebnissen führen.",
-            alignment: "left"
-          },
-          order: 1
-        }
-      ],
-      lastEdited: new Date().toISOString()
-    };
-  }
-  
-  // Shop templates
-  else if (templateId === "shop-standard" || templateId === "shop-gaming" || templateId === "shop-digital") {
-    return {
-      sections: [
-        {
-          id: uuidv4(),
-          type: "hero" as SectionType,
-          content: {
-            title: "Willkommen in unserem Online-Shop",
-            subtitle: "Entdecken Sie unsere Qualitätsprodukte zu attraktiven Preisen",
-            buttonText: "Jetzt einkaufen",
-            buttonLink: "#products",
-            imageUrl: "/placeholder.svg",
-            alignment: "center"
-          },
-          order: 0
-        },
-        {
-          id: uuidv4(),
-          type: "product" as SectionType,
-          content: {
-            products: [
-              {
-                id: uuidv4(),
-                name: "Produkt 1",
-                description: "Produktbeschreibung hier...",
-                price: "49,99 €",
-                imageUrl: "/placeholder.svg"
-              },
-              {
-                id: uuidv4(),
-                name: "Produkt 2",
-                description: "Produktbeschreibung hier...",
-                price: "29,99 €",
-                imageUrl: "/placeholder.svg"
-              },
-              {
-                id: uuidv4(),
-                name: "Produkt 3",
-                description: "Produktbeschreibung hier...",
-                price: "39,99 €",
-                imageUrl: "/placeholder.svg"
-              }
-            ],
-            layout: "grid",
-            showPrice: true,
-            showDescription: true
-          },
-          order: 1
-        },
-        {
-          id: uuidv4(),
-          type: "text" as SectionType,
-          content: {
-            title: "Über unseren Shop",
-            content: "Unser Online-Shop bietet eine große Auswahl an qualitativ hochwertigen Produkten. Wir garantieren schnelle Lieferung und exzellenten Kundenservice.",
-            alignment: "left"
-          },
-          order: 2
-        }
-      ],
-      lastEdited: new Date().toISOString()
-    };
-  }
-  
-  // Portfolio templates
-  else if (templateId === "portfolio-minimal" || templateId === "portfolio-creative") {
-    return {
-      sections: [
-        {
-          id: uuidv4(),
-          type: "hero" as SectionType,
-          content: {
-            title: "Mein kreatives Portfolio",
-            subtitle: "Eine Sammlung meiner besten Arbeiten und Projekte",
-            buttonText: "Projekte ansehen",
-            buttonLink: "#projects",
-            imageUrl: "/placeholder.svg",
-            alignment: "center"
-          },
-          order: 0
-        },
-        {
-          id: uuidv4(),
-          type: "text" as SectionType,
-          content: {
-            title: "Über mich",
-            content: "Ich bin ein leidenschaftlicher Designer/Entwickler mit Erfahrung in verschiedenen kreativen Bereichen. Mein Ziel ist es, innovative und ansprechende Lösungen zu schaffen, die Ihre Erwartungen übertreffen.",
-            alignment: "left"
-          },
-          order: 1
-        },
-        {
-          id: uuidv4(),
-          type: "image" as SectionType,
-          content: {
-            imageUrl: "/placeholder.svg",
-            caption: "Projekt: Webdesign für XYZ",
-            altText: "Screenshot eines Webdesign-Projekts"
-          },
-          order: 2
-        }
-      ],
-      lastEdited: new Date().toISOString()
-    };
-  }
-  
-  // Blog templates
-  else if (templateId === "blog-standard" || templateId === "blog-magazine") {
-    return {
-      sections: [
-        {
-          id: uuidv4(),
-          type: "hero" as SectionType,
-          content: {
-            title: "Mein Blog",
-            subtitle: "Gedanken, Ideen und Inspirationen zu aktuellen Themen",
-            buttonText: "Neueste Beiträge",
-            buttonLink: "#posts",
-            imageUrl: "/placeholder.svg",
-            alignment: "center"
-          },
-          order: 0
-        },
-        {
-          id: uuidv4(),
-          type: "text" as SectionType,
-          content: {
-            title: "Willkommen auf meinem Blog",
-            content: "Hier teile ich regelmäßig meine Gedanken zu verschiedenen Themen. Abonnieren Sie meinen Newsletter, um keine Updates zu verpassen.",
-            alignment: "left"
-          },
-          order: 1
-        },
-        {
-          id: uuidv4(),
-          type: "text" as SectionType,
-          content: {
-            title: "Neuester Beitrag: Die Zukunft des digitalen Marketings",
-            content: "In diesem Beitrag untersuche ich die neuesten Trends im digitalen Marketing und wie Sie diese für Ihr Unternehmen nutzen können...",
-            alignment: "left"
-          },
-          order: 2
-        }
-      ],
-      lastEdited: new Date().toISOString()
-    };
-  }
-  
-  // Landing page templates
-  else if (templateId === "landing-product" || templateId === "landing-event") {
-    return {
-      sections: [
-        {
-          id: uuidv4(),
-          type: "hero" as SectionType,
-          content: {
-            title: "Neues Produkt: Innovation XYZ",
-            subtitle: "Die revolutionäre Lösung für Ihre täglichen Herausforderungen",
-            buttonText: "Jetzt vorbestellen",
-            buttonLink: "#order",
-            imageUrl: "/placeholder.svg",
-            alignment: "center"
-          },
-          order: 0
-        },
-        {
-          id: uuidv4(),
-          type: "text" as SectionType,
-          content: {
-            title: "Was macht unser Produkt besonders?",
-            content: "Unser Produkt bietet innovative Funktionen, die Ihren Alltag erleichtern. Es ist einfach zu bedienen, langlebig und kosteneffizient.",
-            alignment: "left"
-          },
-          order: 1
-        },
-        {
-          id: uuidv4(),
-          type: "form" as SectionType,
-          content: {
-            title: "Bestellen Sie jetzt",
-            fields: [
-              { id: uuidv4(), type: "text", label: "Name", required: true },
-              { id: uuidv4(), type: "email", label: "E-Mail", required: true },
-              { id: uuidv4(), type: "text", label: "Adresse", required: true }
-            ],
-            buttonText: "Jetzt kaufen"
-          },
-          order: 2
-        }
-      ],
-      lastEdited: new Date().toISOString()
-    };
-  }
-  
-  // Default empty template
   return {
-    sections: [],
+    sections: defaultSections,
     lastEdited: new Date().toISOString()
   };
 };
 
+// Template service with database fetching methods
 export const templateService = {
-  getTemplates(): WebsiteTemplate[] {
-    return DEFAULT_TEMPLATES;
+  // Get all templates from database
+  async getTemplates(): Promise<WebsiteTemplate[]> {
+    try {
+      const { data, error } = await supabase.rpc('get_all_templates');
+      
+      if (error) {
+        console.error('Error fetching templates:', error);
+        return [];
+      }
+      
+      return data.map(template => ({
+        id: template.id,
+        name: template.name,
+        description: template.description || '',
+        thumbnail: template.thumbnail || '/placeholder.svg',
+        category: template.category,
+        proOnly: template.pro_only || false
+      })) as WebsiteTemplate[];
+    } catch (error) {
+      console.error('Failed to fetch templates:', error);
+      return [];
+    }
   },
   
-  getShopTemplates(): WebsiteTemplate[] {
-    return DEFAULT_SHOP_TEMPLATES;
+  // Get all shop templates from database
+  async getShopTemplates(): Promise<WebsiteTemplate[]> {
+    try {
+      const { data, error } = await supabase.rpc('get_all_templates');
+      
+      if (error) {
+        console.error('Error fetching shop templates:', error);
+        return [];
+      }
+      
+      return data
+        .filter(template => template.category === 'shop')
+        .map(template => ({
+          id: template.id,
+          name: template.name,
+          description: template.description || '',
+          thumbnail: template.thumbnail || '/placeholder.svg',
+          category: template.category,
+          proOnly: template.pro_only || false
+        })) as WebsiteTemplate[];
+    } catch (error) {
+      console.error('Failed to fetch shop templates:', error);
+      return [];
+    }
   },
   
-  getTemplate(id: string): WebsiteTemplate | null {
-    const allTemplates = [...DEFAULT_TEMPLATES, ...DEFAULT_SHOP_TEMPLATES];
-    return allTemplates.find(t => t.id === id) || null;
+  // Get single template by ID from database
+  async getTemplate(id: string): Promise<WebsiteTemplate | null> {
+    try {
+      const { data, error } = await supabase.rpc('get_template_by_id', { template_id: id });
+      
+      if (error || !data || data.length === 0) {
+        console.error('Error fetching template by ID:', error || 'No template found');
+        return null;
+      }
+      
+      const template = data[0];
+      return {
+        id: template.id,
+        name: template.name,
+        description: template.description || '',
+        thumbnail: template.thumbnail || '/placeholder.svg',
+        category: template.category,
+        proOnly: template.pro_only || false
+      };
+    } catch (error) {
+      console.error('Failed to fetch template by ID:', error);
+      return null;
+    }
   },
 
   getTemplateDefaultContent

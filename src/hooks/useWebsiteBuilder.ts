@@ -44,27 +44,53 @@ export const useWebsiteBuilder = (websiteId?: string) => {
         const contentData = await websiteService.getWebsiteContent(websiteId);
         if (contentData && contentData.content.sections && contentData.content.sections.length > 0) {
           // Make sure we cast sections to the correct type
-          const typedSections = contentData.content.sections as WebsiteSection[];
+          const typedSections = contentData.content.sections.map(section => ({
+            ...section,
+            type: section.type as SectionType
+          })) as WebsiteSection[];
+          
           setSections(typedSections);
         } else {
-          // Get default content based on the template
-          const templateContent = templateService.getTemplateDefaultContent(websiteData.template);
-          if (templateContent && templateContent.sections && templateContent.sections.length > 0) {
-            // Explicitly cast each section to ensure 'type' is treated as SectionType
-            const templateSections = templateContent.sections.map(section => ({
-              ...section,
-              type: section.type as SectionType
-            })) as WebsiteSection[];
+          try {
+            // Get default content based on the template
+            const getContentFn = templateService.getTemplateDefaultContent(websiteData.template);
+            const templateContent = await getContentFn();
             
-            setSections(templateSections);
-            // Save the default content immediately to the website
-            await websiteService.saveWebsiteContent(websiteId, {
-              sections: templateSections,
-              lastEdited: new Date().toISOString()
-            });
-          } else {
-            // Fallback to basic sections if no template content is available
-            const defaultSections: WebsiteSection[] = [
+            if (templateContent && templateContent.sections && templateContent.sections.length > 0) {
+              // Explicitly cast each section to ensure 'type' is treated as SectionType
+              const templateSections = templateContent.sections.map(section => ({
+                ...section,
+                type: section.type as SectionType
+              })) as WebsiteSection[];
+              
+              setSections(templateSections);
+              // Save the default content immediately to the website
+              await websiteService.saveWebsiteContent(websiteId, {
+                sections: templateSections,
+                lastEdited: new Date().toISOString()
+              });
+            } else {
+              // Fallback to basic sections if no template content is available
+              const defaultSections: WebsiteSection[] = [
+                {
+                  id: uuidv4(),
+                  type: 'hero',
+                  content: {
+                    title: 'Willkommen auf Ihrer Website',
+                    subtitle: 'Eine leistungsstarke Plattform für Ihre Online-Präsenz',
+                    buttonText: 'Mehr erfahren',
+                    buttonLink: '#',
+                    imageUrl: '/placeholder.svg'
+                  },
+                  order: 0
+                }
+              ];
+              setSections(defaultSections);
+            }
+          } catch (error) {
+            console.error('Error loading template content:', error);
+            // Set fallback sections
+            const fallbackSections: WebsiteSection[] = [
               {
                 id: uuidv4(),
                 type: 'hero',
@@ -78,7 +104,7 @@ export const useWebsiteBuilder = (websiteId?: string) => {
                 order: 0
               }
             ];
-            setSections(defaultSections);
+            setSections(fallbackSections);
           }
         }
       }

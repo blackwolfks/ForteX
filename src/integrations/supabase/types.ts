@@ -332,6 +332,42 @@ export type Database = {
           },
         ]
       }
+      website_templates: {
+        Row: {
+          category: string
+          content: Json | null
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          pro_only: boolean | null
+          thumbnail: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          content?: Json | null
+          created_at?: string | null
+          description?: string | null
+          id: string
+          name: string
+          pro_only?: boolean | null
+          thumbnail?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          content?: Json | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          pro_only?: boolean | null
+          thumbnail?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       websites: {
         Row: {
           created_at: string
@@ -419,6 +455,36 @@ export type Database = {
         }
         Returns: {
           success: boolean
+        }[]
+      }
+      get_all_templates: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          name: string
+          description: string
+          thumbnail: string
+          category: string
+          pro_only: boolean
+          content: Json
+          created_at: string
+          updated_at: string
+        }[]
+      }
+      get_template_by_id: {
+        Args: {
+          template_id: string
+        }
+        Returns: {
+          id: string
+          name: string
+          description: string
+          thumbnail: string
+          category: string
+          pro_only: boolean
+          content: Json
+          created_at: string
+          updated_at: string
         }[]
       }
       get_user_pro_status: {
