@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -37,7 +36,6 @@ export default function MediaManager() {
       setLoading(true);
       
       try {
-        // Ensure bucket exists
         const bucketExists = await mediaService.ensureBucketExists('websites');
         
         if (!bucketExists) {
@@ -48,7 +46,6 @@ export default function MediaManager() {
           return;
         }
         
-        // List all files from the bucket
         const { data, error } = await supabase
           .storage
           .from('websites')
@@ -61,7 +58,6 @@ export default function MediaManager() {
           return;
         }
         
-        // Get public URLs for each file
         const mediaWithUrls = await Promise.all(
           data.filter(item => !item.id.endsWith('/')).map(async (item) => {
             const { data: urlData } = await supabase
@@ -98,7 +94,6 @@ export default function MediaManager() {
     setUploading(true);
     
     try {
-      // Ensure bucket exists before upload
       const bucketExists = await mediaService.ensureBucketExists('websites');
       
       if (!bucketExists) {
@@ -114,14 +109,12 @@ export default function MediaManager() {
         if (result) {
           toast.success(`${file.name} erfolgreich hochgeladen`);
           
-          // Add the new file to the list
-          const isImage = imageUtils.isImageFileName(file.name);
           setMediaFiles(prev => [
             ...prev, 
             { 
               name: file.name, 
               url: result,
-              type: isImage ? 'image' : 'document'
+              type: imageUtils.isImageFileName(file.name) ? 'image' : 'document'
             }
           ]);
         } else {
@@ -133,7 +126,6 @@ export default function MediaManager() {
       toast.error('Fehler beim Hochladen der Datei(en)');
     } finally {
       setUploading(false);
-      // Reset the input field
       e.target.value = '';
     }
   };

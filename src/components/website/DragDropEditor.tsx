@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { Separator } from '@/components/ui/separator';
 import { useHotkeys } from '@/hooks/useHotkeys';
+import { mediaService } from '@/services/website/media';
 
 interface DragDropEditorProps {
   websiteId: string;
@@ -121,6 +122,21 @@ export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
     }
   };
   
+  const handleImageUpload = async (file: File) => {
+    try {
+      await mediaService.ensureBucketExists('websites');
+      const result = await mediaService.uploadMedia(file);
+      if (result) {
+        return result;
+      }
+      return null;
+    } catch (error) {
+      console.error('Image upload error:', error);
+      toast.error('Fehler beim Hochladen des Bildes');
+      return null;
+    }
+  };
+  
   const renderSection = (section: WebsiteSection) => {
     switch (section.type) {
       case 'hero':
@@ -130,6 +146,7 @@ export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
             section={section} 
             isEditing={false}
             onUpdate={(content) => updateSectionContent(section.id, content)} 
+            onUpload={handleImageUpload}
           />
         );
       case 'text':
@@ -181,6 +198,7 @@ export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
             section={section} 
             isEditing={true}
             onUpdate={(content) => updateSectionContent(section.id, content)} 
+            onUpload={handleImageUpload}
           />
         );
       case 'text':
@@ -461,4 +479,3 @@ export default function DragDropEditor({ websiteId }: DragDropEditorProps) {
     </div>
   );
 }
-

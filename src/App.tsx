@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import {
   BrowserRouter as Router,
@@ -6,19 +7,21 @@ import {
   Navigate,
 } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
+
+// Correct the import paths
 import Dashboard from './pages/Dashboard';
-import Signin from './pages/Signin';
-import Signup from './pages/Signup';
+import Signin from './pages/SignIn';
+import Signup from './pages/SignUp';
 import Profile from './pages/Profile';
 import ForgotPassword from './pages/ForgotPassword';
-import UpdateProfile from './pages/UpdateProfile';
-import TwoFactorAuth from './pages/TwoFactorAuth';
-import AdminDashboard from './pages/AdminDashboard';
-import WebsiteBuilderDashboard from './pages/WebsiteBuilderDashboard';
+import UpdateProfile from './pages/Profile';
+import TwoFactorAuth from './pages/TwoFactorSetup';
+import AdminDashboard from './pages/Dashboard';
+import WebsiteBuilderDashboard from './pages/Dashboard';
 import WebsiteEditor from './pages/WebsiteEditor';
-import ProductManagement from './pages/ProductManagement';
-import ProductEditor from './pages/ProductEditor';
-import OrdersPage from './pages/OrdersPage';
+import ProductManagement from './pages/Dashboard';
+import ProductEditor from './pages/Dashboard';
+import OrdersPage from './pages/Dashboard';
 import MediaManager from './pages/MediaManager';
 
 function AuthGuard({ children }: { children: React.ReactNode }) {

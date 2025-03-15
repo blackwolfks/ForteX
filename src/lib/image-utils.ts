@@ -1,4 +1,3 @@
-
 import { cn } from "./utils";
 
 /**
@@ -44,6 +43,15 @@ export const imageUtils = {
     }
     
     return `${urlWithoutCache}?t=${timestamp}`;
+  },
+  
+  /**
+   * Checks if a filename is an image based on its extension
+   */
+  isImageFileName: (filename: string): boolean => {
+    if (!filename) return false;
+    const extension = filename.split('.').pop()?.toLowerCase() || '';
+    return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(extension);
   },
   
   /**
