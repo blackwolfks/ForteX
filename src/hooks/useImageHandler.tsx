@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { imageUtils } from '@/lib/image-utils';
 
 interface UseImageHandlerProps {
   imageUrl: string;
@@ -64,8 +65,22 @@ export function useImageHandler({ imageUrl, onUpdate, onUpload }: UseImageHandle
         console.log("[useImageHandler] Upload successful, setting new image URL:", imageUrl);
         onUpdate({ imageUrl });
         
-        // Pre-cache the image
+        // Force content type in the image preload
         const img = new Image();
+        img.crossOrigin = "anonymous"; // Try to handle CORS issues
+        
+        // Add listener to handle successful load
+        img.onload = () => {
+          console.log("[useImageHandler] Image preloaded successfully");
+        };
+        
+        // Add error listener to catch preload issues
+        img.onerror = (error) => {
+          console.error("[useImageHandler] Error preloading image:", error);
+          // We don't set error state here to give the component's image a chance to load
+        };
+        
+        // Set the source last to trigger loading
         img.src = imageUrl;
         
         toast.success("Bild erfolgreich hochgeladen");
@@ -87,9 +102,30 @@ export function useImageHandler({ imageUrl, onUpdate, onUpload }: UseImageHandle
       setImageError(false);
       
       // Force browser to reload the image by appending a cache-busting query parameter
-      const cacheBuster = `?cache=${Date.now()}`;
+      const cacheBuster = `?t=${Date.now()}`;
       const urlWithoutCache = imageUrl.split('?')[0]; // Remove any existing query params
-      const newUrl = `${urlWithoutCache}${cacheBuster}`;
+      
+      // Add the proper content type hint based on file extension
+      const fileExtension = urlWithoutCache.split('.').pop()?.toLowerCase() || '';
+      let contentTypeHint = '';
+      
+      switch (fileExtension) {
+        case 'jpg':
+        case 'jpeg':
+          contentTypeHint = '&contentType=image/jpeg';
+          break;
+        case 'png':
+          contentTypeHint = '&contentType=image/png';
+          break;
+        case 'gif':
+          contentTypeHint = '&contentType=image/gif';
+          break;
+        case 'webp':
+          contentTypeHint = '&contentType=image/webp';
+          break;
+      }
+      
+      const newUrl = `${urlWithoutCache}${cacheBuster}${contentTypeHint}`;
       
       onUpdate({ imageUrl: newUrl });
       toast.info("Bild wird neu geladen...");

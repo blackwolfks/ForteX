@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { imageUtils } from "@/lib/image-utils";
 
 export const mediaService = {
   async uploadMedia(file: File, path?: string): Promise<string | null> {
@@ -37,7 +38,7 @@ export const mediaService = {
 
       console.log("[MediaService] Uploading file:", sanitizedFilePath);
 
-      // Use a more explicit content type based on file extension
+      // Determine the correct MIME type based on file extension
       let contentType;
       switch (fileExtension) {
         case 'jpg':
@@ -54,18 +55,24 @@ export const mediaService = {
           contentType = 'image/webp';
           break;
         default:
+          // Use the browser-detected MIME type as fallback
           contentType = file.type;
       }
+
+      console.log("[MediaService] Setting content type:", contentType);
+
+      // Set explicit upload options with the correct content type
+      const uploadOptions = {
+        cacheControl: '3600',
+        upsert: true,
+        contentType: contentType // This is critical for proper image display
+      };
 
       // Upload the file with explicit content type
       const { data, error } = await supabase
         .storage
         .from('websites')
-        .upload(sanitizedFilePath, file, {
-          cacheControl: '3600',
-          upsert: true,
-          contentType: contentType // Explicitly set the content type
-        });
+        .upload(sanitizedFilePath, file, uploadOptions);
       
       if (error) {
         console.error("[MediaService] Storage upload error:", error);
@@ -95,20 +102,26 @@ export const mediaService = {
       console.log("[MediaService] Upload successful, public URL:", publicUrl);
       
       // Add a cache-busting parameter to ensure the browser doesn't use a cached version
-      const cachebustedUrl = `${publicUrl}?t=${timestamp}`;
+      // and to force content type recognition
+      const cachebustedUrl = `${publicUrl}?t=${timestamp}&contentType=${encodeURIComponent(contentType)}`;
       console.log("[MediaService] Cache-busted URL:", cachebustedUrl);
       
       // Test if the URL is accessible by attempting to fetch it
       try {
         const testFetch = await fetch(cachebustedUrl, { 
           method: 'HEAD',
-          cache: 'no-cache'
+          cache: 'no-cache',
+          headers: {
+            'Accept': contentType
+          }
         });
         
         if (!testFetch.ok) {
           console.warn("[MediaService] Generated URL might not be accessible:", cachebustedUrl, "Status:", testFetch.status);
+          console.warn("[MediaService] Response headers:", JSON.stringify(Object.fromEntries([...testFetch.headers])));
         } else {
           console.log("[MediaService] URL verified accessible:", cachebustedUrl);
+          console.log("[MediaService] Content-Type received:", testFetch.headers.get('content-type'));
         }
       } catch (fetchError) {
         console.warn("[MediaService] Could not verify URL accessibility:", fetchError);
