@@ -58,7 +58,18 @@ export default function WebsiteEditor() {
   }, [websiteId, navigate]);
   
   const handleMediaUpload = async (file: File): Promise<string | null> => {
-    return await mediaService.uploadMedia(file);
+    if (!websiteId) {
+      toast.error("Keine Website-ID verfügbar");
+      return null;
+    }
+    
+    // Prüfen des Dateityps, nur Bilder erlauben
+    if (!file.type.startsWith('image/')) {
+      toast.error("Nur Bildformate sind erlaubt.");
+      return null;
+    }
+    
+    return await mediaService.uploadMedia(file, `website-${websiteId}`);
   };
   
   if (loading) {

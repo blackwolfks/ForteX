@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Upload } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface ImageSectionProps {
   section: WebsiteSection;
@@ -33,12 +34,30 @@ export default function ImageSection({
     const file = e.target.files?.[0];
     if (!file) return;
     
+    // Prüfen ob es sich um ein Bild handelt
+    if (!file.type.startsWith('image/')) {
+      toast.error("Nur Bildformate sind erlaubt.");
+      return;
+    }
+    
+    // Prüfen der Dateigröße
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      toast.error("Datei ist zu groß. Die maximale Dateigröße beträgt 5MB.");
+      return;
+    }
+    
     setUploading(true);
     try {
       const imageUrl = await onUpload(file);
       if (imageUrl) {
         onUpdate({ imageUrl });
+        toast.success("Bild erfolgreich hochgeladen");
+      } else {
+        toast.error("Fehler beim Hochladen des Bildes");
       }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast.error("Fehler beim Hochladen des Bildes");
     } finally {
       setUploading(false);
     }
@@ -56,6 +75,9 @@ export default function ImageSection({
                   src={imageUrl} 
                   alt={altText} 
                   className="w-full h-full object-cover" 
+                  onError={(e) => {
+                    e.currentTarget.src = '/placeholder.svg';
+                  }}
                 />
               </div>
               <div>
@@ -108,6 +130,9 @@ export default function ImageSection({
           src={imageUrl} 
           alt={altText} 
           className="w-full h-auto rounded-lg shadow-md" 
+          onError={(e) => {
+            e.currentTarget.src = '/placeholder.svg';
+          }}
         />
         {caption && (
           <figcaption className="text-center text-sm mt-4 text-gray-600">

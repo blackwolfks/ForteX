@@ -33,7 +33,7 @@ export const getTemplateDefaultContent = (templateId: string) => {
                 return {
                   ...section,
                   type: section.type as SectionType,
-                  id: ('id' in section && section.id) ? section.id : uuidv4()
+                  id: section.id ? String(section.id) : uuidv4()
                 } as WebsiteSection;
               }
               return null;
@@ -90,6 +90,11 @@ const ensureAbsoluteUrl = (url: string | null | undefined): string => {
   // Check if it's a local path in the public folder
   if (url.startsWith('/')) {
     return url;
+  }
+  
+  // Check if it's a path in the lovable-uploads folder
+  if (url.includes('lovable-uploads')) {
+    return `/public/${url}`;
   }
   
   // Otherwise, assume it's a relative path in the storage bucket
