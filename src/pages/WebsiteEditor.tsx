@@ -79,10 +79,18 @@ export default function WebsiteEditor() {
         if (attempts > 0) {
           console.log(`[WebsiteEditor] Retrying upload (attempt ${attempts + 1})`);
           await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second between retries
+          
+          // Für den Wiederholungsversuch einen neuen Blob mit explizitem MIME-Type erstellen
+          const fileArrayBuffer = await file.arrayBuffer();
+          const contentType = imageUtils.getContentTypeFromExtension(file.name);
+          const newFile = new File([fileArrayBuffer], file.name, { type: contentType });
+          console.log(`[WebsiteEditor] Retry with explicit MIME type:`, contentType);
+          
+          result = await mediaService.uploadMedia(newFile, folderPath);
+        } else {
+          // Beim ersten Versuch die originale Datei verwenden
+          result = await mediaService.uploadMedia(file, folderPath);
         }
-        
-        // Make sure we're passing the original file object
-        result = await mediaService.uploadMedia(file, folderPath);
         attempts++;
       }
       

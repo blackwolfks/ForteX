@@ -113,7 +113,7 @@ export const imageUtils = {
       case 'webp':
         return 'image/webp';
       default:
-        // Use a specific image type as fallback instead of generic binary
+        // Immer einen konkreten Bildtyp als Fallback verwenden
         return 'image/png'; 
     }
   },
@@ -131,6 +131,9 @@ export const imageUtils = {
       
       // Set the source last to trigger loading
       img.src = url;
+      
+      // Timeout nach 5 Sekunden, falls das Bild nicht geladen wird
+      setTimeout(() => resolve(false), 5000);
     });
   },
   
@@ -161,7 +164,7 @@ export const imageUtils = {
         mimeType = 'image/webp';
         break;
       default:
-        // Wenn wir den Typ nicht bestimmen können, versuchen wir es mit PNG als Fallback
+        // Wenn wir den Typ nicht bestimmen können, verwenden wir PNG als Fallback
         mimeType = 'image/png';
     }
     
