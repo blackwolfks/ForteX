@@ -1,5 +1,4 @@
 
-import { useState, useEffect } from 'react';
 import { WebsiteSection } from '@/services/website-service';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Upload, AlertCircle, RefreshCw } from 'lucide-react';
-import { toast } from 'sonner';
+import { useImageHandler } from '@/hooks/useImageHandler';
 
 interface ImageSectionProps {
   section: WebsiteSection;
@@ -28,92 +27,17 @@ export default function ImageSection({
     altText = 'Beschreibender Text'
   } = section.content;
   
-  const [uploading, setUploading] = useState(false);
-  const [imageError, setImageError] = useState(false);
-  const [loadingRetries, setLoadingRetries] = useState(0);
-  
-  // Reset error state when imageUrl changes
-  useEffect(() => {
-    setImageError(false);
-  }, [imageUrl]);
-  
-  // Attempt to reload the image if it fails initially
-  useEffect(() => {
-    if (imageError && loadingRetries < 2 && imageUrl && imageUrl !== '/placeholder.svg') {
-      const timer = setTimeout(() => {
-        console.log(`[ImageSection] Retrying image load (attempt ${loadingRetries + 1}):`, imageUrl);
-        setImageError(false);
-        setLoadingRetries(prev => prev + 1);
-      }, 2000); // Wait 2 seconds before retry
-      
-      return () => clearTimeout(timer);
-    }
-  }, [imageError, imageUrl, loadingRetries]);
-  
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    setImageError(false);
-    setLoadingRetries(0);
-    
-    console.log("[ImageSection] Selected file:", file.name, "type:", file.type, "size:", file.size);
-    
-    // Check file size first
-    if (file.size > 5 * 1024 * 1024) { // 5MB limit
-      toast.error("Datei ist zu groß. Die maximale Dateigröße beträgt 5MB.");
-      return;
-    }
-    
-    // Check file extension
-    const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
-    console.log("[ImageSection] File extension:", fileExtension);
-    
-    if (!['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension)) {
-      toast.error(`Dateityp .${fileExtension} wird nicht unterstützt. Bitte nur Bilder im JPG, PNG, GIF oder WebP Format hochladen.`);
-      return;
-    }
-    
-    setUploading(true);
-    try {
-      console.log("[ImageSection] Starting image upload for file:", file.name, "type:", file.type);
-      const imageUrl = await onUpload(file);
-      
-      if (imageUrl) {
-        console.log("[ImageSection] Upload successful, setting new image URL:", imageUrl);
-        onUpdate({ imageUrl });
-        
-        // Pre-cache the image
-        const img = new Image();
-        img.src = imageUrl;
-        
-        toast.success("Bild erfolgreich hochgeladen");
-      } else {
-        console.error("[ImageSection] Upload failed - no URL returned");
-        toast.error("Fehler beim Hochladen des Bildes");
-      }
-    } catch (error) {
-      console.error('[ImageSection] Error uploading image:', error);
-      toast.error("Fehler beim Hochladen des Bildes");
-    } finally {
-      setUploading(false);
-    }
-  };
-  
-  const handleRetryLoad = () => {
-    if (imageUrl && imageUrl !== '/placeholder.svg') {
-      console.log("[ImageSection] Manually retrying image load:", imageUrl);
-      setImageError(false);
-      
-      // Force browser to reload the image by appending a cache-busting query parameter
-      const cacheBuster = `?cache=${Date.now()}`;
-      const urlWithoutCache = imageUrl.split('?')[0]; // Remove any existing query params
-      const newUrl = `${urlWithoutCache}${cacheBuster}`;
-      
-      onUpdate({ imageUrl: newUrl });
-      toast.info("Bild wird neu geladen...");
-    }
-  };
+  const {
+    uploading,
+    imageError,
+    setImageError,
+    handleImageUpload,
+    handleRetryLoad
+  } = useImageHandler({
+    imageUrl,
+    onUpdate,
+    onUpload
+  });
   
   if (isEditing) {
     return (

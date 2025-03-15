@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { WebsiteSection } from '@/services/website-service';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, AlertCircle, RefreshCw } from 'lucide-react';
-import { toast } from 'sonner';
+import { useImageHandler } from '@/hooks/useImageHandler';
 
 interface HeroSectionProps {
   section: WebsiteSection;
@@ -32,92 +32,17 @@ export default function HeroSection({
     alignment = 'center'
   } = section.content;
   
-  const [uploading, setUploading] = useState(false);
-  const [imageError, setImageError] = useState(false);
-  const [loadingRetries, setLoadingRetries] = useState(0);
-  
-  // Reset error state when imageUrl changes
-  useEffect(() => {
-    setImageError(false);
-  }, [imageUrl]);
-  
-  // Attempt to reload the image if it fails initially
-  useEffect(() => {
-    if (imageError && loadingRetries < 2 && imageUrl && imageUrl !== '/placeholder.svg') {
-      const timer = setTimeout(() => {
-        console.log(`[HeroSection] Retrying image load (attempt ${loadingRetries + 1}):`, imageUrl);
-        setImageError(false);
-        setLoadingRetries(prev => prev + 1);
-      }, 2000); // Wait 2 seconds before retry
-      
-      return () => clearTimeout(timer);
-    }
-  }, [imageError, imageUrl, loadingRetries]);
-  
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    setImageError(false);
-    setLoadingRetries(0);
-    
-    console.log("[HeroSection] Selected file:", file.name, "type:", file.type, "size:", file.size);
-    
-    // Check file size first
-    if (file.size > 5 * 1024 * 1024) { // 5MB limit
-      toast.error("Datei ist zu groß. Die maximale Dateigröße beträgt 5MB.");
-      return;
-    }
-    
-    // Check file extension
-    const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
-    console.log("[HeroSection] File extension:", fileExtension);
-    
-    if (!['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension)) {
-      toast.error(`Dateityp .${fileExtension} wird nicht unterstützt. Bitte nur Bilder im JPG, PNG, GIF oder WebP Format hochladen.`);
-      return;
-    }
-    
-    setUploading(true);
-    try {
-      console.log("[HeroSection] Starting hero image upload for file:", file.name, "type:", file.type);
-      const imageUrl = await onUpload(file);
-      
-      if (imageUrl) {
-        console.log("[HeroSection] Upload successful, setting new hero image URL:", imageUrl);
-        onUpdate({ imageUrl });
-        
-        // Pre-cache the image
-        const img = new Image();
-        img.src = imageUrl;
-        
-        toast.success("Bild erfolgreich hochgeladen");
-      } else {
-        console.error("[HeroSection] Upload failed - no URL returned");
-        toast.error("Fehler beim Hochladen des Bildes");
-      }
-    } catch (error) {
-      console.error('[HeroSection] Error uploading hero image:', error);
-      toast.error("Fehler beim Hochladen des Bildes");
-    } finally {
-      setUploading(false);
-    }
-  };
-  
-  const handleRetryLoad = () => {
-    if (imageUrl && imageUrl !== '/placeholder.svg') {
-      console.log("[HeroSection] Manually retrying image load:", imageUrl);
-      setImageError(false);
-      
-      // Force browser to reload the image by appending a cache-busting query parameter
-      const cacheBuster = `?cache=${Date.now()}`;
-      const urlWithoutCache = imageUrl.split('?')[0]; // Remove any existing query params
-      const newUrl = `${urlWithoutCache}${cacheBuster}`;
-      
-      onUpdate({ imageUrl: newUrl });
-      toast.info("Bild wird neu geladen...");
-    }
-  };
+  const {
+    uploading,
+    imageError,
+    setImageError,
+    handleImageUpload,
+    handleRetryLoad
+  } = useImageHandler({
+    imageUrl,
+    onUpdate,
+    onUpload
+  });
   
   // Function to create CSS background with fallback
   const getBackgroundStyle = () => {
