@@ -41,7 +41,7 @@ export default function HeroSection({
     
     setImageError(false);
     
-    console.log("Selected hero image file:", file.name, "type:", file.type, "size:", file.size);
+    console.log("[HeroSection] Selected file:", file.name, "type:", file.type, "size:", file.size);
     
     // Check file size first
     if (file.size > 5 * 1024 * 1024) { // 5MB limit
@@ -51,6 +51,8 @@ export default function HeroSection({
     
     // Check file extension
     const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+    console.log("[HeroSection] File extension:", fileExtension);
+    
     if (!['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension)) {
       toast.error(`Dateityp .${fileExtension} wird nicht unterstützt. Bitte nur Bilder im JPG, PNG, GIF oder WebP Format hochladen.`);
       return;
@@ -58,19 +60,19 @@ export default function HeroSection({
     
     setUploading(true);
     try {
-      console.log("Starting hero image upload for file:", file.name, "type:", file.type);
+      console.log("[HeroSection] Starting hero image upload for file:", file.name, "type:", file.type);
       const imageUrl = await onUpload(file);
       
       if (imageUrl) {
-        console.log("Upload successful, setting new hero image URL:", imageUrl);
+        console.log("[HeroSection] Upload successful, setting new hero image URL:", imageUrl);
         onUpdate({ imageUrl });
         toast.success("Bild erfolgreich hochgeladen");
       } else {
-        console.error("Upload failed - no URL returned");
+        console.error("[HeroSection] Upload failed - no URL returned");
         toast.error("Fehler beim Hochladen des Bildes");
       }
     } catch (error) {
-      console.error('Error uploading hero image:', error);
+      console.error('[HeroSection] Error uploading hero image:', error);
       toast.error("Fehler beim Hochladen des Bildes");
     } finally {
       setUploading(false);
@@ -149,7 +151,7 @@ export default function HeroSection({
                     alt="Hero background" 
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      console.error("Hero image failed to load:", imageUrl);
+                      console.error("[HeroSection] Hero image failed to load:", imageUrl);
                       setImageError(true);
                       e.currentTarget.src = '/placeholder.svg';
                     }}

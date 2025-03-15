@@ -37,7 +37,7 @@ export default function ImageSection({
     
     setImageError(false);
     
-    console.log("Selected file:", file.name, "type:", file.type, "size:", file.size);
+    console.log("[ImageSection] Selected file:", file.name, "type:", file.type, "size:", file.size);
     
     // Check file size first
     if (file.size > 5 * 1024 * 1024) { // 5MB limit
@@ -47,6 +47,8 @@ export default function ImageSection({
     
     // Check file extension
     const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+    console.log("[ImageSection] File extension:", fileExtension);
+    
     if (!['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension)) {
       toast.error(`Dateityp .${fileExtension} wird nicht unterstützt. Bitte nur Bilder im JPG, PNG, GIF oder WebP Format hochladen.`);
       return;
@@ -54,19 +56,19 @@ export default function ImageSection({
     
     setUploading(true);
     try {
-      console.log("Starting image upload for file:", file.name, "type:", file.type);
+      console.log("[ImageSection] Starting image upload for file:", file.name, "type:", file.type);
       const imageUrl = await onUpload(file);
       
       if (imageUrl) {
-        console.log("Upload successful, setting new image URL:", imageUrl);
+        console.log("[ImageSection] Upload successful, setting new image URL:", imageUrl);
         onUpdate({ imageUrl });
         toast.success("Bild erfolgreich hochgeladen");
       } else {
-        console.error("Upload failed - no URL returned");
+        console.error("[ImageSection] Upload failed - no URL returned");
         toast.error("Fehler beim Hochladen des Bildes");
       }
     } catch (error) {
-      console.error('Error uploading image:', error);
+      console.error('[ImageSection] Error uploading image:', error);
       toast.error("Fehler beim Hochladen des Bildes");
     } finally {
       setUploading(false);
@@ -91,7 +93,7 @@ export default function ImageSection({
                     alt={altText} 
                     className="w-full h-full object-cover" 
                     onError={(e) => {
-                      console.error("Image failed to load:", imageUrl);
+                      console.error("[ImageSection] Image failed to load:", imageUrl);
                       setImageError(true);
                       e.currentTarget.src = '/placeholder.svg';
                     }}

@@ -63,16 +63,18 @@ export default function WebsiteEditor() {
       return null;
     }
     
-    console.log("WebsiteEditor: Handling media upload for file:", file.name, "type:", file.type, "size:", file.size);
+    console.log("[WebsiteEditor] Handling media upload for file:", file.name, "type:", file.type, "size:", file.size);
     
-    // Check file size - do this check here too for extra safety
-    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+    // Validate file (redundant checks as a safety measure)
+    if (file.size > 5 * 1024 * 1024) {
       toast.error("Datei ist zu groß. Die maximale Dateigröße beträgt 5MB.");
       return null;
     }
     
-    // Check file extension
+    // Get file extension and validate
     const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+    console.log("[WebsiteEditor] File extension:", fileExtension);
+    
     if (!['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension)) {
       toast.error(`Dateityp .${fileExtension} wird nicht unterstützt. Bitte nur Bilder im JPG, PNG, GIF oder WebP Format hochladen.`);
       return null;
@@ -80,14 +82,18 @@ export default function WebsiteEditor() {
     
     try {
       const uploadPath = `website-${websiteId}`;
-      console.log("Uploading to path:", uploadPath);
+      console.log("[WebsiteEditor] Uploading to path:", uploadPath);
       
       const imageUrl = await mediaService.uploadMedia(file, uploadPath);
-      console.log("Upload result:", imageUrl);
+      console.log("[WebsiteEditor] Upload result:", imageUrl);
+      
+      if (!imageUrl) {
+        console.error("[WebsiteEditor] Upload failed - no URL returned from media service");
+      }
       
       return imageUrl;
     } catch (error) {
-      console.error("Error in handleMediaUpload:", error);
+      console.error("[WebsiteEditor] Error in handleMediaUpload:", error);
       toast.error("Fehler beim Hochladen des Bildes");
       return null;
     }

@@ -11,8 +11,8 @@ export const mediaService = {
         ? `${path}/${timestamp}_${file.name}` 
         : `${timestamp}_${file.name}`;
       
-      console.log("Upload starting for file:", file.name);
-      console.log("File details - Type:", file.type, "Size:", file.size);
+      console.log("[MediaService] Upload starting for file:", file.name);
+      console.log("[MediaService] File details - Type:", file.type, "Size:", file.size);
       
       // Check file size
       if (file.size > 5 * 1024 * 1024) { // 5MB limit
@@ -20,22 +20,22 @@ export const mediaService = {
         return null;
       }
 
-      // Get file extension from filename instead of relying on MIME type
+      // Get file extension from filename
       const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
       const acceptedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
       
-      console.log("File extension:", fileExtension);
+      console.log("[MediaService] File extension detected:", fileExtension);
       
       if (!acceptedExtensions.includes(fileExtension)) {
         toast.error(`Dateityp .${fileExtension} wird nicht unterstützt. Bitte nur Bilder im JPG, PNG, GIF oder WebP Format hochladen.`);
-        console.error("File extension not accepted:", fileExtension);
+        console.error("[MediaService] File extension not accepted:", fileExtension);
         return null;
       }
 
       // Sanitize filename by removing special characters
       const sanitizedFilePath = filePath.replace(/[^a-zA-Z0-9.-_\/]/g, '_');
 
-      console.log("Uploading file:", sanitizedFilePath);
+      console.log("[MediaService] Uploading file:", sanitizedFilePath);
 
       // Force content type based on extension
       let contentType;
@@ -57,21 +57,33 @@ export const mediaService = {
           contentType = 'image/jpeg'; // Fallback
       }
       
-      console.log("Forcing content type:", contentType);
+      console.log("[MediaService] Using content type:", contentType, "for file with extension:", fileExtension);
         
+      // Log payload before sending to help debug
+      console.log("[MediaService] Upload parameters:", {
+        path: sanitizedFilePath,
+        fileSize: file.size,
+        fileType: file.type,
+        forcedContentType: contentType
+      });
+
+      // Create a new Blob to ensure proper content type
+      const contentBlob = new Blob([await file.arrayBuffer()], { type: contentType });
+      console.log("[MediaService] Created content blob with type:", contentBlob.type);
+      
       // Upload to the websites bucket with explicit content type
       const { data, error } = await supabase
         .storage
         .from('websites')
-        .upload(sanitizedFilePath, file, {
+        .upload(sanitizedFilePath, contentBlob, {
           cacheControl: '3600',
           upsert: true,
           contentType: contentType // Explicitly set the content type
         });
       
       if (error) {
-        console.error("Storage upload error:", error);
-        console.error("Full error details:", JSON.stringify(error));
+        console.error("[MediaService] Storage upload error:", error);
+        console.error("[MediaService] Full error details:", JSON.stringify(error));
         
         // More specific error messages based on error type
         if (error.message.includes("JWT")) {
@@ -94,10 +106,10 @@ export const mediaService = {
         .from('websites')
         .getPublicUrl(data?.path || sanitizedFilePath);
       
-      console.log("Upload successful, public URL:", publicUrl);
+      console.log("[MediaService] Upload successful, public URL:", publicUrl);
       return publicUrl || null;
     } catch (error) {
-      console.error("Error uploading file:", error);
+      console.error("[MediaService] Unexpected error uploading file:", error);
       toast.error("Fehler beim Hochladen der Datei");
       return null;
     }
