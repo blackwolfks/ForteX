@@ -45,7 +45,12 @@ export const mediaService = {
         return null;
       }
 
-      // Use the file directly with explicit contentType to ensure it's set correctly
+      // WICHTIG: Hier erstellen wir einen neuen Blob mit dem korrekten MIME-Type
+      // Dies verhindert das Problem mit application/json
+      const fileBlob = new Blob([await file.arrayBuffer()], { type: contentType });
+      console.log("[MediaService] Created new blob with explicit content type:", contentType);
+
+      // Use the correct content type in the upload options
       const uploadOptions = {
         cacheControl: '3600',
         upsert: true,
@@ -54,18 +59,18 @@ export const mediaService = {
 
       console.log("[MediaService] Uploading with options:", uploadOptions);
 
-      // Explicitly log the File object to confirm it's correct
-      console.log("[MediaService] File object:", JSON.stringify({
+      // Explicitly log the details to confirm
+      console.log("[MediaService] File details before upload:", {
         name: file.name,
-        type: file.type,
+        type: contentType,
         size: file.size
-      }));
+      });
 
-      // Upload the file directly
+      // Upload the blob with explicit contentType
       const { data, error } = await supabase
         .storage
         .from('websites')
-        .upload(sanitizedFilePath, file, uploadOptions);
+        .upload(sanitizedFilePath, fileBlob, uploadOptions);
       
       if (error) {
         console.error("[MediaService] Storage upload error:", error);

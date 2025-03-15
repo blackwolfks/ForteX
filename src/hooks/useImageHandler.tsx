@@ -74,7 +74,7 @@ export function useImageHandler({ imageUrl, onUpdate, onUpload }: UseImageHandle
     try {
       console.log("[useImageHandler] Starting image upload for file:", file.name, "type:", file.type);
       
-      // Pass the file directly without modifying it to preserve MIME type
+      // Unveränderte Datei weitergeben, um MIME-Type zu erhalten
       const imageUrl = await onUpload(file);
       
       if (imageUrl) {
