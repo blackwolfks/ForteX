@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { WebsiteSection } from '@/services/website-service';
 import { Input } from "@/components/ui/input";
@@ -41,6 +42,13 @@ export default function ImageSection({
     // Check file size first
     if (file.size > 5 * 1024 * 1024) { // 5MB limit
       toast.error("Datei ist zu groß. Die maximale Dateigröße beträgt 5MB.");
+      return;
+    }
+    
+    // Check file extension
+    const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+    if (!['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension)) {
+      toast.error(`Dateityp .${fileExtension} wird nicht unterstützt. Bitte nur Bilder im JPG, PNG, GIF oder WebP Format hochladen.`);
       return;
     }
     
@@ -94,7 +102,7 @@ export default function ImageSection({
                 <Input
                   id="imageUpload"
                   type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                  accept=".jpg,.jpeg,.png,.gif,.webp"
                   className="hidden"
                   onChange={handleImageUpload}
                 />

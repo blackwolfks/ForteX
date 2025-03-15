@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { websiteService } from '@/services/website-service';
@@ -67,6 +68,13 @@ export default function WebsiteEditor() {
     // Check file size - do this check here too for extra safety
     if (file.size > 5 * 1024 * 1024) { // 5MB limit
       toast.error("Datei ist zu groß. Die maximale Dateigröße beträgt 5MB.");
+      return null;
+    }
+    
+    // Check file extension
+    const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+    if (!['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension)) {
+      toast.error(`Dateityp .${fileExtension} wird nicht unterstützt. Bitte nur Bilder im JPG, PNG, GIF oder WebP Format hochladen.`);
       return null;
     }
     

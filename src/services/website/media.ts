@@ -20,33 +20,54 @@ export const mediaService = {
         return null;
       }
 
-      // Simplified file type check - just check the MIME type directly without lowercase conversion
-      const acceptedFormats = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      // Get file extension from filename instead of relying on MIME type
+      const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+      const acceptedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
       
-      if (!acceptedFormats.includes(file.type)) {
-        toast.error(`Dateityp ${file.type} wird nicht unterstützt. Bitte nur Bilder im JPG, PNG, GIF oder WebP Format hochladen.`);
-        console.error("File type not accepted:", file.type);
-        console.log("Accepted formats:", acceptedFormats);
+      console.log("File extension:", fileExtension);
+      
+      if (!acceptedExtensions.includes(fileExtension)) {
+        toast.error(`Dateityp .${fileExtension} wird nicht unterstützt. Bitte nur Bilder im JPG, PNG, GIF oder WebP Format hochladen.`);
+        console.error("File extension not accepted:", fileExtension);
         return null;
       }
 
       // Sanitize filename by removing special characters
       const sanitizedFilePath = filePath.replace(/[^a-zA-Z0-9.-_\/]/g, '_');
 
-      console.log("Uploading file:", sanitizedFilePath, "with type:", file.type);
+      console.log("Uploading file:", sanitizedFilePath);
 
-      // Add proper content type header based on file type
-      const options = {
-        cacheControl: '3600',
-        upsert: true,
-        contentType: file.type // Set the correct MIME type
-      };
+      // Force content type based on extension
+      let contentType;
+      switch (fileExtension) {
+        case 'jpg':
+        case 'jpeg':
+          contentType = 'image/jpeg';
+          break;
+        case 'png':
+          contentType = 'image/png';
+          break;
+        case 'gif':
+          contentType = 'image/gif';
+          break;
+        case 'webp':
+          contentType = 'image/webp';
+          break;
+        default:
+          contentType = 'image/jpeg'; // Fallback
+      }
+      
+      console.log("Forcing content type:", contentType);
         
-      // Upload to the websites bucket
+      // Upload to the websites bucket with explicit content type
       const { data, error } = await supabase
         .storage
         .from('websites')
-        .upload(sanitizedFilePath, file, options);
+        .upload(sanitizedFilePath, file, {
+          cacheControl: '3600',
+          upsert: true,
+          contentType: contentType // Explicitly set the content type
+        });
       
       if (error) {
         console.error("Storage upload error:", error);
