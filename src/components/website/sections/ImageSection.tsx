@@ -37,9 +37,16 @@ export default function ImageSection({
     
     setImageError(false);
     
-    // Prüfen ob es sich um ein Bild handelt
+    // Validate file is an image
     if (!file.type.startsWith('image/')) {
       toast.error("Nur Bildformate sind erlaubt.");
+      return;
+    }
+    
+    // Validate accepted image formats
+    const acceptedFormats = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!acceptedFormats.includes(file.type)) {
+      toast.error("Bitte nur Bilder im JPG, PNG, GIF oder WebP Format hochladen.");
       return;
     }
     
@@ -51,7 +58,7 @@ export default function ImageSection({
     
     setUploading(true);
     try {
-      console.log("Starting image upload for file:", file.name);
+      console.log("Starting image upload for file:", file.name, "type:", file.type);
       const imageUrl = await onUpload(file);
       
       if (imageUrl) {
@@ -99,7 +106,7 @@ export default function ImageSection({
                 <Input
                   id="imageUpload"
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
                   className="hidden"
                   onChange={handleImageUpload}
                 />

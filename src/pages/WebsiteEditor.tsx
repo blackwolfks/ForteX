@@ -63,11 +63,18 @@ export default function WebsiteEditor() {
       return null;
     }
     
-    console.log("WebsiteEditor: Handling media upload for file:", file.name);
+    console.log("WebsiteEditor: Handling media upload for file:", file.name, "type:", file.type, "size:", file.size);
     
-    // Prüfen des Dateityps, nur Bilder erlauben
+    // Validate file is an image
     if (!file.type.startsWith('image/')) {
       toast.error("Nur Bildformate sind erlaubt.");
+      return null;
+    }
+    
+    // Validate accepted image formats
+    const acceptedFormats = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!acceptedFormats.includes(file.type)) {
+      toast.error("Bitte nur Bilder im JPG, PNG, GIF oder WebP Format hochladen.");
       return null;
     }
     

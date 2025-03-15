@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload } from 'lucide-react';
+import { Upload, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface HeroSectionProps {
   section: WebsiteSection;
@@ -32,17 +33,49 @@ export default function HeroSection({
   } = section.content;
   
   const [uploading, setUploading] = useState(false);
+  const [imageError, setImageError] = useState(false);
   
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
+    setImageError(false);
+    
+    // Validate file is an image
+    if (!file.type.startsWith('image/')) {
+      toast.error("Nur Bildformate sind erlaubt.");
+      return;
+    }
+    
+    // Validate accepted image formats
+    const acceptedFormats = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!acceptedFormats.includes(file.type)) {
+      toast.error("Bitte nur Bilder im JPG, PNG, GIF oder WebP Format hochladen.");
+      return;
+    }
+    
+    // Check file size
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      toast.error("Datei ist zu groß. Die maximale Dateigröße beträgt 5MB.");
+      return;
+    }
+    
     setUploading(true);
     try {
+      console.log("Starting hero image upload for file:", file.name, "type:", file.type);
       const imageUrl = await onUpload(file);
+      
       if (imageUrl) {
+        console.log("Upload successful, setting new hero image URL:", imageUrl);
         onUpdate({ imageUrl });
+        toast.success("Bild erfolgreich hochgeladen");
+      } else {
+        console.error("Upload failed - no URL returned");
+        toast.error("Fehler beim Hochladen des Bildes");
       }
+    } catch (error) {
+      console.error('Error uploading hero image:', error);
+      toast.error("Fehler beim Hochladen des Bildes");
     } finally {
       setUploading(false);
     }
@@ -110,17 +143,28 @@ export default function HeroSection({
             <Label>Hintergrundbild</Label>
             <div className="flex items-center gap-4">
               <div className="relative w-24 h-24 border rounded-md overflow-hidden bg-muted">
-                <img 
-                  src={imageUrl} 
-                  alt="Hero background" 
-                  className="w-full h-full object-cover" 
-                />
+                {imageError ? (
+                  <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                    <AlertCircle className="w-8 h-8 text-gray-400" />
+                  </div>
+                ) : (
+                  <img 
+                    src={imageUrl} 
+                    alt="Hero background" 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      console.error("Hero image failed to load:", imageUrl);
+                      setImageError(true);
+                      e.currentTarget.src = '/placeholder.svg';
+                    }}
+                  />
+                )}
               </div>
               <div>
                 <Input
                   id="imageUpload"
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
                   className="hidden"
                   onChange={handleImageUpload}
                 />
@@ -132,6 +176,11 @@ export default function HeroSection({
                   <Upload className="w-4 h-4 mr-2" />
                   {uploading ? 'Wird hochgeladen...' : 'Bild hochladen'}
                 </Button>
+                {imageUrl && imageUrl !== '/placeholder.svg' && (
+                  <p className="text-xs mt-2 text-muted-foreground break-all max-w-[200px]">
+                    {imageUrl.split('/').pop()}
+                  </p>
+                )}
               </div>
             </div>
           </div>

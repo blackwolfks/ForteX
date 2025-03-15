@@ -35,7 +35,7 @@ export const mediaService = {
         contentType: file.type // Set the correct MIME type
       };
         
-      // Upload to the websites bucket
+      // Upload to the websites bucket with JSON parsing for better error handling
       const { data, error } = await supabase
         .storage
         .from('websites')
@@ -51,6 +51,8 @@ export const mediaService = {
           toast.error("Keine Berechtigung zum Hochladen. Bitte prüfen Sie Ihre Zugriffsrechte.");
         } else if (error.message.includes("network")) {
           toast.error("Netzwerkfehler beim Hochladen. Bitte prüfen Sie Ihre Internetverbindung.");
+        } else if (error.message.includes("mime type") || error.message.includes("not supported")) {
+          toast.error("Dateityp wird nicht unterstützt. Bitte nur Bilder im JPG, PNG oder WebP Format hochladen.");
         } else {
           toast.error(`Fehler beim Hochladen: ${error.message}`);
         }
