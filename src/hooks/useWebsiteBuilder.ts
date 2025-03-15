@@ -43,13 +43,16 @@ export const useWebsiteBuilder = (websiteId?: string) => {
         
         const contentData = await websiteService.getWebsiteContent(websiteId);
         if (contentData && contentData.content.sections && contentData.content.sections.length > 0) {
-          // Use existing content if available
-          setSections(contentData.content.sections);
+          // Make sure we cast sections to the correct type
+          const typedSections = contentData.content.sections as WebsiteSection[];
+          setSections(typedSections);
         } else {
           // Get default content based on the template
           const templateContent = templateService.getTemplateDefaultContent(websiteData.template);
           if (templateContent && templateContent.sections && templateContent.sections.length > 0) {
-            setSections(templateContent.sections);
+            // Make sure we cast sections to the correct type
+            const templateSections = templateContent.sections as WebsiteSection[];
+            setSections(templateSections);
             // Save the default content immediately to the website
             await websiteService.saveWebsiteContent(websiteId, templateContent);
           } else {

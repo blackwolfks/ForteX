@@ -1,5 +1,5 @@
 
-import { WebsiteTemplate } from "@/types/website.types";
+import { WebsiteTemplate, WebsiteSection, SectionType } from "@/types/website.types";
 import { v4 as uuidv4 } from 'uuid';
 
 const DEFAULT_TEMPLATES: WebsiteTemplate[] = [
@@ -159,7 +159,7 @@ export const getTemplateDefaultContent = (templateId: string) => {
       sections: [
         {
           id: uuidv4(),
-          type: "hero",
+          type: "hero" as SectionType,
           content: {
             title: "Willkommen bei Ihrem Unternehmen",
             subtitle: "Professionelle Lösungen für Ihre Geschäftsanforderungen",
@@ -172,7 +172,7 @@ export const getTemplateDefaultContent = (templateId: string) => {
         },
         {
           id: uuidv4(),
-          type: "text",
+          type: "text" as SectionType,
           content: {
             title: "Über uns",
             content: "Wir sind ein etabliertes Unternehmen mit jahrelanger Erfahrung in der Branche. Unser Team aus Experten ist darauf spezialisiert, maßgeschneiderte Lösungen für Ihr Unternehmen zu entwickeln.",
@@ -182,7 +182,7 @@ export const getTemplateDefaultContent = (templateId: string) => {
         },
         {
           id: uuidv4(),
-          type: "image",
+          type: "image" as SectionType,
           content: {
             imageUrl: "/placeholder.svg",
             caption: "Unser Hauptsitz",
@@ -192,7 +192,7 @@ export const getTemplateDefaultContent = (templateId: string) => {
         },
         {
           id: uuidv4(),
-          type: "form",
+          type: "form" as SectionType,
           content: {
             title: "Kontaktieren Sie uns",
             fields: [
@@ -214,7 +214,7 @@ export const getTemplateDefaultContent = (templateId: string) => {
       sections: [
         {
           id: uuidv4(),
-          type: "hero",
+          type: "hero" as SectionType,
           content: {
             title: "Kreative Digitalagentur",
             subtitle: "Wir gestalten digitale Erlebnisse, die begeistern und Ergebnisse liefern",
@@ -227,7 +227,7 @@ export const getTemplateDefaultContent = (templateId: string) => {
         },
         {
           id: uuidv4(),
-          type: "text",
+          type: "text" as SectionType,
           content: {
             title: "Unsere Expertise",
             content: "Als führende Digitalagentur bieten wir umfassende Dienstleistungen von der Webentwicklung über Branding bis hin zu digitalen Marketingstrategien. Wir arbeiten mit Kunden jeder Größe zusammen, um ihre Online-Präsenz zu stärken.",
@@ -237,7 +237,7 @@ export const getTemplateDefaultContent = (templateId: string) => {
         },
         {
           id: uuidv4(),
-          type: "image",
+          type: "image" as SectionType,
           content: {
             imageUrl: "/placeholder.svg",
             caption: "Unser neuestes Projekt",
@@ -255,7 +255,7 @@ export const getTemplateDefaultContent = (templateId: string) => {
       sections: [
         {
           id: uuidv4(),
-          type: "hero",
+          type: "hero" as SectionType,
           content: {
             title: "Strategische Beratung für Ihr Unternehmen",
             subtitle: "Maßgeschneiderte Lösungen für komplexe Geschäftsherausforderungen",
@@ -268,7 +268,7 @@ export const getTemplateDefaultContent = (templateId: string) => {
         },
         {
           id: uuidv4(),
-          type: "text",
+          type: "text" as SectionType,
           content: {
             title: "Unsere Beratungsphilosophie",
             content: "Unsere Berater bringen jahrzehntelange Erfahrung in verschiedenen Branchen mit. Wir analysieren Ihr Unternehmen gründlich und entwickeln Strategien, die zu messbaren Ergebnissen führen.",
@@ -287,7 +287,7 @@ export const getTemplateDefaultContent = (templateId: string) => {
       sections: [
         {
           id: uuidv4(),
-          type: "hero",
+          type: "hero" as SectionType,
           content: {
             title: "Willkommen in unserem Online-Shop",
             subtitle: "Entdecken Sie unsere Qualitätsprodukte zu attraktiven Preisen",
@@ -300,7 +300,7 @@ export const getTemplateDefaultContent = (templateId: string) => {
         },
         {
           id: uuidv4(),
-          type: "product",
+          type: "product" as SectionType,
           content: {
             products: [
               {
@@ -333,7 +333,7 @@ export const getTemplateDefaultContent = (templateId: string) => {
         },
         {
           id: uuidv4(),
-          type: "text",
+          type: "text" as SectionType,
           content: {
             title: "Über unseren Shop",
             content: "Unser Online-Shop bietet eine große Auswahl an qualitativ hochwertigen Produkten. Wir garantieren schnelle Lieferung und exzellenten Kundenservice.",
@@ -352,7 +352,7 @@ export const getTemplateDefaultContent = (templateId: string) => {
       sections: [
         {
           id: uuidv4(),
-          type: "hero",
+          type: "hero" as SectionType,
           content: {
             title: "Mein kreatives Portfolio",
             subtitle: "Eine Sammlung meiner besten Arbeiten und Projekte",
@@ -365,7 +365,7 @@ export const getTemplateDefaultContent = (templateId: string) => {
         },
         {
           id: uuidv4(),
-          type: "text",
+          type: "text" as SectionType,
           content: {
             title: "Über mich",
             content: "Ich bin ein leidenschaftlicher Designer/Entwickler mit Erfahrung in verschiedenen kreativen Bereichen. Mein Ziel ist es, innovative und ansprechende Lösungen zu schaffen, die Ihre Erwartungen übertreffen.",
@@ -375,7 +375,7 @@ export const getTemplateDefaultContent = (templateId: string) => {
         },
         {
           id: uuidv4(),
-          type: "image",
+          type: "image" as SectionType,
           content: {
             imageUrl: "/placeholder.svg",
             caption: "Projekt: Webdesign für XYZ",
@@ -394,7 +394,7 @@ export const getTemplateDefaultContent = (templateId: string) => {
       sections: [
         {
           id: uuidv4(),
-          type: "hero",
+          type: "hero" as SectionType,
           content: {
             title: "Mein Blog",
             subtitle: "Gedanken, Ideen und Inspirationen zu aktuellen Themen",
@@ -407,7 +407,7 @@ export const getTemplateDefaultContent = (templateId: string) => {
         },
         {
           id: uuidv4(),
-          type: "text",
+          type: "text" as SectionType,
           content: {
             title: "Willkommen auf meinem Blog",
             content: "Hier teile ich regelmäßig meine Gedanken zu verschiedenen Themen. Abonnieren Sie meinen Newsletter, um keine Updates zu verpassen.",
@@ -417,7 +417,7 @@ export const getTemplateDefaultContent = (templateId: string) => {
         },
         {
           id: uuidv4(),
-          type: "text",
+          type: "text" as SectionType,
           content: {
             title: "Neuester Beitrag: Die Zukunft des digitalen Marketings",
             content: "In diesem Beitrag untersuche ich die neuesten Trends im digitalen Marketing und wie Sie diese für Ihr Unternehmen nutzen können...",
@@ -436,7 +436,7 @@ export const getTemplateDefaultContent = (templateId: string) => {
       sections: [
         {
           id: uuidv4(),
-          type: "hero",
+          type: "hero" as SectionType,
           content: {
             title: "Neues Produkt: Innovation XYZ",
             subtitle: "Die revolutionäre Lösung für Ihre täglichen Herausforderungen",
@@ -449,7 +449,7 @@ export const getTemplateDefaultContent = (templateId: string) => {
         },
         {
           id: uuidv4(),
-          type: "text",
+          type: "text" as SectionType,
           content: {
             title: "Was macht unser Produkt besonders?",
             content: "Unser Produkt bietet innovative Funktionen, die Ihren Alltag erleichtern. Es ist einfach zu bedienen, langlebig und kosteneffizient.",
@@ -459,7 +459,7 @@ export const getTemplateDefaultContent = (templateId: string) => {
         },
         {
           id: uuidv4(),
-          type: "form",
+          type: "form" as SectionType,
           content: {
             title: "Bestellen Sie jetzt",
             fields: [
