@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { websiteService } from '@/services/website-service';
@@ -20,7 +19,6 @@ export default function WebsiteEditor() {
   const navigate = useNavigate();
   
   useEffect(() => {
-    // Prüfen, ob der Benutzer angemeldet ist
     const checkAuth = async () => {
       const { data } = await supabase.auth.getSession();
       if (!data.session) {
@@ -65,18 +63,16 @@ export default function WebsiteEditor() {
     
     console.log("[WebsiteEditor] Handling media upload for file:", file.name, "type:", file.type, "size:", file.size);
     
-    // Validate file (redundant checks as a safety measure)
     if (file.size > 5 * 1024 * 1024) {
       toast.error("Datei ist zu groß. Die maximale Dateigröße beträgt 5MB.");
       return null;
     }
     
-    // Get file extension and validate
     const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
     console.log("[WebsiteEditor] File extension:", fileExtension);
     
     if (!['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension)) {
-      toast.error(`Dateityp .${fileExtension} wird nicht unterstützt. Bitte nur Bilder im JPG, PNG, GIF oder WebP Format hochladen.`);
+      toast.error(`Dateityp .${fileExtension} wird nicht unterstützt. Bitte nur Bilder im JPG, PNG oder WebP Format hochladen.`);
       return null;
     }
     
@@ -84,14 +80,7 @@ export default function WebsiteEditor() {
       const uploadPath = `website-${websiteId}`;
       console.log("[WebsiteEditor] Uploading to path:", uploadPath);
       
-      const imageUrl = await mediaService.uploadMedia(file, uploadPath);
-      console.log("[WebsiteEditor] Upload result:", imageUrl);
-      
-      if (!imageUrl) {
-        console.error("[WebsiteEditor] Upload failed - no URL returned from media service");
-      }
-      
-      return imageUrl;
+      return await mediaService.uploadMedia(file, uploadPath);
     } catch (error) {
       console.error("[WebsiteEditor] Error in handleMediaUpload:", error);
       toast.error("Fehler beim Hochladen des Bildes");

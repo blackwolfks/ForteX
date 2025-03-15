@@ -59,7 +59,10 @@ export const mediaService = {
       
       console.log("[MediaService] Using content type:", contentType, "for file with extension:", fileExtension);
         
-      // Log payload before sending to help debug
+      // Use formData to ensure proper content type handling
+      const formData = new FormData();
+      formData.append('file', file, file.name);
+      
       console.log("[MediaService] Upload parameters:", {
         path: sanitizedFilePath,
         fileSize: file.size,
@@ -67,15 +70,11 @@ export const mediaService = {
         forcedContentType: contentType
       });
 
-      // Create a new Blob to ensure proper content type
-      const contentBlob = new Blob([await file.arrayBuffer()], { type: contentType });
-      console.log("[MediaService] Created content blob with type:", contentBlob.type);
-      
-      // Upload to the websites bucket with explicit content type
+      // Upload directly as a binary blob with the correct content type
       const { data, error } = await supabase
         .storage
         .from('websites')
-        .upload(sanitizedFilePath, contentBlob, {
+        .upload(sanitizedFilePath, file, {
           cacheControl: '3600',
           upsert: true,
           contentType: contentType // Explicitly set the content type
