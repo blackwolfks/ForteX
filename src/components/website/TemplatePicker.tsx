@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,7 +27,6 @@ export default function TemplatePicker({
   const [activeTab, setActiveTab] = useState<string>('all');
   const [isProUser, setIsProUser] = useState<boolean>(false);
   
-  // Check if user is a Pro user
   const { data: proStatus } = useQuery({
     queryKey: ['user-pro-status'],
     queryFn: async () => {
@@ -40,7 +38,6 @@ export default function TemplatePicker({
     staleTime: 60000, // 1 minute
   });
   
-  // Fetch templates from the database
   const { data: templates = [], isLoading: templatesLoading } = useQuery({
     queryKey: ['website-templates'],
     queryFn: async () => {
@@ -48,7 +45,6 @@ export default function TemplatePicker({
     },
   });
   
-  // Fetch shop templates if needed
   const { data: shopTemplates = [], isLoading: shopTemplatesLoading } = useQuery({
     queryKey: ['shop-templates'],
     queryFn: async () => {
@@ -161,7 +157,7 @@ function TemplateGrid({ templates, onSelect, selectedTemplate, isProUser }: Temp
                       <Card className="h-full border shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden relative">
                         {selectedTemplate === template.id && (
                           <div className="absolute top-2 left-2 z-10">
-                            <Badge variant="primary" className="font-semibold">
+                            <Badge variant="default" className="font-semibold">
                               <CheckIcon className="h-3 w-3 mr-1" /> Ausgewählt
                             </Badge>
                           </div>

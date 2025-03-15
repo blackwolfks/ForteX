@@ -15,18 +15,22 @@ export const getTemplateDefaultContent = (templateId: string) => {
         return getFallbackContent();
       }
       
-      if (data && data.length > 0 && data[0].content && data[0].content.sections) {
-        // Make sure we process the sections to have the correct SectionType
-        const typedSections = data[0].content.sections.map(section => ({
-          ...section,
-          type: section.type as SectionType,
-          id: section.id || uuidv4()
-        }));
-        
-        return {
-          sections: typedSections,
-          lastEdited: new Date().toISOString()
-        };
+      if (data && data.length > 0 && data[0].content) {
+        // Check if content has sections property and it's an array
+        const contentObj = data[0].content;
+        if (typeof contentObj === 'object' && contentObj !== null && 'sections' in contentObj && Array.isArray(contentObj.sections)) {
+          // Make sure we process the sections to have the correct SectionType
+          const typedSections = contentObj.sections.map(section => ({
+            ...section,
+            type: section.type as SectionType,
+            id: section.id || uuidv4()
+          }));
+          
+          return {
+            sections: typedSections,
+            lastEdited: new Date().toISOString()
+          };
+        }
       }
       
       return getFallbackContent();
@@ -136,6 +140,6 @@ export const templateService = {
       return null;
     }
   },
-
+  
   getTemplateDefaultContent
 };

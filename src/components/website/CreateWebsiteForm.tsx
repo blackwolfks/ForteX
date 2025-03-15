@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangleIcon, RocketIcon, PaintbrushIcon, CheckCircleIcon } from 'lucide-react';
+import { AlertTriangleIcon, RocketIcon, PaintbrushIcon, CheckCircleIcon, LockIcon } from 'lucide-react';
 import TemplatePicker from './TemplatePicker';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
