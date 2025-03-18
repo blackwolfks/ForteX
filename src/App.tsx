@@ -20,6 +20,7 @@ import Profile from "./pages/Profile";
 import AuthGuard from "./components/AuthGuard";
 import WebsiteEditor from "./pages/WebsiteEditor";
 import CreateWebsite from "./pages/CreateWebsite";
+import LicenseManager from "./pages/LicenseManager";
 
 const queryClient = new QueryClient();
 
@@ -75,6 +76,16 @@ const App = () => (
               <>
                 <Navbar />
                 <Profile />
+              </>
+            </AuthGuard>
+          } />
+          
+          {/* License Manager Route */}
+          <Route path="/license-manager" element={
+            <AuthGuard requireAuth={true}>
+              <>
+                <Navbar />
+                <LicenseManager />
               </>
             </AuthGuard>
           } />

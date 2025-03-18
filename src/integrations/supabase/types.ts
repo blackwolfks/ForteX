@@ -208,6 +208,42 @@ export type Database = {
         }
         Relationships: []
       }
+      server_licenses: {
+        Row: {
+          aktiv: boolean | null
+          created_at: string | null
+          id: string
+          license_key: string
+          script_file: string | null
+          script_name: string
+          server_key: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          aktiv?: boolean | null
+          created_at?: string | null
+          id?: string
+          license_key: string
+          script_file?: string | null
+          script_name: string
+          server_key: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          aktiv?: boolean | null
+          created_at?: string | null
+          id?: string
+          license_key?: string
+          script_file?: string | null
+          script_name?: string
+          server_key?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_subscriptions: {
         Row: {
           created_at: string | null
@@ -417,6 +453,28 @@ export type Database = {
         }
         Returns: string
       }
+      check_license_by_server_key: {
+        Args: {
+          p_server_key: string
+        }
+        Returns: {
+          valid: boolean
+          license_key: string
+          script_name: string
+          script_file: string
+        }[]
+      }
+      create_license: {
+        Args: {
+          p_script_name: string
+          p_script_file?: string
+        }
+        Returns: {
+          id: string
+          license_key: string
+          server_key: string
+        }[]
+      }
       create_website:
         | {
             Args: {
@@ -437,6 +495,12 @@ export type Database = {
             }
             Returns: string
           }
+      delete_license: {
+        Args: {
+          p_license_id: string
+        }
+        Returns: boolean
+      }
       delete_website: {
         Args: {
           site_id: string
@@ -456,6 +520,10 @@ export type Database = {
         Returns: {
           success: boolean
         }[]
+      }
+      generate_license_key: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       get_all_templates: {
         Args: Record<PropertyKey, never>
@@ -485,6 +553,18 @@ export type Database = {
           content: Json
           created_at: string
           updated_at: string
+        }[]
+      }
+      get_user_licenses: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          license_key: string
+          server_key: string
+          script_name: string
+          script_file: string
+          aktiv: boolean
+          created_at: string
         }[]
       }
       get_user_pro_status: {
@@ -561,6 +641,12 @@ export type Database = {
           updated_at: string
         }[]
       }
+      regenerate_server_key: {
+        Args: {
+          p_license_id: string
+        }
+        Returns: string
+      }
       save_website_builder_settings: {
         Args: {
           p_default_domain?: string
@@ -575,6 +661,19 @@ export type Database = {
           content_data: Json
         }
         Returns: undefined
+      }
+      update_license: {
+        Args: {
+          p_license_id: string
+          p_script_name?: string
+          p_script_file?: string
+          p_aktiv?: boolean
+          p_regenerate_server_key?: boolean
+        }
+        Returns: {
+          success: boolean
+          server_key: string
+        }[]
       }
       update_website:
         | {
