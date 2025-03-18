@@ -1,4 +1,3 @@
-
 --[[ 
   ForteX Framework - Remote Script Loader
   
@@ -9,24 +8,16 @@
 
 -- ASCII Art für ForteX am Start anzeigen
 local function ShowASCIILogo()
-    print("^3") -- Gelbe Farbe
+    -- Rot und kleiner
+    print("^1")
     print([[
-     FFFFFFFFFFF                              tt                     XXXXXXX       XXXXXXX
-    F::::::::::::F                         tt:::t                    X:::::X       X:::::X
-   F::::::FFFFFF:::F                       t:::::t                   X:::::X       X:::::X
-   F:::::F      FFFFFF   ooooooooooo      t:::::t                   X::::::X     X::::::X
-   F:::::F             oo:::::::::::oo    t:::::t                   XXX:::::X   X:::::XXX
-   F::::::FFFFFFFFFF o:::::::::::::::o ttttt:::::ttttt                 X:::::X X:::::X
-   F:::::::::::::::F o:::::ooooo:::::o t:::::::::::::t                  X:::::X:::::X
-   F:::::::::::::::F o::::o     o::::o t:::::::::::::t                   X:::::::::X
-   F::::::FFFFFFFFFF o::::o     o::::o tttttt:::::::t                   X:::::::::X
-   F:::::F           o::::o     o::::o       t:::::t                   X:::::X:::::X
-   F:::::F           o::::o     o::::o       t:::::t                  X:::::X X:::::X
- FF:::::::FF         o:::::ooooo:::::o       t:::::t               XXX:::::X   X:::::XXX
- F::::::::FF         o:::::::::::::::o       t:::::t    tttttt    X::::::X     X::::::X
- F::::::::FF          oo:::::::::::oo        t::::::tttt:::::t    X:::::X       X:::::X
- FFFFFFFFFFF            ooooooooooo          tt::::::::::::::t    X:::::X       X:::::X
-                                               tttttttttttt      XXXXXXX       XXXXXXX
+ ######  ####### ######  ####### ####### #     # 
+ #       #       #     #    #    #        #   #  
+ #       #       #     #    #    #         # #   
+ ######  #####   ######     #    #####      #    
+ #       #       #   #      #    #          #    
+ #       #       #    #     #    #          #    
+ #       ####### #     #    #    #######    #    
     ]])
     print("^0") -- Zurück zur Standardfarbe
 end
@@ -41,8 +32,11 @@ local SUCCESS_PREFIX = "^8[^1CRX^8, ^2ForteX^8]^0"
 local ERROR_PREFIX = "^8[^1CRX^8, ^1ForteX^8]^0"
 local DEBUG_PREFIX = "^8[^1CRX^8, ^3ForteX DEBUG^8]^0"
 
--- Zeige Logo am Anfang
-ShowASCIILogo()
+-- Für txAdmin und Server-Konsole sichtbar machen
+Citizen.CreateThread(function()
+    Wait(1000) -- Kurze Verzögerung für bessere Sichtbarkeit beim Start
+    ShowASCIILogo()
+end)
 
 if not configFile then
     print(ERROR_PREFIX .. " Fehler: config.lua konnte nicht geladen werden^7")
@@ -248,6 +242,8 @@ AddEventHandler('onResourceStart', function(resourceName)
     if GetCurrentResourceName() == resourceName then
         print(SUCCESS_PREFIX .. " Ressource gestartet^7")
         Wait(1000) -- Kurze Verzögerung
+        ShowASCIILogo() -- Logo erneut beim Resource-Start anzeigen
+        Wait(500)
         LoadRemoteScript()
     end
 end)
@@ -262,6 +258,7 @@ end)
 RegisterCommand('fortex_reload', function(source, args, rawCommand)
     if source == 0 then -- Nur von der Konsole aus
         print(PREFIX .. " Manuelles Neuladen des Remote-Skripts...^7")
+        ShowASCIILogo() -- Logo beim Reload anzeigen
         LoadRemoteScript()
     end
 end, true)
