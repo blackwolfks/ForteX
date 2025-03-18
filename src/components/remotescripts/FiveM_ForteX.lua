@@ -1,3 +1,4 @@
+
 --[[ 
   ForteX Framework - Remote Script Loader
   
@@ -32,10 +33,24 @@ local SUCCESS_PREFIX = "^8[^1CRX^8, ^2ForteX^8]^0"
 local ERROR_PREFIX = "^8[^1CRX^8, ^1ForteX^8]^0"
 local DEBUG_PREFIX = "^8[^1CRX^8, ^3ForteX DEBUG^8]^0"
 
--- Für txAdmin und Server-Konsole sichtbar machen
+-- Für txAdmin und Server-Konsole sichtbar machen - direkt beim Laden ausführen
+print("^1")  -- Rot für bessere Sichtbarkeit in der txAdmin-Konsole
+print([[
+ ######  ####### ######  ####### ####### #     # 
+ #       #       #     #    #    #        #   #  
+ #       #       #     #    #    #         # #   
+ ######  #####   ######     #    #####      #    
+ #       #       #   #      #    #          #    
+ #       #       #    #     #    #          #    
+ #       ####### #     #    #    #######    #    
+]])
+print("^0")  -- Zurück zur Standardfarbe
+
+-- Auch nach einer kurzen Verzögerung nochmal zeigen (für txAdmin)
 Citizen.CreateThread(function()
-    Wait(1000) -- Kurze Verzögerung für bessere Sichtbarkeit beim Start
+    Wait(2000) -- Längere Verzögerung für bessere Sichtbarkeit beim Start
     ShowASCIILogo()
+    print(SUCCESS_PREFIX .. " ForteX Framework wird geladen...")
 end)
 
 if not configFile then
@@ -241,16 +256,25 @@ end
 AddEventHandler('onResourceStart', function(resourceName)
     if GetCurrentResourceName() == resourceName then
         print(SUCCESS_PREFIX .. " Ressource gestartet^7")
-        Wait(1000) -- Kurze Verzögerung
-        ShowASCIILogo() -- Logo erneut beim Resource-Start anzeigen
-        Wait(500)
+        -- Logo direkt beim Resource-Start anzeigen
+        print("^1")  -- Rot für bessere Sichtbarkeit 
+        print([[
+ ######  ####### ######  ####### ####### #     # 
+ #       #       #     #    #    #        #   #  
+ #       #       #     #    #         # #   
+ ######  #####   ######     #    #####      #    
+ #       #       #   #      #    #          #    
+ #       #       #    #     #    #          #    
+ #       ####### #     #    #    #######    #    
+        ]])
+        print("^0")  -- Zurück zur Standardfarbe
         LoadRemoteScript()
     end
 end)
 
 -- Auch beim Start laden
 Citizen.CreateThread(function()
-    Wait(2000) -- Kurze Verzögerung beim Start
+    Wait(3000) -- Längere Verzögerung beim Start
     LoadRemoteScript()
 end)
 
@@ -258,7 +282,18 @@ end)
 RegisterCommand('fortex_reload', function(source, args, rawCommand)
     if source == 0 then -- Nur von der Konsole aus
         print(PREFIX .. " Manuelles Neuladen des Remote-Skripts...^7")
-        ShowASCIILogo() -- Logo beim Reload anzeigen
+        -- Logo beim Reload anzeigen
+        print("^1")  -- Rot für bessere Sichtbarkeit
+        print([[
+ ######  ####### ######  ####### ####### #     # 
+ #       #       #     #    #    #        #   #  
+ #       #       #     #    #    #         # #   
+ ######  #####   ######     #    #####      #    
+ #       #       #   #      #    #          #    
+ #       #       #    #     #    #          #    
+ #       ####### #     #    #    #######    #    
+        ]])
+        print("^0")  -- Zurück zur Standardfarbe
         LoadRemoteScript()
     end
 end, true)
