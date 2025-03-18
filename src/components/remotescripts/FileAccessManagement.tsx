@@ -54,7 +54,6 @@ const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
       }
 
       // Zugriffsrechte direkt mit RPC-Funktion abrufen
-      // Da die Tabelle neu ist, verwenden wir raw query anstelle von direktem Table-Zugriff
       const { data: accessData, error: accessError } = await supabase
         .rpc('get_file_access_for_license', { 
           p_license_id: licenseId 
@@ -70,12 +69,18 @@ const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
         .filter(file => !file.name.startsWith(".")) // Versteckte Dateien ausblenden
         .map(file => {
           const fullPath = `${licenseId}/${file.name}`;
-          const accessInfo = accessData?.find((a: FileAccess) => a.file_path === fullPath);
+          // Prüfen ob accessData ein Array ist und den richtigen Wert enthält
+          let isPublic = false;
+          
+          if (Array.isArray(accessData)) {
+            const accessInfo = accessData.find((a: FileAccess) => a.file_path === fullPath);
+            isPublic = accessInfo?.is_public || false;
+          }
           
           return {
             name: file.name,
             fullPath: fullPath,
-            isPublic: accessInfo?.is_public || false,
+            isPublic: isPublic,
             size: file.metadata?.size || 0,
             isDirectory: file.metadata?.mimetype === 'inode/directory'
           };

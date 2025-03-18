@@ -49,7 +49,9 @@ type RpcFunctionName =
   | 'create_license'           
   | 'regenerate_server_key'    
   | 'update_license'
-  | 'delete_license';          // Added this function to fix the error
+  | 'delete_license'
+  | 'get_file_access_for_license'  // Add the new RPC function
+  | 'update_file_access';          // Add the new RPC function
 
 // Define parameter types for each RPC function
 type RpcParams = {
@@ -116,6 +118,15 @@ type RpcParams = {
   };
   'delete_license': {
     p_license_id: string;
+  };
+  // Add the new RPC function parameter types
+  'get_file_access_for_license': {
+    p_license_id: string;
+  };
+  'update_file_access': {
+    p_license_id: string;
+    p_file_path: string;
+    p_is_public: boolean;
   };
 };
 

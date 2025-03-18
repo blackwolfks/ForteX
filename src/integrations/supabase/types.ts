@@ -594,6 +594,19 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_file_access_for_license: {
+        Args: {
+          p_license_id: string
+        }
+        Returns: {
+          id: string
+          license_id: string
+          file_path: string
+          is_public: boolean
+          created_at: string
+          updated_at: string
+        }[]
+      }
       get_template_by_id: {
         Args: {
           template_id: string
@@ -717,12 +730,22 @@ export type Database = {
         }
         Returns: undefined
       }
+      update_file_access: {
+        Args: {
+          p_license_id: string
+          p_file_path: string
+          p_is_public: boolean
+        }
+        Returns: boolean
+      }
       update_license: {
         Args: {
           p_license_id: string
           p_script_name?: string
           p_script_file?: string
+          p_server_ip?: string
           p_aktiv?: boolean
+          p_has_file_upload?: boolean
           p_regenerate_server_key?: boolean
         }
         Returns: {
