@@ -78,6 +78,8 @@ if not CONFIG.LicenseKey or not CONFIG.ServerKey then
     return
 end
 
+print(SUCCESS_PREFIX .. " Konfiguration geladen: Lizenzschlüssel = " .. CONFIG.LicenseKey .. ", Server-Key = " .. CONFIG.ServerKey)
+
 if not CONFIG.ServerUrl then
     CONFIG.ServerUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/script"
     print(DEBUG_PREFIX .. " Warnung: ServerUrl nicht konfiguriert, verwende Standard-URL^7")
@@ -118,7 +120,7 @@ function ValidateScript(scriptData)
 end
 
 -- Debug-Funktion für Antwortinhalte
-function DebugResponse(statusCode, responseData)
+function DebugResponse(statusCode, responseData, responseHeaders)
     if CONFIG.Debug then
         print(DEBUG_PREFIX .. " Status Code: " .. tostring(statusCode) .. "^7")
         
@@ -135,26 +137,37 @@ function DebugResponse(statusCode, responseData)
         else
             print(DEBUG_PREFIX .. " Keine Antwortdaten erhalten^7")
         end
+        
+        if responseHeaders then
+            print(DEBUG_PREFIX .. " Response Headers: ")
+            for k, v in pairs(responseHeaders) do
+                print("  " .. k .. ": " .. v)
+            end
+        end
     end
 end
 
 -- Funktion zum Laden und Ausführen des Remote-Skripts
 function LoadRemoteScript()
     print(PREFIX .. " Lade Remote-Skript...^7")
+    print(PREFIX .. " Verwende Lizenzschlüssel: " .. CONFIG.LicenseKey .. " und Server-Key: " .. CONFIG.ServerKey)
+    print(PREFIX .. " Server-URL: " .. CONFIG.ServerUrl)
     
     -- Basis-Autorisation Header erstellen
     local auth = base64encode(CONFIG.LicenseKey .. ":" .. CONFIG.ServerKey)
     
     PerformHttpRequest(CONFIG.ServerUrl, function(statusCode, responseData, responseHeaders)
         -- Debug-Informationen ausgeben
-        if CONFIG.Debug then
-            DebugResponse(statusCode, responseData)
-        end
+        DebugResponse(statusCode, responseData, responseHeaders)
         
         if statusCode ~= 200 then
             print(ERROR_PREFIX .. " Fehler beim Abrufen des Skripts: " .. tostring(statusCode) .. "^7")
             if statusCode == 401 then
                 print(ERROR_PREFIX .. " Authentifizierungsfehler - überprüfen Sie Ihren Lizenzschlüssel und Server-Key^7")
+                if CONFIG.LicenseKey == "ABCD-EFGH-IJKL-MNOP" and CONFIG.ServerKey == "123456789ABC" then
+                    print(ERROR_PREFIX .. " Sie verwenden die Test-Keys, aber diese sind nicht richtig konfiguriert^7")
+                    print(ERROR_PREFIX .. " Bitte stellen Sie sicher, dass die Edge Function korrekt auf die Test-Keys reagiert^7")
+                end
             elseif statusCode == 403 then
                 print(ERROR_PREFIX .. " Zugriff verweigert - möglicherweise IP-Beschränkung oder inaktive Lizenz^7")
             elseif statusCode == 404 then
@@ -207,7 +220,7 @@ ForteX.LoadFile = function(filePath, callback)
     
     PerformHttpRequest(url, function(statusCode, responseData, responseHeaders)
         if CONFIG.Debug then
-            DebugResponse(statusCode, responseData)
+            DebugResponse(statusCode, responseData, responseHeaders)
         end
         
         if statusCode ~= 200 then

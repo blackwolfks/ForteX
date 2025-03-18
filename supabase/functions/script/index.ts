@@ -29,7 +29,7 @@ serve(async (req) => {
     // IP-Adresse des anfragenden Servers erhalten
     const clientIp = req.headers.get("x-forwarded-for") || "unknown";
     
-    console.log(`Anfrage von IP: ${clientIp}, Lizenzschlüssel: ${licenseKey?.substring(0, 4)}..., Server-Key: ${serverKey?.substring(0, 4)}...`);
+    console.log(`Anfrage von IP: ${clientIp}, Lizenzschlüssel: ${licenseKey}, Server-Key: ${serverKey}`);
     
     // Überprüfen, ob die erforderlichen Header vorhanden sind
     if (!licenseKey || !serverKey) {
@@ -40,13 +40,13 @@ serve(async (req) => {
       });
     }
     
-    // Test-Authentifizierung überprüfen
+    // WICHTIG: Test-Authentifizierung härter codieren und immer akzeptieren
     if (licenseKey === "ABCD-EFGH-IJKL-MNOP" && serverKey === "123456789ABC") {
-      console.log("Test-Authentifizierung erfolgreich");
+      console.log("Test-Authentifizierung erfolgreich - direkte Antwort wird gesendet");
       return new Response(
         `-- ForteX Test Script
-print("^2ForteX Test-Modus aktiv^0")
-print("^3Lizenz erfolgreich validiert^0")
+print("^2ForteX Test-Modus aktiv - Lizenz erfolgreich validiert^0")
+print("^3ForteX: Test-Keys wurden erkannt und akzeptiert^0")
 print("^3Test-Skript wird ausgeführt...^0")
 
 -- Zeige alle Spieler an
@@ -56,13 +56,14 @@ AddEventHandler('onResourceStart', function(resourceName)
             while true do
                 Wait(10000)
                 local playerCount = GetNumPlayerIndices()
-                print("^2Es sind " .. playerCount .. " Spieler online^0")
+                print("^2ForteX: Es sind " .. playerCount .. " Spieler online^0")
             end
         end)
     end
 end)
 
-print("^2ForteX Test-Skript erfolgreich geladen!^0")`, 
+print("^2ForteX Test-Skript erfolgreich geladen!^0")
+print("^2Die Testkeys ABCD-EFGH-IJKL-MNOP und 123456789ABC wurden erfolgreich validiert^0")`, 
         {
           headers: { ...corsHeaders, "Content-Type": "text/plain" },
           status: 200,
@@ -75,14 +76,24 @@ print("^2ForteX Test-Skript erfolgreich geladen!^0")`,
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") as string;
     const supabase = createClient(supabaseUrl, supabaseKey);
     
+    console.log("Überprüfe Lizenz mit check_license_by_keys Funktion");
+    
     // Lizenz in der Datenbank überprüfen mit beiden Schlüsseln
     const { data, error } = await supabase.rpc("check_license_by_keys", {
       p_license_key: licenseKey,
       p_server_key: serverKey
     });
     
-    if (error || !data || !data.valid) {
-      console.log("Ungültige Lizenz oder Server-Key:", error);
+    if (error) {
+      console.log("Fehler bei der Lizenzüberprüfung:", error);
+      return new Response(JSON.stringify({ error: "Fehler bei der Lizenzüberprüfung" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      });
+    }
+    
+    if (!data || !data.valid) {
+      console.log("Ungültige Lizenz oder Server-Key:", data);
       return new Response(JSON.stringify({ error: "Ungültige Authentifizierungsdaten" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 401,
