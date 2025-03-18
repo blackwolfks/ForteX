@@ -21,10 +21,10 @@ CONFIG = {
     -- Ihr Server-Key (erhalten Sie von der Web-Admin-Oberfläche)
     ServerKey = "XXXXXXXXXXXX",
     
-    -- Die URL des API-Servers
-    ServerUrl = "https://ihre-domain.de/api/script",
+    -- Die URL des API-Servers (WICHTIG: Verwenden Sie die korrekte Supabase URL)
+    ServerUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/script",
     
-    -- Debug-Modus (auf false setzen für Produktion)
+    -- Debug-Modus (auf true setzen für mehr Informationen bei Problemen)
     Debug = true,
     
     -- Automatische Updates aktivieren
@@ -80,6 +80,27 @@ Das ForteX Framework bietet mehrere Sicherheitsebenen:
 2. Server-Key-Authentifizierung
 3. IP-Adress-Validierung (optional einstellbar im Admin-Panel)
 4. Skript-Validierung vor der Ausführung
+
+## Fehlerbehebung
+
+### HTML statt Lua-Code erhalten
+Wenn Sie eine Fehlermeldung wie `unexpected symbol near '<'` erhalten, bedeutet dies, dass das Framework HTML anstatt Lua-Code erhalten hat. Dies kann folgende Ursachen haben:
+
+1. **Falsche ServerUrl**: Stellen Sie sicher, dass die ServerUrl in der `config.lua` korrekt ist. Sie sollte auf die Supabase Edge Function zeigen, z.B. `https://fewcmtozntpedrsluawj.supabase.co/functions/v1/script`.
+
+2. **Authentifizierungsprobleme**: Überprüfen Sie, ob Ihr Lizenzschlüssel und Server-Key korrekt sind.
+
+3. **Netzwerkprobleme**: Überprüfen Sie, ob Ihr Server eine Verbindung zum Internet hat und keine Firewall den Zugriff blockiert.
+
+Aktivieren Sie den Debug-Modus in der `config.lua` (setzen Sie `Debug = true`), um mehr Informationen zu erhalten.
+
+### Debug-Modus
+
+Der Debug-Modus gibt zusätzliche Informationen in der Serverkonsole aus. Um ihn zu aktivieren, setzen Sie in der `config.lua`:
+
+```lua
+Debug = true
+```
 
 ## Support
 

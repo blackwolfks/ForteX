@@ -8,10 +8,10 @@ CONFIG = {
     -- Ihr Server-Key (erhalten Sie von der Web-Admin-Oberfläche)
     ServerKey = "XXXXXXXXXXXX",
     
-    -- Die URL des API-Servers
-    ServerUrl = "https://ihre-domain.de/api/script",
+    -- Die URL des API-Servers - WICHTIG: Verwenden Sie die korrekte Supabase-URL ohne Umleitungen
+    ServerUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/script",
     
-    -- Debug-Modus (auf false setzen für Produktion)
+    -- Debug-Modus (auf true setzen für mehr Informationen)
     Debug = true,
     
     -- Automatische Updates aktivieren

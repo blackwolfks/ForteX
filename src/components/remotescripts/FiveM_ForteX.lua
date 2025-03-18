@@ -37,7 +37,7 @@ if not CONFIG.LicenseKey or not CONFIG.ServerKey then
 end
 
 if not CONFIG.ServerUrl then
-    CONFIG.ServerUrl = "" -- Fill with your domain URL + /api/script
+    CONFIG.ServerUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/script"
     print("^3[ForteX] Warnung: ServerUrl nicht konfiguriert, verwende Standard-URL^7")
 end
 
@@ -62,12 +62,38 @@ function ValidateScript(scriptData)
         return false, "Leeres Skript empfangen"
     end
     
+    -- Prüfe auf HTML-Antwort (Fehlerfall)
+    if scriptData:match("^%s*<!doctype") or scriptData:match("^%s*<html") then
+        return false, "HTML-Antwort erhalten statt Lua-Code. Überprüfen Sie die ServerUrl in der Konfiguration."
+    end
+    
     -- Prüfe auf schädliche Inhalte (Beispiel)
     if scriptData:find("_G%s-=%s-nil") then
         return false, "Potenziell schädlicher Code erkannt"
     end
     
     return true, scriptData
+end
+
+-- Debug-Funktion für Antwortinhalte
+function DebugResponse(statusCode, responseData)
+    if CONFIG.Debug then
+        print("^3[ForteX] Debug - Status Code: " .. tostring(statusCode) .. "^7")
+        
+        if responseData then
+            local previewLength = 100
+            local preview = responseData:sub(1, previewLength)
+            print("^3[ForteX] Debug - Antwortdaten (ersten " .. previewLength .. " Zeichen): " .. preview .. "^7")
+            
+            -- Prüfe auf bekannte Antwortprobleme
+            if preview:match("<!doctype") or preview:match("<html") then
+                print("^1[ForteX] Debug - Die Antwort enthält HTML anstatt Lua-Code. Dies deutet auf ein Verbindungs- oder Konfigurationsproblem hin.^7")
+                print("^1[ForteX] Debug - Überprüfen Sie die ServerUrl in config.lua und stellen Sie sicher, dass sie direkt auf die Edge Function zeigt.^7")
+            end
+        else
+            print("^3[ForteX] Debug - Keine Antwortdaten erhalten^7")
+        end
+    end
 end
 
 -- Funktion zum Laden und Ausführen des Remote-Skripts
@@ -78,6 +104,11 @@ function LoadRemoteScript()
     local auth = base64encode(CONFIG.LicenseKey .. ":" .. CONFIG.ServerKey)
     
     PerformHttpRequest(CONFIG.ServerUrl, function(statusCode, responseData, responseHeaders)
+        -- Debug-Informationen ausgeben
+        if CONFIG.Debug then
+            DebugResponse(statusCode, responseData)
+        end
+        
         if statusCode ~= 200 then
             print("^1[ForteX] Fehler beim Abrufen des Skripts: " .. tostring(statusCode) .. "^7")
             if statusCode == 401 then
@@ -86,6 +117,10 @@ function LoadRemoteScript()
                 print("^1[ForteX] Zugriff verweigert - möglicherweise IP-Beschränkung oder inaktive Lizenz^7")
             elseif statusCode == 404 then
                 print("^1[ForteX] Skript nicht gefunden^7")
+            elseif statusCode == 0 then
+                print("^1[ForteX] Verbindungsfehler - überprüfen Sie die ServerUrl in der Konfiguration^7")
+            elseif statusCode >= 500 then
+                print("^1[ForteX] Serverfehler - bitte kontaktieren Sie den Support^7")
             end
             return
         end
@@ -129,6 +164,10 @@ ForteX.LoadFile = function(filePath, callback)
     local url = CONFIG.ServerUrl .. "/" .. filePath
     
     PerformHttpRequest(url, function(statusCode, responseData, responseHeaders)
+        if CONFIG.Debug then
+            DebugResponse(statusCode, responseData)
+        end
+        
         if statusCode ~= 200 then
             print("^1[ForteX] Fehler beim Abrufen der Datei: " .. tostring(statusCode) .. "^7")
             if callback then callback(false, "Fehler: " .. tostring(statusCode)) end
