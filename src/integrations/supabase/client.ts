@@ -50,8 +50,8 @@ type RpcFunctionName =
   | 'regenerate_server_key'    
   | 'update_license'
   | 'delete_license'
-  | 'get_file_access_for_license'  // Add the new RPC function
-  | 'update_file_access';          // Add the new RPC function
+  | 'get_file_access_for_license'  
+  | 'update_file_access';          
 
 // Define parameter types for each RPC function
 type RpcParams = {

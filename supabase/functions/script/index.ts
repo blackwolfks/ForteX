@@ -19,7 +19,8 @@ serve(async (req) => {
   }
 
   try {
-    console.log("Script API wurde aufgerufen");
+    const url = new URL(req.url);
+    console.log("Script API wurde aufgerufen:", url.pathname);
     
     // Lizenzschlüssel und Server-Key aus den Headers extrahieren
     const licenseKey = req.headers.get("x-license-key");
@@ -76,10 +77,70 @@ serve(async (req) => {
       });
     }
     
+    // Extrahiere spezifischen Dateipfad aus der URL
+    // Format: /api/script/filename.lua
+    const pathParts = url.pathname.split('/');
+    const specificFile = pathParts.length > 2 ? pathParts.slice(2).join('/') : null;
+    
     // Überprüfen, ob ein Skript-Datei-Upload existiert
     if (data.has_file_upload) {
-      // Dateien aus dem Storage abrufen
-      const { data: storageData, error: storageError } = await supabase.storage
+      // Wenn ein spezifischer Dateipfad angefordert wurde
+      if (specificFile) {
+        console.log(`Spezifische Datei angefordert: ${specificFile}`);
+        
+        // Vollständigen Pfad erstellen
+        const fullPath = `${data.id}/${specificFile}`;
+        
+        // Überprüfen, ob der Benutzer Zugriff auf diese Datei hat
+        const { data: accessData, error: accessError } = await supabase
+          .from("script_file_access")
+          .select("is_public")
+          .eq("license_id", data.id)
+          .eq("file_path", fullPath)
+          .maybeSingle();
+        
+        if (accessError) {
+          console.log("Fehler beim Abrufen der Datei-Zugriffsrechte:", accessError);
+          return new Response(JSON.stringify({ error: "Fehler beim Abrufen der Zugriffsrechte" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 500,
+          });
+        }
+        
+        // Wenn die Datei nicht existiert oder nicht öffentlich ist
+        if (!accessData || !accessData.is_public) {
+          console.log(`Zugriff auf Datei verweigert: ${fullPath}`);
+          return new Response(JSON.stringify({ error: "Zugriff auf Datei verweigert" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 403,
+          });
+        }
+        
+        // Datei herunterladen
+        const { data: fileData, error: fileError } = await supabase.storage
+          .from("script-files")
+          .download(fullPath);
+        
+        if (fileError) {
+          console.log("Fehler beim Herunterladen der Datei:", fileError);
+          return new Response(JSON.stringify({ error: "Fehler beim Herunterladen der Datei" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 500,
+          });
+        }
+        
+        // Datei als Text senden
+        const fileText = await fileData.text();
+        console.log(`Datei erfolgreich gesendet: ${fullPath}`);
+        
+        return new Response(fileText, {
+          headers: { ...corsHeaders, "Content-Type": "text/plain" },
+          status: 200,
+        });
+      }
+      
+      // Wenn keine spezifische Datei angefordert wurde, listet Dateien auf
+      const { data: storageFiles, error: storageError } = await supabase.storage
         .from("script-files")
         .list(data.id.toString());
       
@@ -109,17 +170,17 @@ serve(async (req) => {
       const publicFiles = accessData?.filter(file => file.is_public) || [];
       
       // Wenn es keine öffentlichen Dateien gibt, aber eine main.lua, diese verwenden
-      let mainFile = storageData.find(file => 
+      let mainFile = storageFiles.find(file => 
         publicFiles.some(pf => pf.file_path === `${data.id}/${file.name}`) || file.name === "main.lua"
       );
       
       // Wenn keine öffentliche oder main.lua Datei gefunden wurde, nach anderen Dateien suchen
       if (!mainFile) {
-        const luaFiles = storageData.filter(file => file.name.endsWith('.lua'));
+        const luaFiles = storageFiles.filter(file => file.name.endsWith('.lua'));
         if (luaFiles.length > 0) {
           mainFile = luaFiles[0]; // Erste .lua-Datei verwenden
-        } else if (storageData.length > 0) {
-          mainFile = storageData[0]; // Irgendeine Datei verwenden
+        } else if (storageFiles.length > 0) {
+          mainFile = storageFiles[0]; // Irgendeine Datei verwenden
         }
       }
       
