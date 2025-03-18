@@ -6,7 +6,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.33.1"
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-license-key, x-server-key",
-  "Access-Control-Allow-Methods": "GET, OPTIONS"
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS"
 };
 
 serve(async (req) => {
@@ -26,22 +26,47 @@ serve(async (req) => {
     const licenseKey = req.headers.get("x-license-key");
     const serverKey = req.headers.get("x-server-key");
     
+    // Alternative: Extrahiere aus dem Body, falls die Headers nicht gesetzt sind
+    let bodyData = {};
+    if (!licenseKey || !serverKey) {
+      try {
+        if (req.method === "POST") {
+          bodyData = await req.json();
+          if (!licenseKey && bodyData.license_key) {
+            console.log("Lizenzschlüssel aus dem Body extrahiert");
+          }
+          if (!serverKey && bodyData.server_key) {
+            console.log("Server-Key aus dem Body extrahiert");
+          }
+        }
+      } catch (e) {
+        console.log("Keine Body-Daten vorhanden oder kein gültiges JSON");
+      }
+    }
+    
+    // Verwende die Werte aus den Headers oder dem Body
+    const finalLicenseKey = licenseKey || bodyData.license_key;
+    const finalServerKey = serverKey || bodyData.server_key;
+    
     // IP-Adresse des anfragenden Servers erhalten
     const clientIp = req.headers.get("x-forwarded-for") || "unknown";
     
-    console.log(`Anfrage von IP: ${clientIp}, Lizenzschlüssel: ${licenseKey}, Server-Key: ${serverKey}`);
+    console.log(`Anfrage von IP: ${clientIp}, Lizenzschlüssel: ${finalLicenseKey}, Server-Key: ${finalServerKey}`);
     
     // Überprüfen, ob die erforderlichen Header vorhanden sind
-    if (!licenseKey || !serverKey) {
+    if (!finalLicenseKey || !finalServerKey) {
       console.log("Fehlende Authentifizierungsdaten");
-      return new Response(JSON.stringify({ error: "Fehlende Authentifizierungsdaten" }), {
+      return new Response(JSON.stringify({ 
+        error: "Fehlende Authentifizierungsdaten",
+        message: "Bitte stellen Sie sicher, dass die X-License-Key und X-Server-Key Header oder entsprechende POST-Parameter gesetzt sind."
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 401,
       });
     }
     
     // WICHTIG: Test-Authentifizierung überprüfen und immer akzeptieren
-    if (licenseKey === "ABCD-EFGH-IJKL-MNOP" && serverKey === "123456789ABC") {
+    if (finalLicenseKey === "ABCD-EFGH-IJKL-MNOP" && finalServerKey === "123456789ABC") {
       console.log("Test-Authentifizierung erfolgreich - direkte Antwort wird gesendet");
       return new Response(
         `-- ForteX Test Script
@@ -80,8 +105,8 @@ print("^2Die Testkeys ABCD-EFGH-IJKL-MNOP und 123456789ABC wurden erfolgreich va
     
     // Lizenz in der Datenbank überprüfen mit beiden Schlüsseln
     const { data, error } = await supabase.rpc("check_license_by_keys", {
-      p_license_key: licenseKey,
-      p_server_key: serverKey
+      p_license_key: finalLicenseKey,
+      p_server_key: finalServerKey
     });
     
     if (error) {

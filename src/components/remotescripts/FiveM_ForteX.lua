@@ -1,4 +1,3 @@
-
 --[[ 
   ForteX Framework - Remote Script Loader
   
@@ -173,63 +172,72 @@ function LoadRemoteScript()
     -- Zuerst die Lizenz in der Datenbank überprüfen
     VerifyLicenseWithDatabase(CONFIG.LicenseKey, CONFIG.ServerKey, function(isValid, result)
         if not isValid then
-            print(ERROR_PREFIX .. " Lizenzprüfung in der Datenbank fehlgeschlagen - Skript wird nicht geladen^7")
+            print(ERROR_PREFIX .. " Lizenzprüfung in der Datenbank fehlgeschlagen - versuche direkt das Skript zu laden^7")
+            LoadScriptDirectly() -- Trotzdem versuchen, das Skript direkt zu laden
             return
         end
         
         -- Nach erfolgreicher Datenbankprüfung das Skript laden
         print(SUCCESS_PREFIX .. " Lizenz in der Datenbank bestätigt, lade Skript...^7")
-        
-        PerformHttpRequest(CONFIG.ServerUrl, function(statusCode, responseData, responseHeaders)
-            -- Debug-Informationen ausgeben
-            DebugResponse(statusCode, responseData, responseHeaders)
-            
-            if statusCode ~= 200 then
-                print(ERROR_PREFIX .. " Fehler beim Abrufen des Skripts: " .. tostring(statusCode) .. "^7")
-                if statusCode == 401 then
-                    print(ERROR_PREFIX .. " Authentifizierungsfehler - überprüfen Sie Ihren Lizenzschlüssel und Server-Key^7")
-                    print(ERROR_PREFIX .. " Ihre Config-Werte: LicenseKey=" .. CONFIG.LicenseKey .. ", ServerKey=" .. CONFIG.ServerKey .. "^7")
-                elseif statusCode == 403 then
-                    print(ERROR_PREFIX .. " Zugriff verweigert - möglicherweise IP-Beschränkung oder inaktive Lizenz^7")
-                elseif statusCode == 404 then
-                    print(ERROR_PREFIX .. " Skript nicht gefunden^7")
-                elseif statusCode == 0 then
-                    print(ERROR_PREFIX .. " Verbindungsfehler - überprüfen Sie die ServerUrl in der Konfiguration^7")
-                elseif statusCode >= 500 then
-                    print(ERROR_PREFIX .. " Serverfehler - bitte kontaktieren Sie den Support^7")
-                end
-                return
-            end
-            
-            print(SUCCESS_PREFIX .. " Skript erfolgreich abgerufen^7")
-            
-            -- Skript validieren
-            local isValid, scriptOrError = ValidateScript(responseData)
-            if not isValid then
-                print(ERROR_PREFIX .. " Skript-Validierung fehlgeschlagen: " .. scriptOrError .. "^7")
-                return
-            end
-            
-            -- Skript ausführen
-            print(PREFIX .. " Führe Skript aus...^7")
-            local func, err = load(scriptOrError)
-            if func then
-                local success, error = pcall(func)
-                if success then
-                    print(SUCCESS_PREFIX .. " Skript erfolgreich geladen und ausgeführt^7")
-                else
-                    print(ERROR_PREFIX .. " Fehler beim Ausführen des Skripts: " .. tostring(error) .. "^7")
-                end
-            else
-                print(ERROR_PREFIX .. " Fehler beim Kompilieren des Skripts: " .. tostring(err) .. "^7")
-            end
-        end, "GET", "", {
-            ["X-License-Key"] = CONFIG.LicenseKey,
-            ["X-Server-Key"] = CONFIG.ServerKey,
-            ["User-Agent"] = "FiveM-ForteX/1.0",
-            ["Accept"] = "text/plain"
-        })
+        LoadScriptDirectly()
     end)
+end
+
+-- Funktion zum direkten Laden des Skripts
+function LoadScriptDirectly()
+    PerformHttpRequest(CONFIG.ServerUrl, function(statusCode, responseData, responseHeaders)
+        -- Debug-Informationen ausgeben
+        DebugResponse(statusCode, responseData, responseHeaders)
+        
+        if statusCode ~= 200 then
+            print(ERROR_PREFIX .. " Fehler beim Abrufen des Skripts: " .. tostring(statusCode) .. "^7")
+            if statusCode == 401 then
+                print(ERROR_PREFIX .. " Authentifizierungsfehler - überprüfen Sie Ihren Lizenzschlüssel und Server-Key^7")
+                print(ERROR_PREFIX .. " Ihre Config-Werte: LicenseKey=" .. CONFIG.LicenseKey .. ", ServerKey=" .. CONFIG.ServerKey .. "^7")
+            elseif statusCode == 403 then
+                print(ERROR_PREFIX .. " Zugriff verweigert - möglicherweise IP-Beschränkung oder inaktive Lizenz^7")
+            elseif statusCode == 404 then
+                print(ERROR_PREFIX .. " Skript nicht gefunden^7")
+            elseif statusCode == 0 then
+                print(ERROR_PREFIX .. " Verbindungsfehler - überprüfen Sie die ServerUrl in der Konfiguration^7")
+            elseif statusCode >= 500 then
+                print(ERROR_PREFIX .. " Serverfehler - bitte kontaktieren Sie den Support^7")
+            end
+            return
+        end
+        
+        print(SUCCESS_PREFIX .. " Skript erfolgreich abgerufen^7")
+        
+        -- Skript validieren
+        local isValid, scriptOrError = ValidateScript(responseData)
+        if not isValid then
+            print(ERROR_PREFIX .. " Skript-Validierung fehlgeschlagen: " .. scriptOrError .. "^7")
+            return
+        end
+        
+        -- Skript ausführen
+        print(PREFIX .. " Führe Skript aus...^7")
+        local func, err = load(scriptOrError)
+        if func then
+            local success, error = pcall(func)
+            if success then
+                print(SUCCESS_PREFIX .. " Skript erfolgreich geladen und ausgeführt^7")
+            else
+                print(ERROR_PREFIX .. " Fehler beim Ausführen des Skripts: " .. tostring(error) .. "^7")
+            end
+        else
+            print(ERROR_PREFIX .. " Fehler beim Kompilieren des Skripts: " .. tostring(err) .. "^7")
+        end
+    end, "POST", json.encode({
+        license_key = CONFIG.LicenseKey,
+        server_key = CONFIG.ServerKey
+    }), {
+        ["Content-Type"] = "application/json",
+        ["X-License-Key"] = CONFIG.LicenseKey,
+        ["X-Server-Key"] = CONFIG.ServerKey,
+        ["User-Agent"] = "FiveM-ForteX/1.0",
+        ["Accept"] = "text/plain"
+    })
 end
 
 -- ForteX API für andere Ressourcen
