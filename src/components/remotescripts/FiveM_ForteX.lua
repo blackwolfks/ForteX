@@ -1,3 +1,4 @@
+
 --[[ 
   ForteX Framework - Remote Script Loader
   
@@ -24,7 +25,7 @@ end
 
 -- Konfigurationsdatei laden
 local resourceName = GetCurrentResourceName()
-local configFile = LoadResourceFile(resourceName, "config.lua")
+local configFile = LoadResourceFile(resourceName, "ForteX_config.lua")
 
 -- Farben und Prefixes für Konsolenausgaben definieren
 local PREFIX = "^8[^1CRX^8, ^3ForteX^8]^0"
@@ -53,14 +54,14 @@ Citizen.CreateThread(function()
 end)
 
 if not configFile then
-    print(ERROR_PREFIX .. " Fehler: config.lua konnte nicht geladen werden^7")
+    print(ERROR_PREFIX .. " Fehler: ForteX_config.lua konnte nicht geladen werden^7")
     return
 end
 
 -- Config-Datei ausführen
 local configFunc, configError = load(configFile)
 if not configFunc then
-    print(ERROR_PREFIX .. " Fehler beim Laden der config.lua: " .. tostring(configError) .. "^7")
+    print(ERROR_PREFIX .. " Fehler beim Laden der ForteX_config.lua: " .. tostring(configError) .. "^7")
     return
 end
 
@@ -129,7 +130,7 @@ function DebugResponse(statusCode, responseData)
             -- Prüfe auf bekannte Antwortprobleme
             if preview:match("<!doctype") or preview:match("<html") then
                 print(ERROR_PREFIX .. " Die Antwort enthält HTML anstatt Lua-Code. Dies deutet auf ein Verbindungs- oder Konfigurationsproblem hin.^7")
-                print(ERROR_PREFIX .. " Überprüfen Sie die ServerUrl in config.lua und stellen Sie sicher, dass sie direkt auf die Edge Function zeigt.^7")
+                print(ERROR_PREFIX .. " Überprüfen Sie die ServerUrl in ForteX_config.lua und stellen Sie sicher, dass sie direkt auf die Edge Function zeigt.^7")
             end
         else
             print(DEBUG_PREFIX .. " Keine Antwortdaten erhalten^7")

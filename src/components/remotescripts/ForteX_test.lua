@@ -53,6 +53,21 @@ print("^3License Key: ^0" .. CONFIG.LicenseKey)
 print("^3Server Key: ^0" .. CONFIG.ServerKey)
 print("^3Server URL: ^0" .. CONFIG.ServerUrl)
 
+-- Base64-Encoding Funktion (von FiveM_ForteX.lua kopiert)
+local b = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+function base64encode(data)
+    return ((data:gsub('.', function(x) 
+        local r,b='',x:byte()
+        for i=8,1,-1 do r=r..(b%2^i-b%2^(i-1)>0 and '1' or '0') end
+        return r;
+    end)..'0000'):gsub('%d%d%d?%d?%d?%d?', function(x)
+        if (#x < 6) then return '' end
+        local c=0
+        for i=1,6 do c=c+(x:sub(i,i)=='1' and 2^(6-i) or 0) end
+        return b:sub(c+1,c+1)
+    end)..({ '', '==', '=' })[#data%3+1])
+end
+
 -- API-Anfrage Beispiel
 local function TestApiRequest()
     print("^3Teste API-Verbindung...^0")
@@ -67,7 +82,9 @@ local function TestApiRequest()
         end
         
         print("^2API-Test erfolgreich!^0")
-        print("^3Erste 100 Zeichen der Antwort: ^0" .. responseData:sub(1, 100) .. "...")
+        if responseData then
+            print("^3Erste 100 Zeichen der Antwort: ^0" .. responseData:sub(1, 100) .. "...")
+        end
     end, "GET", "", {
         ["Authorization"] = "Basic " .. auth,
         ["X-License-Key"] = CONFIG.LicenseKey,
@@ -75,21 +92,6 @@ local function TestApiRequest()
         ["User-Agent"] = "FiveM-ForteX-Test/1.0",
         ["Accept"] = "text/plain"
     })
-end
-
--- Base64-Encoding Funktion (von FiveM_ForteX.lua kopiert)
-local b = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
-function base64encode(data)
-    return ((data:gsub('.', function(x) 
-        local r,b='',x:byte()
-        for i=8,1,-1 do r=r..(b%2^i-b%2^(i-1)>0 and '1' or '0') end
-        return r;
-    end)..'0000'):gsub('%d%d%d?%d?%d?%d?', function(x)
-        if (#x < 6) then return '' end
-        local c=0
-        for i=1,6 do c=c+(x:sub(i,i)=='1' and 2^(6-i) or 0) end
-        return b:sub(c+1,c+1)
-    end)..({ '', '==', '=' })[#data%3+1])
 end
 
 -- Warte 2 Sekunden und führe den API-Test aus
