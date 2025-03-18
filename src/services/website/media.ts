@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { imageUtils } from "@/lib/image-utils";
+import { checkStorageBucket } from "@/lib/supabase";
 
 export const mediaService = {
   async ensureBucketExists(bucketName: string = 'websites'): Promise<boolean> {
@@ -12,14 +13,16 @@ export const mediaService = {
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) {
         console.error("[MediaService] User is not authenticated, cannot check/create bucket");
+        toast.error("Sie müssen angemeldet sein, um den Storage-Bucket zu nutzen");
         return false;
       }
       
-      // Check if the bucket exists
+      // Check if the bucket exists with more detailed error logging
       const { data: buckets, error: listError } = await supabase.storage.listBuckets();
       
       if (listError) {
         console.error("[MediaService] Error checking buckets:", listError);
+        console.error("[MediaService] Error details:", JSON.stringify(listError));
         
         // If permission error, provide specific feedback
         if (listError.message.includes("permission") || listError.message.includes("not authorized")) {
@@ -35,13 +38,16 @@ export const mediaService = {
       if (!bucketExists) {
         console.log(`[MediaService] Bucket '${bucketName}' does not exist, attempting to create it...`);
         
-        // Try to create the bucket
-        const { error: createError } = await supabase.storage.createBucket(bucketName, {
+        // Try to create the bucket with detailed logging
+        const { data, error: createError } = await supabase.storage.createBucket(bucketName, {
           public: true
         });
         
+        console.log("[MediaService] Create bucket response:", data);
+        
         if (createError) {
           console.error(`[MediaService] Failed to create bucket '${bucketName}':`, createError);
+          console.error("[MediaService] Full error details:", JSON.stringify(createError));
           
           // Give more detailed error based on error type
           if (createError.message.includes("already exists")) {
@@ -114,12 +120,21 @@ export const mediaService = {
         return null;
       }
 
-      // Ensure the bucket exists before attempting upload
+      // Ensure the bucket exists before attempting upload with extra debugging
       const bucketExists = await this.ensureBucketExists('websites');
+      console.log("[MediaService] Bucket exists check returned:", bucketExists);
+      
       if (!bucketExists) {
         console.error("[MediaService] 'websites' bucket does not exist and could not be created");
-        toast.error("Fehler: Storage-Bucket konnte nicht erstellt werden. Bitte kontaktieren Sie den Administrator.");
-        return null;
+        
+        // Try to create the bucket one more time with alternative method
+        const retryCreate = await checkStorageBucket('websites');
+        console.log("[MediaService] Retry create bucket returned:", retryCreate);
+        
+        if (!retryCreate) {
+          toast.error("Fehler: Storage-Bucket konnte nicht erstellt werden. Bitte kontaktieren Sie den Administrator.");
+          return null;
+        }
       }
       console.log("[MediaService] 'websites' bucket exists, proceeding with upload");
 

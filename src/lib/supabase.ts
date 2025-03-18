@@ -65,3 +65,49 @@ export type Invoice = {
   invoice_date?: string;
   invoice_url?: string;
 };
+
+// Hilfsfunktion, um den Status eines Storage-Buckets zu prüfen und zu erstellen
+export const checkStorageBucket = async (bucketName: string = 'websites'): Promise<boolean> => {
+  try {
+    console.log(`Überprüfe Storage-Bucket '${bucketName}'...`);
+    
+    // Session überprüfen
+    const { data: sessionData } = await supabaseClient.auth.getSession();
+    if (!sessionData.session) {
+      console.error("Nicht authentifiziert. Bitte melden Sie sich an, um den Storage zu nutzen.");
+      return false;
+    }
+    
+    // Bucket-Liste abrufen
+    const { data: buckets, error: listError } = await supabaseClient.storage.listBuckets();
+    
+    if (listError) {
+      console.error("Fehler beim Abrufen der Buckets:", listError);
+      return false;
+    }
+    
+    const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
+    
+    if (!bucketExists) {
+      console.log(`Bucket '${bucketName}' existiert nicht. Versuche ihn zu erstellen...`);
+      
+      const { data, error: createError } = await supabaseClient.storage.createBucket(bucketName, {
+        public: true
+      });
+      
+      if (createError) {
+        console.error(`Fehler beim Erstellen des Buckets '${bucketName}':`, createError);
+        return false;
+      }
+      
+      console.log(`Bucket '${bucketName}' erfolgreich erstellt.`);
+      return true;
+    }
+    
+    console.log(`Bucket '${bucketName}' existiert bereits.`);
+    return true;
+  } catch (error) {
+    console.error("Unerwarteter Fehler beim Überprüfen/Erstellen des Buckets:", error);
+    return false;
+  }
+};
