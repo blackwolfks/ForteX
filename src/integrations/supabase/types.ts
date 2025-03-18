@@ -208,6 +208,41 @@ export type Database = {
         }
         Relationships: []
       }
+      script_file_access: {
+        Row: {
+          created_at: string
+          file_path: string
+          id: string
+          is_public: boolean
+          license_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          file_path: string
+          id?: string
+          is_public?: boolean
+          license_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          file_path?: string
+          id?: string
+          is_public?: boolean
+          license_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "script_file_access_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "server_licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       server_licenses: {
         Row: {
           aktiv: boolean | null

@@ -24,6 +24,13 @@ interface FileItem {
   children?: FileItem[];
 }
 
+interface FileAccess {
+  id?: string;
+  license_id: string;
+  file_path: string;
+  is_public: boolean;
+}
+
 const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,14 +53,16 @@ const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
         return;
       }
 
-      // Zugriffsrechte abrufen
+      // Zugriffsrechte direkt mit RPC-Funktion abrufen
+      // Da die Tabelle neu ist, verwenden wir raw query anstelle von direktem Table-Zugriff
       const { data: accessData, error: accessError } = await supabase
-        .from("script_file_access")
-        .select("file_path, is_public")
-        .eq("license_id", licenseId);
+        .rpc('get_file_access_for_license', { 
+          p_license_id: licenseId 
+        });
 
       if (accessError) {
         console.error("Fehler beim Abrufen der Zugriffsrechte:", accessError);
+        toast.error("Fehler beim Laden der Zugriffsrechte");
       }
 
       // Dateien mit Zugriffsrechten zusammenführen
@@ -61,7 +70,7 @@ const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
         .filter(file => !file.name.startsWith(".")) // Versteckte Dateien ausblenden
         .map(file => {
           const fullPath = `${licenseId}/${file.name}`;
-          const accessInfo = accessData?.find(a => a.file_path === fullPath);
+          const accessInfo = accessData?.find((a: FileAccess) => a.file_path === fullPath);
           
           return {
             name: file.name,
@@ -93,31 +102,17 @@ const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
     try {
       // Für jede Datei die Zugriffsrechte aktualisieren
       for (const file of files) {
-        // Prüfen, ob bereits ein Eintrag existiert
-        const { data: existingData } = await supabase
-          .from("script_file_access")
-          .select("id")
-          .eq("license_id", licenseId)
-          .eq("file_path", file.fullPath)
-          .single();
-
-        if (existingData) {
-          // Eintrag aktualisieren
-          await supabase
-            .from("script_file_access")
-            .update({
-              is_public: file.isPublic
-            })
-            .eq("id", existingData.id);
-        } else {
-          // Neuen Eintrag erstellen
-          await supabase
-            .from("script_file_access")
-            .insert({
-              license_id: licenseId,
-              file_path: file.fullPath,
-              is_public: file.isPublic
-            });
+        // Verwende die RPC-Funktion zum Speichern der Zugriffsrechte
+        const { error } = await supabase
+          .rpc('update_file_access', {
+            p_license_id: licenseId,
+            p_file_path: file.fullPath,
+            p_is_public: file.isPublic
+          });
+          
+        if (error) {
+          console.error("Fehler beim Speichern der Zugriffsrechte:", error);
+          throw error;
         }
       }
 
