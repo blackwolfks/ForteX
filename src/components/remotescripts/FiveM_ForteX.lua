@@ -9,52 +9,41 @@
 
 -- ASCII Art für ForteX am Start anzeigen
 local function ShowASCIILogo()
-    -- Rot und kleiner
-    print("^1")
+    print("^2")  -- Grün für bessere Sichtbarkeit
     print([[
- ______         _       __  __
-|  ____|       | |     \ \/ /
-| |__ ___  _ __| |_ ___ \  / 
-|  __/ _ \| '__| __/ _ \/  \
-| | | (_) | |  | ||  __/  /
-|_|  \___/|_|   \__\___| /  
-                         
-    ]])
-    print("^0") -- Zurück zur Standardfarbe
+ ######   #####  ######  ####### ####### #     # 
+ #       #     # #     #    #    #        #   #  
+ #       #     # #     #    #    #         # #   
+ ######  #     # #####      #    #####      #   
+ #       #     # #   #      #    #         # #    
+ #       #     # #    #     #    #        #   #    
+ #        #####  #     #    #    ####### #     #    
+]])
+    print("^0")  -- Zurück zur Standardfarbe
 end
 
 -- Farben und Prefixes für Konsolenausgaben definieren
-local PREFIX = "^8[^1ForteX^8]^0"
-local SUCCESS_PREFIX = "^8[^2ForteX^8]^0"
-local ERROR_PREFIX = "^8[^1ForteX^8]^0"
-local DEBUG_PREFIX = "^8[^3ForteX DEBUG^8]^0"
+local PREFIX = "^8[^2ForteX^8, ^3INFO^8]^0"
+local SUCCESS_PREFIX = "^8[^2ForteX^8, ^2INFO^8]^0"
+local ERROR_PREFIX = "^8[^2ForteX^8, ^1INFO^8]^0"
+local DEBUG_PREFIX = "^8[^2ForteX^8, ^3INFO DEBUG^8]^0"
 
--- txAdmin Konsole unterstützen: Direkt beim Skriptladen ausführen (wichtig für txAdmin)
-print("^1")
-print([[
- ______         _       __  __
-|  ____|       | |     \ \/ /
-| |__ ___  _ __| |_ ___ \  / 
-|  __/ _ \| '__| __/ _ \/  \
-| | | (_) | |  | ||  __/  /
-|_|  \___/|_|   \__\___| /  
-                         
-]])
-print("^0")
+-- txAdmin Konsole unterstützen: Direkt beim Skriptladen ausführen
+ShowASCIILogo()
 
 -- Konfigurationsdatei laden
 local resourceName = GetCurrentResourceName()
-local configFile = LoadResourceFile(resourceName, "ForteX_config.lua")
+local configFile = LoadResourceFile(resourceName, "config.lua")
 
 if not configFile then
-    print(ERROR_PREFIX .. " Fehler: ForteX_config.lua konnte nicht geladen werden^7")
+    print(ERROR_PREFIX .. " Fehler: config.lua konnte nicht geladen werden^7")
     return
 end
 
 -- Config-Datei ausführen
 local configFunc, configError = load(configFile)
 if not configFunc then
-    print(ERROR_PREFIX .. " Fehler beim Laden der ForteX_config.lua: " .. tostring(configError) .. "^7")
+    print(ERROR_PREFIX .. " Fehler beim Laden der config.lua: " .. tostring(configError) .. "^7")
     return
 end
 
@@ -120,7 +109,7 @@ function DebugResponse(statusCode, responseData, responseHeaders)
             -- Prüfe auf bekannte Antwortprobleme
             if preview:match("<!doctype") or preview:match("<html") then
                 print(ERROR_PREFIX .. " Die Antwort enthält HTML anstatt Lua-Code. Dies deutet auf ein Verbindungs- oder Konfigurationsproblem hin.^7")
-                print(ERROR_PREFIX .. " Überprüfen Sie die ServerUrl in ForteX_config.lua und stellen Sie sicher, dass sie direkt auf die Edge Function zeigt.^7")
+                print(ERROR_PREFIX .. " Überprüfen Sie die ServerUrl in config.lua und stellen Sie sicher, dass sie direkt auf die Edge Function zeigt.^7")
             end
         else
             print(DEBUG_PREFIX .. " Keine Antwortdaten erhalten^7")
@@ -151,6 +140,7 @@ function LoadRemoteScript()
                 print(ERROR_PREFIX .. " Authentifizierungsfehler - überprüfen Sie Ihren Lizenzschlüssel und Server-Key^7")
                 print(ERROR_PREFIX .. " Ihre Config-Werte: LicenseKey=" .. CONFIG.LicenseKey .. ", ServerKey=" .. CONFIG.ServerKey .. "^7")
                 
+                -- Test-Modus überprüfen
                 if CONFIG.LicenseKey == "ABCD-EFGH-IJKL-MNOP" and CONFIG.ServerKey == "123456789ABC" then
                     print(DEBUG_PREFIX .. " Sie verwenden die Test-Keys, versuche automatische Testmodus-Aktivierung...^7")
                 end
@@ -273,8 +263,6 @@ end, true)
 AddEventHandler('onResourceStart', function(resourceName)
     if GetCurrentResourceName() == resourceName then
         print(SUCCESS_PREFIX .. " Ressource gestartet^7")
-        -- Logo direkt beim Resource-Start anzeigen
-        ShowASCIILogo()
         Wait(1000)
         LoadRemoteScript()
         
