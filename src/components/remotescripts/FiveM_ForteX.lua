@@ -1,3 +1,4 @@
+
 --[[ 
   ForteX Framework - Remote Script Loader
   
@@ -110,6 +111,29 @@ function DebugResponse(statusCode, responseData, responseHeaders)
                 print(ERROR_PREFIX .. " Die Antwort enthält HTML anstatt Lua-Code. Dies deutet auf ein Verbindungs- oder Konfigurationsproblem hin.^7")
                 print(ERROR_PREFIX .. " Überprüfen Sie die ServerUrl in config.lua und stellen Sie sicher, dass sie direkt auf die Edge Function zeigt.^7")
             end
+            
+            -- Prüfe auf JSON-Antwort (wahrscheinlich ein Fehler)
+            if preview:match("^%s*{") then
+                local jsonData = json.decode(responseData)
+                if jsonData and jsonData.error then
+                    print(ERROR_PREFIX .. " Fehler vom Server erhalten: " .. tostring(jsonData.error) .. "^7")
+                    
+                    -- Debug-Informationen anzeigen, wenn vorhanden
+                    if jsonData.debug then
+                        print(DEBUG_PREFIX .. " Debug-Informationen: ")
+                        for k, v in pairs(jsonData.debug) do
+                            if type(v) == "table" then
+                                print("  " .. k .. ": ")
+                                for subk, subv in pairs(v) do
+                                    print("    " .. subk .. ": " .. tostring(subv))
+                                end
+                            else
+                                print("  " .. k .. ": " .. tostring(v))
+                            end
+                        end
+                    end
+                end
+            end
         else
             print(DEBUG_PREFIX .. " Keine Antwortdaten erhalten^7")
         end
@@ -159,7 +183,9 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
         server_key = serverKey
     }), {
         ["Content-Type"] = "application/json",
-        ["User-Agent"] = "FiveM-ForteX/1.0"
+        ["User-Agent"] = "FiveM-ForteX/1.0",
+        ["X-License-Key"] = licenseKey,
+        ["X-Server-Key"] = serverKey
     })
 end
 
@@ -204,6 +230,15 @@ function LoadScriptDirectly()
                 print(ERROR_PREFIX .. " Serverfehler - bitte kontaktieren Sie den Support^7")
             end
             return
+        }
+        
+        -- Prüfen ob die Antwort ein JSON-Fehlerobjekt ist
+        if responseData:match("^%s*{") then
+            local jsonData = json.decode(responseData)
+            if jsonData and jsonData.error then
+                print(ERROR_PREFIX .. " Serverfehler: " .. tostring(jsonData.error) .. "^7")
+                return
+            end
         end
         
         print(SUCCESS_PREFIX .. " Skript erfolgreich abgerufen^7")
@@ -213,7 +248,7 @@ function LoadScriptDirectly()
         if not isValid then
             print(ERROR_PREFIX .. " Skript-Validierung fehlgeschlagen: " .. scriptOrError .. "^7")
             return
-        end
+        }
         
         -- Skript ausführen
         print(PREFIX .. " Führe Skript aus...^7")
@@ -251,20 +286,20 @@ ForteX.LoadFile = function(filePath, callback)
             print(ERROR_PREFIX .. " Lizenzprüfung in der Datenbank fehlgeschlagen - Datei wird nicht geladen^7")
             if callback then callback(false, "Ungültige Lizenz") end
             return
-        end
+        }
         
         local url = CONFIG.ServerUrl .. "/" .. filePath
         
         PerformHttpRequest(url, function(statusCode, responseData, responseHeaders)
             if CONFIG.Debug then
                 DebugResponse(statusCode, responseData, responseHeaders)
-            end
+            }
             
             if statusCode ~= 200 then
                 print(ERROR_PREFIX .. " Fehler beim Abrufen der Datei: " .. tostring(statusCode) .. "^7")
                 if callback then callback(false, "Fehler: " .. tostring(statusCode)) end
                 return
-            end
+            }
             
             if callback then callback(true, responseData) end
         end, "GET", "", {
@@ -282,21 +317,21 @@ ForteX.ExecuteFile = function(filePath, callback)
         if not success then
             if callback then callback(false, data) end
             return
-        end
+        }
         
         local func, err = load(data)
         if not func then
             print(ERROR_PREFIX .. " Fehler beim Kompilieren der Datei: " .. tostring(err) .. "^7")
             if callback then callback(false, "Kompilierfehler: " .. tostring(err)) end
             return
-        end
+        }
         
         local success, error = pcall(func)
         if not success then
             print(ERROR_PREFIX .. " Fehler beim Ausführen der Datei: " .. tostring(error) .. "^7")
             if callback then callback(false, "Ausführungsfehler: " .. tostring(error)) end
             return
-        end
+        }
         
         if callback then callback(true, "Datei erfolgreich ausgeführt") end
     end)

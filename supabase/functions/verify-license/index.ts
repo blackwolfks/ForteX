@@ -22,9 +22,22 @@ serve(async (req) => {
     console.log("Lizenzverifizierungs-API wurde aufgerufen");
     
     // Request-Body parsen
-    const requestData = await req.json();
-    const licenseKey = requestData.license_key;
-    const serverKey = requestData.server_key;
+    let licenseKey, serverKey;
+    
+    // Versuche erst, die Daten aus den Headers zu bekommen
+    licenseKey = req.headers.get("x-license-key");
+    serverKey = req.headers.get("x-server-key");
+    
+    // Wenn nicht in den Headers, versuche im Body
+    if (!licenseKey || !serverKey) {
+      try {
+        const requestData = await req.json();
+        licenseKey = licenseKey || requestData.license_key;
+        serverKey = serverKey || requestData.server_key;
+      } catch (e) {
+        console.log("Konnte JSON-Body nicht parsen:", e.message);
+      }
+    }
     
     // IP-Adresse des anfragenden Servers erhalten
     const clientIp = req.headers.get("x-forwarded-for") || "unknown";
@@ -36,7 +49,14 @@ serve(async (req) => {
       console.log("Fehlende Lizenzinformationen");
       return new Response(JSON.stringify({ 
         valid: false, 
-        error: "Lizenzschlüssel und Server-Key müssen angegeben werden" 
+        error: "Lizenzschlüssel und Server-Key müssen angegeben werden",
+        debug: {
+          headers_present: {
+            license_key: req.headers.has("x-license-key"),
+            server_key: req.headers.has("x-server-key")
+          },
+          client_ip: clientIp
+        }
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 400,
@@ -62,6 +82,22 @@ serve(async (req) => {
     // Supabase-Client initialisieren
     const supabaseUrl = Deno.env.get("SUPABASE_URL") as string;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") as string;
+    
+    if (!supabaseUrl || !supabaseKey) {
+      console.error("SUPABASE_URL oder SUPABASE_SERVICE_ROLE_KEY nicht konfiguriert");
+      return new Response(JSON.stringify({ 
+        valid: false, 
+        error: "Serverfehler: Supabase-Konfiguration fehlt",
+        debug: {
+          supabase_url_exists: !!supabaseUrl,
+          service_role_key_exists: !!supabaseKey
+        }
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      });
+    }
+    
     const supabase = createClient(supabaseUrl, supabaseKey);
     
     console.log("Überprüfe Lizenz in der Datenbank...");
@@ -76,7 +112,14 @@ serve(async (req) => {
       console.log("Fehler bei der Datenbankabfrage:", error);
       return new Response(JSON.stringify({ 
         valid: false, 
-        error: "Datenbankfehler bei der Lizenzprüfung" 
+        error: "Datenbankfehler bei der Lizenzprüfung",
+        debug: {
+          db_error: error.message,
+          query_params: {
+            license_key: licenseKey,
+            server_key: serverKey
+          }
+        }
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
@@ -87,7 +130,11 @@ serve(async (req) => {
       console.log("Ungültige Lizenz oder Server-Key");
       return new Response(JSON.stringify({ 
         valid: false, 
-        error: "Ungültige Lizenz oder Server-Key" 
+        error: "Ungültige Lizenz oder Server-Key",
+        debug: {
+          data_received: data || "keine Daten",
+          client_ip: clientIp
+        }
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200, // 200 status but invalid result
@@ -99,7 +146,10 @@ serve(async (req) => {
       console.log("Lizenz ist inaktiv");
       return new Response(JSON.stringify({ 
         valid: false, 
-        error: "Lizenz ist inaktiv" 
+        error: "Lizenz ist inaktiv",
+        debug: {
+          license_data: data
+        }
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
@@ -111,7 +161,11 @@ serve(async (req) => {
       console.log(`IP-Beschränkung verletzt. Erwartet: ${data.server_ip}, Erhalten: ${clientIp}`);
       return new Response(JSON.stringify({ 
         valid: false, 
-        error: "Zugriff von nicht autorisierter IP-Adresse" 
+        error: "Zugriff von nicht autorisierter IP-Adresse",
+        debug: {
+          expected_ip: data.server_ip,
+          client_ip: clientIp
+        }
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
@@ -137,7 +191,11 @@ serve(async (req) => {
     console.error("Unerwarteter Fehler:", error.message);
     return new Response(JSON.stringify({ 
       valid: false,
-      error: "Ein interner Serverfehler ist aufgetreten" 
+      error: "Ein interner Serverfehler ist aufgetreten",
+      debug: {
+        error_message: error.message,
+        error_stack: error.stack
+      }
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,

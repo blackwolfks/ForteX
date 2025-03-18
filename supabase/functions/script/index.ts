@@ -23,42 +23,48 @@ serve(async (req) => {
     console.log("Script API wurde aufgerufen:", url.pathname);
     
     // Lizenzschlüssel und Server-Key aus den Headers extrahieren
-    const licenseKey = req.headers.get("x-license-key");
-    const serverKey = req.headers.get("x-server-key");
+    let licenseKey = req.headers.get("x-license-key");
+    let serverKey = req.headers.get("x-server-key");
+    let bodyData = {};
     
     // Alternative: Extrahiere aus dem Body, falls die Headers nicht gesetzt sind
-    let bodyData = {};
     if (!licenseKey || !serverKey) {
       try {
         if (req.method === "POST") {
           bodyData = await req.json();
           if (!licenseKey && bodyData.license_key) {
+            licenseKey = bodyData.license_key;
             console.log("Lizenzschlüssel aus dem Body extrahiert");
           }
           if (!serverKey && bodyData.server_key) {
+            serverKey = bodyData.server_key;
             console.log("Server-Key aus dem Body extrahiert");
           }
         }
       } catch (e) {
-        console.log("Keine Body-Daten vorhanden oder kein gültiges JSON");
+        console.log("Keine Body-Daten vorhanden oder kein gültiges JSON:", e.message);
       }
     }
-    
-    // Verwende die Werte aus den Headers oder dem Body
-    const finalLicenseKey = licenseKey || bodyData.license_key;
-    const finalServerKey = serverKey || bodyData.server_key;
     
     // IP-Adresse des anfragenden Servers erhalten
     const clientIp = req.headers.get("x-forwarded-for") || "unknown";
     
-    console.log(`Anfrage von IP: ${clientIp}, Lizenzschlüssel: ${finalLicenseKey}, Server-Key: ${finalServerKey}`);
+    console.log(`Anfrage von IP: ${clientIp}, Lizenzschlüssel: ${licenseKey}, Server-Key: ${serverKey}`);
     
-    // Überprüfen, ob die erforderlichen Header vorhanden sind
-    if (!finalLicenseKey || !finalServerKey) {
+    // Überprüfen, ob die erforderlichen Authentifizierungsdaten vorhanden sind
+    if (!licenseKey || !serverKey) {
       console.log("Fehlende Authentifizierungsdaten");
       return new Response(JSON.stringify({ 
         error: "Fehlende Authentifizierungsdaten",
-        message: "Bitte stellen Sie sicher, dass die X-License-Key und X-Server-Key Header oder entsprechende POST-Parameter gesetzt sind."
+        message: "Bitte stellen Sie sicher, dass die X-License-Key und X-Server-Key Header oder entsprechende POST-Parameter gesetzt sind.",
+        debug: {
+          headers_present: {
+            license_key: req.headers.has("x-license-key"),
+            server_key: req.headers.has("x-server-key")
+          },
+          client_ip: clientIp,
+          url: req.url
+        }
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 401,
@@ -66,7 +72,7 @@ serve(async (req) => {
     }
     
     // WICHTIG: Test-Authentifizierung überprüfen und immer akzeptieren
-    if (finalLicenseKey === "ABCD-EFGH-IJKL-MNOP" && finalServerKey === "123456789ABC") {
+    if (licenseKey === "ABCD-EFGH-IJKL-MNOP" && serverKey === "123456789ABC") {
       console.log("Test-Authentifizierung erfolgreich - direkte Antwort wird gesendet");
       return new Response(
         `-- ForteX Test Script
@@ -99,19 +105,43 @@ print("^2Die Testkeys ABCD-EFGH-IJKL-MNOP und 123456789ABC wurden erfolgreich va
     // Supabase-Client initialisieren
     const supabaseUrl = Deno.env.get("SUPABASE_URL") as string;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") as string;
+    
+    if (!supabaseUrl || !supabaseKey) {
+      console.error("SUPABASE_URL oder SUPABASE_SERVICE_ROLE_KEY nicht konfiguriert");
+      return new Response(JSON.stringify({ 
+        error: "Serverfehler: Supabase-Konfiguration fehlt",
+        debug: {
+          supabase_url_exists: !!supabaseUrl,
+          service_role_key_exists: !!supabaseKey
+        }
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      });
+    }
+    
     const supabase = createClient(supabaseUrl, supabaseKey);
     
     console.log("Überprüfe Lizenz mit check_license_by_keys Funktion");
     
     // Lizenz in der Datenbank überprüfen mit beiden Schlüsseln
     const { data, error } = await supabase.rpc("check_license_by_keys", {
-      p_license_key: finalLicenseKey,
-      p_server_key: finalServerKey
+      p_license_key: licenseKey,
+      p_server_key: serverKey
     });
     
     if (error) {
       console.log("Fehler bei der Lizenzüberprüfung:", error);
-      return new Response(JSON.stringify({ error: "Fehler bei der Lizenzüberprüfung" }), {
+      return new Response(JSON.stringify({ 
+        error: "Fehler bei der Lizenzüberprüfung",
+        debug: {
+          db_error: error.message,
+          query_params: {
+            license_key: licenseKey,
+            server_key: serverKey
+          }
+        }
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
       });
@@ -123,14 +153,23 @@ print("^2Die Testkeys ABCD-EFGH-IJKL-MNOP und 123456789ABC wurden erfolgreich va
       if (licenseKey === "ABCD-EFGH-IJKL-MNOP" || serverKey === "123456789ABC") {
         console.log("Unvollständige Test-Keys erkannt - beide müssen korrekt sein");
         return new Response(JSON.stringify({ 
-          error: "Unvollständige Test-Keys. Bitte verwenden Sie sowohl den richtigen License-Key als auch Server-Key für den Test-Modus." 
+          error: "Unvollständige Test-Keys. Bitte verwenden Sie sowohl den richtigen License-Key als auch Server-Key für den Test-Modus.",
+          debug: {
+            license_key: licenseKey,
+            server_key: serverKey
+          }
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 401,
         });
       }
       
-      return new Response(JSON.stringify({ error: "Ungültige Authentifizierungsdaten" }), {
+      return new Response(JSON.stringify({ 
+        error: "Ungültige Authentifizierungsdaten",
+        debug: {
+          data_received: data || "keine Daten"
+        }
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 401,
       });
@@ -139,16 +178,24 @@ print("^2Die Testkeys ABCD-EFGH-IJKL-MNOP und 123456789ABC wurden erfolgreich va
     // Überprüfen, ob die Lizenz aktiv ist
     if (!data.aktiv) {
       console.log("Lizenz ist inaktiv");
-      return new Response(JSON.stringify({ error: "Lizenz ist inaktiv" }), {
+      return new Response(JSON.stringify({ 
+        error: "Lizenz ist inaktiv"
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 403,
       });
     }
     
     // Überprüfen, ob eine IP-Beschränkung existiert
-    if (data.server_ip && data.server_ip !== clientIp) {
+    if (data.server_ip && data.server_ip !== clientIp && data.server_ip !== "*") {
       console.log(`IP-Beschränkung verletzt. Erwartet: ${data.server_ip}, Erhalten: ${clientIp}`);
-      return new Response(JSON.stringify({ error: "Zugriff von nicht autorisierter IP-Adresse" }), {
+      return new Response(JSON.stringify({ 
+        error: "Zugriff von nicht autorisierter IP-Adresse",
+        debug: {
+          expected_ip: data.server_ip,
+          client_ip: clientIp
+        }
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 403,
       });
@@ -295,7 +342,9 @@ print("^2Die Testkeys ABCD-EFGH-IJKL-MNOP und 123456789ABC wurden erfolgreich va
     // Wenn kein Datei-Upload, dann das Skript aus der Datenbank senden
     if (!data.script_file) {
       console.log("Kein Skript in der Datenbank gefunden");
-      return new Response(JSON.stringify({ error: "Kein Skript gefunden" }), {
+      return new Response(JSON.stringify({ 
+        error: "Kein Skript gefunden"
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 404,
       });
@@ -309,7 +358,13 @@ print("^2Die Testkeys ABCD-EFGH-IJKL-MNOP und 123456789ABC wurden erfolgreich va
     
   } catch (error) {
     console.error("Unerwarteter Fehler:", error.message);
-    return new Response(JSON.stringify({ error: "Ein interner Serverfehler ist aufgetreten" }), {
+    return new Response(JSON.stringify({ 
+      error: "Ein interner Serverfehler ist aufgetreten",
+      debug: {
+        error_message: error.message,
+        error_stack: error.stack
+      }
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });
