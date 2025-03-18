@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ interface License {
   aktiv: boolean;
   created_at: string;
   updated_at: string;
+  has_file_upload?: boolean;
 }
 
 const RemoteScriptsView = () => {
@@ -86,6 +88,7 @@ const RemoteScriptsView = () => {
         p_server_ip: newScript.serverIp || null,
       });
       
+      // Make sure we call the function with the correct parameter names and order
       const { data, error } = await callRPC('create_license', {
         p_script_name: newScript.name,
         p_script_file: newScript.code || null,
@@ -101,11 +104,17 @@ const RemoteScriptsView = () => {
       if (selectedFiles.length > 0) {
         const licenseId = data.id;
         
+        // Ensure the bucket exists before uploading files
         const bucketExists = await mediaService.ensureBucketExists('script-files');
         if (!bucketExists) {
           console.error("Fehler: Bucket 'script-files' konnte nicht erstellt werden");
           toast.error("Fehler beim Erstellen des Storage-Buckets");
+          return;
         }
+        
+        console.log(`Uploading ${selectedFiles.length} files to bucket 'script-files/${licenseId}'`);
+        
+        let uploadErrors = 0;
         
         for (const file of selectedFiles) {
           let filePath = file.webkitRelativePath || file.name;
@@ -119,10 +128,17 @@ const RemoteScriptsView = () => {
           if (uploadError) {
             console.error("Error uploading file:", uploadError);
             console.error("Full error details:", JSON.stringify(uploadError));
-            toast.error(`Fehler beim Hochladen der Datei ${file.name}`);
+            uploadErrors++;
           }
         }
         
+        if (uploadErrors > 0) {
+          toast.error(`${uploadErrors} Dateien konnten nicht hochgeladen werden`);
+        } else {
+          toast.success(`${selectedFiles.length} Dateien erfolgreich hochgeladen`);
+        }
+        
+        // Mark this license as having file uploads
         await callRPC('update_license', {
           p_license_id: licenseId,
           p_has_file_upload: true,
@@ -593,4 +609,3 @@ Citizen.CreateThread(LoadRemoteScript)
 };
 
 export default RemoteScriptsView;
-

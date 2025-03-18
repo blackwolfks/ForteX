@@ -519,17 +519,30 @@ export type Database = {
           has_file_upload: boolean
         }[]
       }
-      create_license: {
-        Args: {
-          p_script_name: string
-          p_script_file?: string
-        }
-        Returns: {
-          id: string
-          license_key: string
-          server_key: string
-        }[]
-      }
+      create_license:
+        | {
+            Args: {
+              p_script_name: string
+              p_script_file?: string
+            }
+            Returns: {
+              id: string
+              license_key: string
+              server_key: string
+            }[]
+          }
+        | {
+            Args: {
+              p_script_name: string
+              p_script_file?: string
+              p_server_ip?: string
+            }
+            Returns: {
+              id: string
+              license_key: string
+              server_key: string
+            }[]
+          }
       create_website:
         | {
             Args: {
