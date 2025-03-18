@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -96,9 +95,6 @@ const RemoteScriptsView = () => {
       // Wenn Dateien ausgewählt wurden, diese hochladen
       if (selectedFiles.length > 0) {
         const licenseId = data.id;
-        
-        // Stellen Sie sicher, dass ein Bucket existiert
-        const bucketName = `script-files-${licenseId}`;
         
         // Hochladen der Dateien
         for (const file of selectedFiles) {

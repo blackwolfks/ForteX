@@ -45,10 +45,11 @@ type RpcFunctionName =
   | 'update_website_status'
   | 'get_user_pro_status'
   | 'enable_pro_access'
-  | 'get_user_licenses'        // Added this function
-  | 'create_license'           // Added this function
-  | 'regenerate_server_key'    // Added this function 
-  | 'update_license';          // Added this function
+  | 'get_user_licenses'        
+  | 'create_license'           
+  | 'regenerate_server_key'    
+  | 'update_license'
+  | 'delete_license';          // Added this function to fix the error
 
 // Define parameter types for each RPC function
 type RpcParams = {
@@ -99,6 +100,7 @@ type RpcParams = {
   'create_license': {
     p_script_name: string;
     p_script_file?: string | null;
+    p_server_ip?: string | null;  // Added p_server_ip parameter
   };
   'regenerate_server_key': {
     p_license_id: string;
@@ -109,6 +111,11 @@ type RpcParams = {
     p_script_file?: string | null;
     p_aktiv?: boolean;
     p_regenerate_server_key?: boolean;
+    p_server_ip?: string | null;  // Added p_server_ip parameter
+    p_has_file_upload?: boolean;  // Added p_has_file_upload parameter
+  };
+  'delete_license': {
+    p_license_id: string;
   };
 };
 
