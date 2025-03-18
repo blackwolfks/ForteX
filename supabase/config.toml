@@ -27,6 +27,32 @@ pop3_port = 54326
 [storage]
 enabled = true
 file_size_limit = "50MiB"
+allowed_mime_types = [
+  "text/plain", 
+  "text/css", 
+  "text/html", 
+  "text/javascript", 
+  "text/markdown", 
+  "text/x-lua", 
+  "application/json", 
+  "application/javascript",
+  "application/x-lua",
+  "application/xml",
+  "application/zip",
+  "application/pdf",
+  "image/jpeg", 
+  "image/png", 
+  "image/gif", 
+  "image/webp", 
+  "image/svg+xml",
+  "audio/mpeg",
+  "audio/webm",
+  "video/mp4",
+  "video/webm",
+  "font/ttf",
+  "font/woff",
+  "font/woff2"
+]
 
 [auth]
 enabled = true
