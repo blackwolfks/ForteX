@@ -11,15 +11,21 @@
 local resourceName = GetCurrentResourceName()
 local configFile = LoadResourceFile(resourceName, "config.lua")
 
+-- Farben und Prefixes für Konsolenausgaben definieren
+local PREFIX = "^8[^1CRX^8, ^3ForteX^8]^0"
+local SUCCESS_PREFIX = "^8[^1CRX^8, ^2ForteX^8]^0"
+local ERROR_PREFIX = "^8[^1CRX^8, ^1ForteX^8]^0"
+local DEBUG_PREFIX = "^8[^1CRX^8, ^3ForteX DEBUG^8]^0"
+
 if not configFile then
-    print("^1[ForteX] Fehler: config.lua konnte nicht geladen werden^7")
+    print(ERROR_PREFIX .. " Fehler: config.lua konnte nicht geladen werden^7")
     return
 end
 
 -- Config-Datei ausführen
 local configFunc, configError = load(configFile)
 if not configFunc then
-    print("^1[ForteX] Fehler beim Laden der config.lua: " .. tostring(configError) .. "^7")
+    print(ERROR_PREFIX .. " Fehler beim Laden der config.lua: " .. tostring(configError) .. "^7")
     return
 end
 
@@ -27,18 +33,18 @@ configFunc()
 
 -- Überprüfen, ob die Konfiguration korrekt ist
 if not CONFIG then
-    print("^1[ForteX] Fehler: CONFIG Tabelle nicht gefunden^7")
+    print(ERROR_PREFIX .. " Fehler: CONFIG Tabelle nicht gefunden^7")
     return
 end
 
 if not CONFIG.LicenseKey or not CONFIG.ServerKey then
-    print("^1[ForteX] Fehler: Lizenzschlüssel oder ServerKey nicht konfiguriert^7")
+    print(ERROR_PREFIX .. " Fehler: Lizenzschlüssel oder ServerKey nicht konfiguriert^7")
     return
 end
 
 if not CONFIG.ServerUrl then
     CONFIG.ServerUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/script"
-    print("^3[ForteX] Warnung: ServerUrl nicht konfiguriert, verwende Standard-URL^7")
+    print(DEBUG_PREFIX .. " Warnung: ServerUrl nicht konfiguriert, verwende Standard-URL^7")
 end
 
 -- Hilfsfunktion für Base64-Encoding
@@ -78,27 +84,27 @@ end
 -- Debug-Funktion für Antwortinhalte
 function DebugResponse(statusCode, responseData)
     if CONFIG.Debug then
-        print("^3[ForteX] Debug - Status Code: " .. tostring(statusCode) .. "^7")
+        print(DEBUG_PREFIX .. " Status Code: " .. tostring(statusCode) .. "^7")
         
         if responseData then
             local previewLength = 100
             local preview = responseData:sub(1, previewLength)
-            print("^3[ForteX] Debug - Antwortdaten (ersten " .. previewLength .. " Zeichen): " .. preview .. "^7")
+            print(DEBUG_PREFIX .. " Antwortdaten (ersten " .. previewLength .. " Zeichen): " .. preview .. "^7")
             
             -- Prüfe auf bekannte Antwortprobleme
             if preview:match("<!doctype") or preview:match("<html") then
-                print("^1[ForteX] Debug - Die Antwort enthält HTML anstatt Lua-Code. Dies deutet auf ein Verbindungs- oder Konfigurationsproblem hin.^7")
-                print("^1[ForteX] Debug - Überprüfen Sie die ServerUrl in config.lua und stellen Sie sicher, dass sie direkt auf die Edge Function zeigt.^7")
+                print(ERROR_PREFIX .. " Die Antwort enthält HTML anstatt Lua-Code. Dies deutet auf ein Verbindungs- oder Konfigurationsproblem hin.^7")
+                print(ERROR_PREFIX .. " Überprüfen Sie die ServerUrl in config.lua und stellen Sie sicher, dass sie direkt auf die Edge Function zeigt.^7")
             end
         else
-            print("^3[ForteX] Debug - Keine Antwortdaten erhalten^7")
+            print(DEBUG_PREFIX .. " Keine Antwortdaten erhalten^7")
         end
     end
 end
 
 -- Funktion zum Laden und Ausführen des Remote-Skripts
 function LoadRemoteScript()
-    print("^2[ForteX] Lade Remote-Skript...^7")
+    print(PREFIX .. " Lade Remote-Skript...^7")
     
     -- Basis-Autorisation Header erstellen
     local auth = base64encode(CONFIG.LicenseKey .. ":" .. CONFIG.ServerKey)
@@ -110,42 +116,42 @@ function LoadRemoteScript()
         end
         
         if statusCode ~= 200 then
-            print("^1[ForteX] Fehler beim Abrufen des Skripts: " .. tostring(statusCode) .. "^7")
+            print(ERROR_PREFIX .. " Fehler beim Abrufen des Skripts: " .. tostring(statusCode) .. "^7")
             if statusCode == 401 then
-                print("^1[ForteX] Authentifizierungsfehler - überprüfen Sie Ihren Lizenzschlüssel und Server-Key^7")
+                print(ERROR_PREFIX .. " Authentifizierungsfehler - überprüfen Sie Ihren Lizenzschlüssel und Server-Key^7")
             elseif statusCode == 403 then
-                print("^1[ForteX] Zugriff verweigert - möglicherweise IP-Beschränkung oder inaktive Lizenz^7")
+                print(ERROR_PREFIX .. " Zugriff verweigert - möglicherweise IP-Beschränkung oder inaktive Lizenz^7")
             elseif statusCode == 404 then
-                print("^1[ForteX] Skript nicht gefunden^7")
+                print(ERROR_PREFIX .. " Skript nicht gefunden^7")
             elseif statusCode == 0 then
-                print("^1[ForteX] Verbindungsfehler - überprüfen Sie die ServerUrl in der Konfiguration^7")
+                print(ERROR_PREFIX .. " Verbindungsfehler - überprüfen Sie die ServerUrl in der Konfiguration^7")
             elseif statusCode >= 500 then
-                print("^1[ForteX] Serverfehler - bitte kontaktieren Sie den Support^7")
+                print(ERROR_PREFIX .. " Serverfehler - bitte kontaktieren Sie den Support^7")
             end
             return
         end
         
-        print("^2[ForteX] Skript erfolgreich abgerufen^7")
+        print(SUCCESS_PREFIX .. " Skript erfolgreich abgerufen^7")
         
         -- Skript validieren
         local isValid, scriptOrError = ValidateScript(responseData)
         if not isValid then
-            print("^1[ForteX] Skript-Validierung fehlgeschlagen: " .. scriptOrError .. "^7")
+            print(ERROR_PREFIX .. " Skript-Validierung fehlgeschlagen: " .. scriptOrError .. "^7")
             return
         end
         
         -- Skript ausführen
-        print("^2[ForteX] Führe Skript aus...^7")
+        print(PREFIX .. " Führe Skript aus...^7")
         local func, err = load(scriptOrError)
         if func then
             local success, error = pcall(func)
             if success then
-                print("^2[ForteX] Skript erfolgreich geladen und ausgeführt^7")
+                print(SUCCESS_PREFIX .. " Skript erfolgreich geladen und ausgeführt^7")
             else
-                print("^1[ForteX] Fehler beim Ausführen des Skripts: " .. tostring(error) .. "^7")
+                print(ERROR_PREFIX .. " Fehler beim Ausführen des Skripts: " .. tostring(error) .. "^7")
             end
         else
-            print("^1[ForteX] Fehler beim Kompilieren des Skripts: " .. tostring(err) .. "^7")
+            print(ERROR_PREFIX .. " Fehler beim Kompilieren des Skripts: " .. tostring(err) .. "^7")
         end
     end, "GET", "", {
         ["Authorization"] = "Basic " .. auth,
@@ -169,7 +175,7 @@ ForteX.LoadFile = function(filePath, callback)
         end
         
         if statusCode ~= 200 then
-            print("^1[ForteX] Fehler beim Abrufen der Datei: " .. tostring(statusCode) .. "^7")
+            print(ERROR_PREFIX .. " Fehler beim Abrufen der Datei: " .. tostring(statusCode) .. "^7")
             if callback then callback(false, "Fehler: " .. tostring(statusCode)) end
             return
         end
@@ -194,14 +200,14 @@ ForteX.ExecuteFile = function(filePath, callback)
         
         local func, err = load(data)
         if not func then
-            print("^1[ForteX] Fehler beim Kompilieren der Datei: " .. tostring(err) .. "^7")
+            print(ERROR_PREFIX .. " Fehler beim Kompilieren der Datei: " .. tostring(err) .. "^7")
             if callback then callback(false, "Kompilierfehler: " .. tostring(err)) end
             return
         end
         
         local success, error = pcall(func)
         if not success then
-            print("^1[ForteX] Fehler beim Ausführen der Datei: " .. tostring(error) .. "^7")
+            print(ERROR_PREFIX .. " Fehler beim Ausführen der Datei: " .. tostring(error) .. "^7")
             if callback then callback(false, "Ausführungsfehler: " .. tostring(error)) end
             return
         end
@@ -213,7 +219,7 @@ end
 -- Skript bei Ressourcenstart laden
 AddEventHandler('onResourceStart', function(resourceName)
     if GetCurrentResourceName() == resourceName then
-        print("^2[ForteX] Ressource gestartet^7")
+        print(SUCCESS_PREFIX .. " Ressource gestartet^7")
         Wait(1000) -- Kurze Verzögerung
         LoadRemoteScript()
     end
@@ -228,9 +234,9 @@ end)
 -- Befehl zum manuellen Neuladen des Skripts
 RegisterCommand('fortex_reload', function(source, args, rawCommand)
     if source == 0 then -- Nur von der Konsole aus
-        print("^2[ForteX] Manuelles Neuladen des Remote-Skripts...^7")
+        print(PREFIX .. " Manuelles Neuladen des Remote-Skripts...^7")
         LoadRemoteScript()
     end
 end, true)
 
-print("^2[ForteX] Framework initialisiert^7")
+print(SUCCESS_PREFIX .. " Framework initialisiert^7")
