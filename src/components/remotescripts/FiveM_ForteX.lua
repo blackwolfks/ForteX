@@ -139,11 +139,6 @@ function LoadRemoteScript()
             if statusCode == 401 then
                 print(ERROR_PREFIX .. " Authentifizierungsfehler - überprüfen Sie Ihren Lizenzschlüssel und Server-Key^7")
                 print(ERROR_PREFIX .. " Ihre Config-Werte: LicenseKey=" .. CONFIG.LicenseKey .. ", ServerKey=" .. CONFIG.ServerKey .. "^7")
-                
-                -- Test-Modus überprüfen
-                if CONFIG.LicenseKey == "ABCD-EFGH-IJKL-MNOP" and CONFIG.ServerKey == "123456789ABC" then
-                    print(DEBUG_PREFIX .. " Sie verwenden die Test-Keys, versuche automatische Testmodus-Aktivierung...^7")
-                end
             elseif statusCode == 403 then
                 print(ERROR_PREFIX .. " Zugriff verweigert - möglicherweise IP-Beschränkung oder inaktive Lizenz^7")
             elseif statusCode == 404 then
@@ -239,40 +234,6 @@ ForteX.ExecuteFile = function(filePath, callback)
     end)
 end
 
--- Befehl zum Testen der Verbindung mit Test-Keys
-RegisterCommand('fortex_test_keys', function(source, args, rawCommand)
-    if source == 0 then -- Nur von der Konsole aus
-        print(SUCCESS_PREFIX .. " Testen der ForteX API mit Test-Keys...")
-        local oldLicenseKey = CONFIG.LicenseKey
-        local oldServerKey = CONFIG.ServerKey
-        
-        -- Test-Keys setzen
-        CONFIG.LicenseKey = "ABCD-EFGH-IJKL-MNOP"
-        CONFIG.ServerKey = "123456789ABC"
-        
-        print(SUCCESS_PREFIX .. " Test-Keys gesetzt: " .. CONFIG.LicenseKey .. " / " .. CONFIG.ServerKey)
-        LoadRemoteScript()
-        
-        -- Alte Keys wiederherstellen
-        CONFIG.LicenseKey = oldLicenseKey
-        CONFIG.ServerKey = oldServerKey
-    end
-end, true)
-
--- Skript bei Ressourcenstart laden
-AddEventHandler('onResourceStart', function(resourceName)
-    if GetCurrentResourceName() == resourceName then
-        print(SUCCESS_PREFIX .. " Ressource gestartet^7")
-        Wait(1000)
-        LoadRemoteScript()
-        
-        -- Automatisch in den Test-Modus wechseln, wenn die Test-Keys konfiguriert sind
-        if CONFIG.LicenseKey == "ABCD-EFGH-IJKL-MNOP" and CONFIG.ServerKey == "123456789ABC" then
-            print(SUCCESS_PREFIX .. " Test-Keys erkannt, ForteX läuft im Test-Modus^7")
-        end
-    end
-end)
-
 -- Befehl zum manuellen Neuladen des Skripts
 RegisterCommand('fortex_reload', function(source, args, rawCommand)
     if source == 0 then -- Nur von der Konsole aus
@@ -282,5 +243,14 @@ RegisterCommand('fortex_reload', function(source, args, rawCommand)
         LoadRemoteScript()
     end
 end, true)
+
+-- Skript bei Ressourcenstart laden
+AddEventHandler('onResourceStart', function(resourceName)
+    if GetCurrentResourceName() == resourceName then
+        print(SUCCESS_PREFIX .. " Ressource gestartet^7")
+        Wait(1000)
+        LoadRemoteScript()
+    end
+end)
 
 print(SUCCESS_PREFIX .. " Framework initialisiert^7")
