@@ -5,13 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, RefreshCw, Save, Trash2, Upload, Server, Copy, Check } from "lucide-react";
+import { Plus, RefreshCw, Save, Trash2, Upload, Server, Copy, Check, Shield } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { callRPC } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
+import FileAccessManagement from "./FileAccessManagement";
 
 interface License {
   id: string;
@@ -79,7 +80,6 @@ const RemoteScriptsView = () => {
     try {
       setUploading(true);
       
-      // Erstellen der Lizenz in der Datenbank
       const { data, error } = await callRPC('create_license', {
         p_script_name: newScript.name,
         p_script_file: newScript.code || null,
@@ -92,13 +92,10 @@ const RemoteScriptsView = () => {
         return;
       }
       
-      // Wenn Dateien ausgewählt wurden, diese hochladen
       if (selectedFiles.length > 0) {
         const licenseId = data.id;
         
-        // Hochladen der Dateien
         for (const file of selectedFiles) {
-          // Erstelle einen Pfad basierend auf der Ordnerstruktur der Datei
           let filePath = file.webkitRelativePath || file.name;
           
           const { error: uploadError } = await supabase.storage
@@ -111,7 +108,6 @@ const RemoteScriptsView = () => {
           }
         }
         
-        // Aktualisiere die Lizenz mit dem Pfad zu den Dateien
         await callRPC('update_license', {
           p_license_id: licenseId,
           p_has_file_upload: true,
@@ -187,7 +183,6 @@ const RemoteScriptsView = () => {
         return;
       }
 
-      // Auch Dateien im Storage löschen, falls vorhanden
       await supabase.storage
         .from('script-files')
         .remove([`${licenseId}`]);
@@ -230,7 +225,7 @@ const RemoteScriptsView = () => {
             <DialogHeader>
               <DialogTitle>Neues Script erstellen</DialogTitle>
               <DialogDescription>
-                Erstellen Sie ein neues Script für die Remote-Verwaltung.
+                Erstellen Sie ein neues Script f��r die Remote-Verwaltung.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -345,6 +340,10 @@ const RemoteScriptsView = () => {
                     <TabsTrigger value="details" className="flex-1">Details</TabsTrigger>
                     <TabsTrigger value="code" className="flex-1">Code</TabsTrigger>
                     <TabsTrigger value="security" className="flex-1">Sicherheit</TabsTrigger>
+                    <TabsTrigger value="file-access" className="flex-1">
+                      <Shield className="h-4 w-4 mr-1" />
+                      Dateizugriff
+                    </TabsTrigger>
                   </TabsList>
                   
                   <TabsContent value="details" className="pt-4 space-y-4">
@@ -514,6 +513,10 @@ const RemoteScriptsView = () => {
                       </Button>
                     </div>
                   </TabsContent>
+                  
+                  <TabsContent value="file-access" className="pt-4 space-y-4">
+                    <FileAccessManagement licenseId={license.id} />
+                  </TabsContent>
                 </Tabs>
               </CardContent>
             </Card>
@@ -521,7 +524,6 @@ const RemoteScriptsView = () => {
         </div>
       )}
       
-      {/* FiveM Integration Guide */}
       <Card>
         <CardHeader>
           <CardTitle>FiveM Integration Guide</CardTitle>
@@ -576,3 +578,4 @@ Citizen.CreateThread(LoadRemoteScript)
 };
 
 export default RemoteScriptsView;
+

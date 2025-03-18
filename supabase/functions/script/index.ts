@@ -44,8 +44,8 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") as string;
     const supabase = createClient(supabaseUrl, supabaseKey);
     
-    // Lizenz in der Datenbank überprüfen
-    const { data, error } = await supabase.rpc("check_license_by_server_key", {
+    // Lizenz in der Datenbank überprüfen mit beiden Schlüsseln
+    const { data, error } = await supabase.rpc("check_license_by_keys", {
       p_license_key: licenseKey,
       p_server_key: serverKey
     });
@@ -91,8 +91,37 @@ serve(async (req) => {
         });
       }
       
-      // Haupt-Skriptdatei identifizieren oder erstes Skript verwenden
-      const mainFile = storageData.find(file => file.name === "main.lua") || storageData[0];
+      // Öffentlich freigegebene Dateien abrufen
+      const { data: accessData, error: accessError } = await supabase
+        .from("script_file_access")
+        .select("file_path, is_public")
+        .eq("license_id", data.id);
+      
+      if (accessError) {
+        console.log("Fehler beim Abrufen der Datei-Zugriffsrechte:", accessError);
+        return new Response(JSON.stringify({ error: "Fehler beim Abrufen der Zugriffsrechte" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 500,
+        });
+      }
+      
+      // Öffentliche Dateien filtern
+      const publicFiles = accessData?.filter(file => file.is_public) || [];
+      
+      // Wenn es keine öffentlichen Dateien gibt, aber eine main.lua, diese verwenden
+      let mainFile = storageData.find(file => 
+        publicFiles.some(pf => pf.file_path === `${data.id}/${file.name}`) || file.name === "main.lua"
+      );
+      
+      // Wenn keine öffentliche oder main.lua Datei gefunden wurde, nach anderen Dateien suchen
+      if (!mainFile) {
+        const luaFiles = storageData.filter(file => file.name.endsWith('.lua'));
+        if (luaFiles.length > 0) {
+          mainFile = luaFiles[0]; // Erste .lua-Datei verwenden
+        } else if (storageData.length > 0) {
+          mainFile = storageData[0]; // Irgendeine Datei verwenden
+        }
+      }
       
       if (!mainFile) {
         console.log("Keine Skriptdateien gefunden");
