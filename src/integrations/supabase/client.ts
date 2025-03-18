@@ -44,7 +44,11 @@ type RpcFunctionName =
   | 'update_website'
   | 'update_website_status'
   | 'get_user_pro_status'
-  | 'enable_pro_access';
+  | 'enable_pro_access'
+  | 'get_user_licenses'        // Added this function
+  | 'create_license'           // Added this function
+  | 'regenerate_server_key'    // Added this function 
+  | 'update_license';          // Added this function
 
 // Define parameter types for each RPC function
 type RpcParams = {
@@ -91,6 +95,21 @@ type RpcParams = {
   };
   'get_user_pro_status': Record<string, never>;
   'enable_pro_access': Record<string, never>;
+  'get_user_licenses': Record<string, never>;
+  'create_license': {
+    p_script_name: string;
+    p_script_file?: string | null;
+  };
+  'regenerate_server_key': {
+    p_license_id: string;
+  };
+  'update_license': {
+    p_license_id: string;
+    p_script_name?: string;
+    p_script_file?: string | null;
+    p_aktiv?: boolean;
+    p_regenerate_server_key?: boolean;
+  };
 };
 
 // Verbesserte callRPC-Funktion mit zusätzlichem Logging und Fehlerbehandlung
