@@ -1,8 +1,7 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.33.1"
 
-// CORS-Headers
+// CORS-Headers erweitern, um Authorization-Header explizit zu erlauben
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-license-key, x-server-key",
@@ -22,10 +21,35 @@ serve(async (req) => {
     const url = new URL(req.url);
     console.log("Script API wurde aufgerufen:", url.pathname);
     
+    // Alle Header ausgeben für Debugging-Zwecke
+    console.log("Request-Headers:", JSON.stringify(Object.fromEntries([...req.headers])));
+    
     // Lizenzschlüssel und Server-Key aus den Headers extrahieren
     let licenseKey = req.headers.get("x-license-key");
     let serverKey = req.headers.get("x-server-key");
     let bodyData = {};
+    
+    // Basic Auth Header extrahieren
+    const authHeader = req.headers.get("authorization");
+    if (authHeader && authHeader.startsWith("Basic ")) {
+      try {
+        const base64Credentials = authHeader.split(" ")[1];
+        const credentials = atob(base64Credentials);
+        const [extractedLicenseKey, extractedServerKey] = credentials.split(":");
+        
+        if (!licenseKey && extractedLicenseKey) {
+          licenseKey = extractedLicenseKey;
+          console.log("Lizenzschlüssel aus Basic Auth extrahiert");
+        }
+        
+        if (!serverKey && extractedServerKey) {
+          serverKey = extractedServerKey;
+          console.log("Server-Key aus Basic Auth extrahiert");
+        }
+      } catch (e) {
+        console.log("Fehler beim Dekodieren des Basic Auth Headers:", e.message);
+      }
+    }
     
     // Alternative: Extrahiere aus dem Body, falls die Headers nicht gesetzt sind
     if (!licenseKey || !serverKey) {
@@ -60,7 +84,8 @@ serve(async (req) => {
         debug: {
           headers_present: {
             license_key: req.headers.has("x-license-key"),
-            server_key: req.headers.has("x-server-key")
+            server_key: req.headers.has("x-server-key"),
+            authorization: req.headers.has("authorization")
           },
           client_ip: clientIp,
           url: req.url
