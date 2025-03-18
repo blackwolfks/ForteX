@@ -153,6 +153,9 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
     
     print(DEBUG_PREFIX .. " Überprüfe Lizenz direkt in der Datenbank: " .. licenseKey .. " / " .. serverKey .. "^7")
     
+    -- Erstelle einen Basic-Auth Header für die Authentifizierung
+    local authHeader = "Basic " .. base64encode(licenseKey .. ":" .. serverKey)
+    
     PerformHttpRequest(verificationUrl, function(statusCode, responseData, responseHeaders)
         if CONFIG.Debug then
             DebugResponse(statusCode, responseData, responseHeaders)
@@ -185,7 +188,8 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
         ["Content-Type"] = "application/json",
         ["User-Agent"] = "FiveM-ForteX/1.0",
         ["X-License-Key"] = licenseKey,
-        ["X-Server-Key"] = serverKey
+        ["X-Server-Key"] = serverKey,
+        ["Authorization"] = authHeader
     })
 end
 
@@ -211,6 +215,9 @@ end
 
 -- Funktion zum direkten Laden des Skripts
 function LoadScriptDirectly()
+    -- Erstelle einen Basic-Auth Header für die Authentifizierung
+    local authHeader = "Basic " .. base64encode(CONFIG.LicenseKey .. ":" .. CONFIG.ServerKey)
+    
     PerformHttpRequest(CONFIG.ServerUrl, function(statusCode, responseData, responseHeaders)
         -- Debug-Informationen ausgeben
         DebugResponse(statusCode, responseData, responseHeaders)
@@ -220,6 +227,7 @@ function LoadScriptDirectly()
             if statusCode == 401 then
                 print(ERROR_PREFIX .. " Authentifizierungsfehler - überprüfen Sie Ihren Lizenzschlüssel und Server-Key^7")
                 print(ERROR_PREFIX .. " Ihre Config-Werte: LicenseKey=" .. CONFIG.LicenseKey .. ", ServerKey=" .. CONFIG.ServerKey .. "^7")
+                print(ERROR_PREFIX .. " Prüfe ob die Authorization-Header korrekt gesendet wurden^7")
             elseif statusCode == 403 then
                 print(ERROR_PREFIX .. " Zugriff verweigert - möglicherweise IP-Beschränkung oder inaktive Lizenz^7")
             elseif statusCode == 404 then
@@ -270,6 +278,7 @@ function LoadScriptDirectly()
         ["Content-Type"] = "application/json",
         ["X-License-Key"] = CONFIG.LicenseKey,
         ["X-Server-Key"] = CONFIG.ServerKey,
+        ["Authorization"] = "Basic " .. base64encode(CONFIG.LicenseKey .. ":" .. CONFIG.ServerKey),
         ["User-Agent"] = "FiveM-ForteX/1.0",
         ["Accept"] = "text/plain"
     })
@@ -289,6 +298,7 @@ ForteX.LoadFile = function(filePath, callback)
         end
         
         local url = CONFIG.ServerUrl .. "/" .. filePath
+        local authHeader = "Basic " .. base64encode(CONFIG.LicenseKey .. ":" .. CONFIG.ServerKey)
         
         PerformHttpRequest(url, function(statusCode, responseData, responseHeaders)
             if CONFIG.Debug then
@@ -305,6 +315,7 @@ ForteX.LoadFile = function(filePath, callback)
         end, "GET", "", {
             ["X-License-Key"] = CONFIG.LicenseKey,
             ["X-Server-Key"] = CONFIG.ServerKey,
+            ["Authorization"] = authHeader,
             ["User-Agent"] = "FiveM-ForteX/1.0",
             ["Accept"] = "text/plain"
         })
