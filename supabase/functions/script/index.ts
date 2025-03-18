@@ -96,37 +96,6 @@ serve(async (req) => {
       });
     }
     
-    // WICHTIG: Test-Authentifizierung überprüfen und immer akzeptieren
-    if (licenseKey === "ABCD-EFGH-IJKL-MNOP" && serverKey === "123456789ABC") {
-      console.log("Test-Authentifizierung erfolgreich - direkte Antwort wird gesendet");
-      return new Response(
-        `-- ForteX Test Script
-print("^2ForteX Test-Modus aktiv - Lizenz erfolgreich validiert^0")
-print("^3ForteX: Test-Keys wurden erkannt und akzeptiert^0")
-print("^3Test-Skript wird ausgeführt...^0")
-
--- Zeige alle Spieler an
-AddEventHandler('onResourceStart', function(resourceName)
-    if GetCurrentResourceName() == resourceName then
-        Citizen.CreateThread(function()
-            while true do
-                Wait(10000)
-                local playerCount = GetNumPlayerIndices()
-                print("^2ForteX: Es sind " .. playerCount .. " Spieler online^0")
-            end
-        end)
-    end
-end)
-
-print("^2ForteX Test-Skript erfolgreich geladen!^0")
-print("^2Die Testkeys ABCD-EFGH-IJKL-MNOP und 123456789ABC wurden erfolgreich validiert^0")`, 
-        {
-          headers: { ...corsHeaders, "Content-Type": "text/plain" },
-          status: 200,
-        }
-      );
-    }
-    
     // Supabase-Client initialisieren
     const supabaseUrl = Deno.env.get("SUPABASE_URL") as string;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") as string;
@@ -174,21 +143,6 @@ print("^2Die Testkeys ABCD-EFGH-IJKL-MNOP und 123456789ABC wurden erfolgreich va
     
     if (!data || !data.valid) {
       console.log("Ungültige Lizenz oder Server-Key:", data);
-      // Prüfen ob es die Test-Keys sind, die falsch implementiert sind
-      if (licenseKey === "ABCD-EFGH-IJKL-MNOP" || serverKey === "123456789ABC") {
-        console.log("Unvollständige Test-Keys erkannt - beide müssen korrekt sein");
-        return new Response(JSON.stringify({ 
-          error: "Unvollständige Test-Keys. Bitte verwenden Sie sowohl den richtigen License-Key als auch Server-Key für den Test-Modus.",
-          debug: {
-            license_key: licenseKey,
-            server_key: serverKey
-          }
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 401,
-        });
-      }
-      
       return new Response(JSON.stringify({ 
         error: "Ungültige Authentifizierungsdaten",
         debug: {

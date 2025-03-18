@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.33.1"
 
@@ -88,21 +89,7 @@ serve(async (req) => {
       });
     }
     
-    // WICHTIG: Test-Authentifizierung überprüfen und immer akzeptieren
-    if (licenseKey === "ABCD-EFGH-IJKL-MNOP" && serverKey === "123456789ABC") {
-      console.log("Test-Authentifizierung erfolgreich");
-      return new Response(JSON.stringify({
-        valid: true,
-        license_info: {
-          id: "test-license",
-          script_name: "Test Script",
-          aktiv: true
-        }
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      });
-    }
+    // Test-Authentifizierung wurde entfernt
     
     // Supabase-Client initialisieren
     const supabaseUrl = Deno.env.get("SUPABASE_URL") as string;
