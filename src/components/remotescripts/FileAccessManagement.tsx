@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, Search, Save } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, callRPC } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface FileAccessProps {
@@ -54,10 +54,10 @@ const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
       }
 
       // Zugriffsrechte direkt mit RPC-Funktion abrufen
-      const { data: accessData, error: accessError } = await supabase
-        .rpc('get_file_access_for_license', { 
-          p_license_id: licenseId 
-        });
+      const { data: accessData, error: accessError } = await callRPC(
+        'get_file_access_for_license', 
+        { p_license_id: licenseId }
+      );
 
       if (accessError) {
         console.error("Fehler beim Abrufen der Zugriffsrechte:", accessError);
@@ -108,12 +108,14 @@ const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
       // Für jede Datei die Zugriffsrechte aktualisieren
       for (const file of files) {
         // Verwende die RPC-Funktion zum Speichern der Zugriffsrechte
-        const { error } = await supabase
-          .rpc('update_file_access', {
+        const { error } = await callRPC(
+          'update_file_access', 
+          {
             p_license_id: licenseId,
             p_file_path: file.fullPath,
             p_is_public: file.isPublic
-          });
+          }
+        );
           
         if (error) {
           console.error("Fehler beim Speichern der Zugriffsrechte:", error);
