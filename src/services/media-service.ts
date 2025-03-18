@@ -7,11 +7,20 @@ export class MediaService {
    */
   async ensureBucketExists(bucketName: string): Promise<boolean> {
     try {
-      // Prüfen, ob der Bucket bereits existiert
-      const { data: buckets, error: getBucketError } = await supabase.storage.listBuckets();
+      // Prüfen, ob der Benutzer angemeldet ist
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        console.error("Nicht authentifiziert. Bitte melden Sie sich an, um den Storage zu nutzen.");
+        return false;
+      }
       
-      if (getBucketError) {
-        console.error(`Fehler beim Abrufen der Buckets: ${getBucketError.message}`);
+      console.log(`Prüfe Storage-Bucket '${bucketName}'...`);
+      
+      // Bucket-Liste abrufen
+      const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+      
+      if (listError) {
+        console.error(`Fehler beim Abrufen der Buckets: ${listError.message}`);
         return false;
       }
       
@@ -39,6 +48,46 @@ export class MediaService {
     } catch (error) {
       console.error(`Unerwarteter Fehler beim Prüfen/Erstellen des Buckets: ${error}`);
       return false;
+    }
+  }
+  
+  /**
+   * Lädt eine Datei in einen Supabase Storage Bucket hoch
+   */
+  async uploadFile(bucketName: string, filePath: string, file: File): Promise<{ url: string | null; error: Error | null }> {
+    try {
+      // Prüfen, ob der Bucket existiert
+      const bucketExists = await this.ensureBucketExists(bucketName);
+      if (!bucketExists) {
+        return { url: null, error: new Error(`Bucket '${bucketName}' existiert nicht und konnte nicht erstellt werden`) };
+      }
+      
+      console.log(`Lade Datei '${filePath}' in Bucket '${bucketName}' hoch...`);
+      
+      // Datei hochladen
+      const { data, error } = await supabase.storage
+        .from(bucketName)
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+        
+      if (error) {
+        console.error(`Fehler beim Hochladen der Datei '${filePath}': ${error.message}`);
+        return { url: null, error };
+      }
+      
+      // Öffentliche URL abrufen
+      const { data: urlData } = supabase.storage
+        .from(bucketName)
+        .getPublicUrl(data.path);
+        
+      console.log(`Datei '${filePath}' erfolgreich hochgeladen, URL: ${urlData.publicUrl}`);
+      
+      return { url: urlData.publicUrl, error: null };
+    } catch (error) {
+      console.error(`Unerwarteter Fehler beim Hochladen der Datei: ${error}`);
+      return { url: null, error: error instanceof Error ? error : new Error(String(error)) };
     }
   }
 }

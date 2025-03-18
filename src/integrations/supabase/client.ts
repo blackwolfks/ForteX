@@ -51,7 +51,8 @@ type RpcFunctionName =
   | 'update_license'
   | 'delete_license'
   | 'get_file_access_for_license'  
-  | 'update_file_access';          
+  | 'update_file_access'
+  | 'check_license_by_keys';
 
 // Define parameter types for each RPC function
 type RpcParams = {
@@ -126,6 +127,10 @@ type RpcParams = {
     p_license_id: string;
     p_file_path: string;
     p_is_public: boolean;
+  };
+  'check_license_by_keys': {
+    p_license_key: string;
+    p_server_key: string;
   };
 };
 
