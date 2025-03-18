@@ -230,7 +230,7 @@ function LoadScriptDirectly()
                 print(ERROR_PREFIX .. " Serverfehler - bitte kontaktieren Sie den Support^7")
             end
             return
-        }
+        end
         
         -- Prüfen ob die Antwort ein JSON-Fehlerobjekt ist
         if responseData:match("^%s*{") then
@@ -248,7 +248,7 @@ function LoadScriptDirectly()
         if not isValid then
             print(ERROR_PREFIX .. " Skript-Validierung fehlgeschlagen: " .. scriptOrError .. "^7")
             return
-        }
+        end
         
         -- Skript ausführen
         print(PREFIX .. " Führe Skript aus...^7")
@@ -286,20 +286,20 @@ ForteX.LoadFile = function(filePath, callback)
             print(ERROR_PREFIX .. " Lizenzprüfung in der Datenbank fehlgeschlagen - Datei wird nicht geladen^7")
             if callback then callback(false, "Ungültige Lizenz") end
             return
-        }
+        end
         
         local url = CONFIG.ServerUrl .. "/" .. filePath
         
         PerformHttpRequest(url, function(statusCode, responseData, responseHeaders)
             if CONFIG.Debug then
                 DebugResponse(statusCode, responseData, responseHeaders)
-            }
+            end
             
             if statusCode ~= 200 then
                 print(ERROR_PREFIX .. " Fehler beim Abrufen der Datei: " .. tostring(statusCode) .. "^7")
                 if callback then callback(false, "Fehler: " .. tostring(statusCode)) end
                 return
-            }
+            end
             
             if callback then callback(true, responseData) end
         end, "GET", "", {
@@ -317,21 +317,21 @@ ForteX.ExecuteFile = function(filePath, callback)
         if not success then
             if callback then callback(false, data) end
             return
-        }
+        end
         
         local func, err = load(data)
         if not func then
             print(ERROR_PREFIX .. " Fehler beim Kompilieren der Datei: " .. tostring(err) .. "^7")
             if callback then callback(false, "Kompilierfehler: " .. tostring(err)) end
             return
-        }
+        end
         
         local success, error = pcall(func)
         if not success then
             print(ERROR_PREFIX .. " Fehler beim Ausführen der Datei: " .. tostring(error) .. "^7")
             if callback then callback(false, "Ausführungsfehler: " .. tostring(error)) end
             return
-        }
+        end
         
         if callback then callback(true, "Datei erfolgreich ausgeführt") end
     end)
