@@ -124,61 +124,112 @@ function DebugResponse(statusCode, responseData, responseHeaders)
     end
 end
 
+-- Funktion zur direkten Überprüfung der Lizenz in der Datenbank
+function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
+    local verificationUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/verify-license"
+    
+    print(DEBUG_PREFIX .. " Überprüfe Lizenz direkt in der Datenbank: " .. licenseKey .. " / " .. serverKey .. "^7")
+    
+    PerformHttpRequest(verificationUrl, function(statusCode, responseData, responseHeaders)
+        if CONFIG.Debug then
+            DebugResponse(statusCode, responseData, responseHeaders)
+        end
+        
+        if statusCode ~= 200 then
+            print(ERROR_PREFIX .. " Fehler bei der Datenbankabfrage: " .. tostring(statusCode) .. "^7")
+            if callback then callback(false, "Datenbankfehler: " .. tostring(statusCode)) end
+            return
+        end
+        
+        local result = json.decode(responseData)
+        if not result then
+            print(ERROR_PREFIX .. " Fehler beim Dekodieren der Server-Antwort^7")
+            if callback then callback(false, "Ungültiges Antwortformat") end
+            return
+        end
+        
+        if result.valid then
+            print(SUCCESS_PREFIX .. " Lizenz erfolgreich in der Datenbank validiert!^7")
+            if callback then callback(true, result) end
+        else
+            print(ERROR_PREFIX .. " Lizenz in der Datenbank nicht gültig oder nicht gefunden^7")
+            if callback then callback(false, "Ungültige Lizenz") end
+        end
+    end, "POST", json.encode({
+        license_key = licenseKey,
+        server_key = serverKey
+    }), {
+        ["Content-Type"] = "application/json",
+        ["User-Agent"] = "FiveM-ForteX/1.0"
+    })
+end
+
 -- Funktion zum Laden und Ausführen des Remote-Skripts
 function LoadRemoteScript()
     print(PREFIX .. " Lade Remote-Skript...^7")
     print(PREFIX .. " Verwende Lizenzschlüssel: " .. CONFIG.LicenseKey .. " und Server-Key: " .. CONFIG.ServerKey .. "^7")
     print(PREFIX .. " Server-URL: " .. CONFIG.ServerUrl .. "^7")
     
-    PerformHttpRequest(CONFIG.ServerUrl, function(statusCode, responseData, responseHeaders)
-        -- Debug-Informationen ausgeben
-        DebugResponse(statusCode, responseData, responseHeaders)
-        
-        if statusCode ~= 200 then
-            print(ERROR_PREFIX .. " Fehler beim Abrufen des Skripts: " .. tostring(statusCode) .. "^7")
-            if statusCode == 401 then
-                print(ERROR_PREFIX .. " Authentifizierungsfehler - überprüfen Sie Ihren Lizenzschlüssel und Server-Key^7")
-                print(ERROR_PREFIX .. " Ihre Config-Werte: LicenseKey=" .. CONFIG.LicenseKey .. ", ServerKey=" .. CONFIG.ServerKey .. "^7")
-            elseif statusCode == 403 then
-                print(ERROR_PREFIX .. " Zugriff verweigert - möglicherweise IP-Beschränkung oder inaktive Lizenz^7")
-            elseif statusCode == 404 then
-                print(ERROR_PREFIX .. " Skript nicht gefunden^7")
-            elseif statusCode == 0 then
-                print(ERROR_PREFIX .. " Verbindungsfehler - überprüfen Sie die ServerUrl in der Konfiguration^7")
-            elseif statusCode >= 500 then
-                print(ERROR_PREFIX .. " Serverfehler - bitte kontaktieren Sie den Support^7")
-            end
-            return
-        end
-        
-        print(SUCCESS_PREFIX .. " Skript erfolgreich abgerufen^7")
-        
-        -- Skript validieren
-        local isValid, scriptOrError = ValidateScript(responseData)
+    -- Zuerst die Lizenz in der Datenbank überprüfen
+    VerifyLicenseWithDatabase(CONFIG.LicenseKey, CONFIG.ServerKey, function(isValid, result)
         if not isValid then
-            print(ERROR_PREFIX .. " Skript-Validierung fehlgeschlagen: " .. scriptOrError .. "^7")
+            print(ERROR_PREFIX .. " Lizenzprüfung in der Datenbank fehlgeschlagen - Skript wird nicht geladen^7")
             return
         end
         
-        -- Skript ausführen
-        print(PREFIX .. " Führe Skript aus...^7")
-        local func, err = load(scriptOrError)
-        if func then
-            local success, error = pcall(func)
-            if success then
-                print(SUCCESS_PREFIX .. " Skript erfolgreich geladen und ausgeführt^7")
-            else
-                print(ERROR_PREFIX .. " Fehler beim Ausführen des Skripts: " .. tostring(error) .. "^7")
+        -- Nach erfolgreicher Datenbankprüfung das Skript laden
+        print(SUCCESS_PREFIX .. " Lizenz in der Datenbank bestätigt, lade Skript...^7")
+        
+        PerformHttpRequest(CONFIG.ServerUrl, function(statusCode, responseData, responseHeaders)
+            -- Debug-Informationen ausgeben
+            DebugResponse(statusCode, responseData, responseHeaders)
+            
+            if statusCode ~= 200 then
+                print(ERROR_PREFIX .. " Fehler beim Abrufen des Skripts: " .. tostring(statusCode) .. "^7")
+                if statusCode == 401 then
+                    print(ERROR_PREFIX .. " Authentifizierungsfehler - überprüfen Sie Ihren Lizenzschlüssel und Server-Key^7")
+                    print(ERROR_PREFIX .. " Ihre Config-Werte: LicenseKey=" .. CONFIG.LicenseKey .. ", ServerKey=" .. CONFIG.ServerKey .. "^7")
+                elseif statusCode == 403 then
+                    print(ERROR_PREFIX .. " Zugriff verweigert - möglicherweise IP-Beschränkung oder inaktive Lizenz^7")
+                elseif statusCode == 404 then
+                    print(ERROR_PREFIX .. " Skript nicht gefunden^7")
+                elseif statusCode == 0 then
+                    print(ERROR_PREFIX .. " Verbindungsfehler - überprüfen Sie die ServerUrl in der Konfiguration^7")
+                elseif statusCode >= 500 then
+                    print(ERROR_PREFIX .. " Serverfehler - bitte kontaktieren Sie den Support^7")
+                end
+                return
             end
-        else
-            print(ERROR_PREFIX .. " Fehler beim Kompilieren des Skripts: " .. tostring(err) .. "^7")
-        end
-    end, "GET", "", {
-        ["X-License-Key"] = CONFIG.LicenseKey,
-        ["X-Server-Key"] = CONFIG.ServerKey,
-        ["User-Agent"] = "FiveM-ForteX/1.0",
-        ["Accept"] = "text/plain"
-    })
+            
+            print(SUCCESS_PREFIX .. " Skript erfolgreich abgerufen^7")
+            
+            -- Skript validieren
+            local isValid, scriptOrError = ValidateScript(responseData)
+            if not isValid then
+                print(ERROR_PREFIX .. " Skript-Validierung fehlgeschlagen: " .. scriptOrError .. "^7")
+                return
+            end
+            
+            -- Skript ausführen
+            print(PREFIX .. " Führe Skript aus...^7")
+            local func, err = load(scriptOrError)
+            if func then
+                local success, error = pcall(func)
+                if success then
+                    print(SUCCESS_PREFIX .. " Skript erfolgreich geladen und ausgeführt^7")
+                else
+                    print(ERROR_PREFIX .. " Fehler beim Ausführen des Skripts: " .. tostring(error) .. "^7")
+                end
+            else
+                print(ERROR_PREFIX .. " Fehler beim Kompilieren des Skripts: " .. tostring(err) .. "^7")
+            end
+        end, "GET", "", {
+            ["X-License-Key"] = CONFIG.LicenseKey,
+            ["X-Server-Key"] = CONFIG.ServerKey,
+            ["User-Agent"] = "FiveM-ForteX/1.0",
+            ["Accept"] = "text/plain"
+        })
+    end)
 end
 
 -- ForteX API für andere Ressourcen
@@ -186,26 +237,35 @@ ForteX = {}
 
 -- Funktion zum Laden einer bestimmten Datei
 ForteX.LoadFile = function(filePath, callback)
-    local url = CONFIG.ServerUrl .. "/" .. filePath
-    
-    PerformHttpRequest(url, function(statusCode, responseData, responseHeaders)
-        if CONFIG.Debug then
-            DebugResponse(statusCode, responseData, responseHeaders)
-        end
-        
-        if statusCode ~= 200 then
-            print(ERROR_PREFIX .. " Fehler beim Abrufen der Datei: " .. tostring(statusCode) .. "^7")
-            if callback then callback(false, "Fehler: " .. tostring(statusCode)) end
+    -- Zuerst die Lizenz in der Datenbank überprüfen
+    VerifyLicenseWithDatabase(CONFIG.LicenseKey, CONFIG.ServerKey, function(isValid, result)
+        if not isValid then
+            print(ERROR_PREFIX .. " Lizenzprüfung in der Datenbank fehlgeschlagen - Datei wird nicht geladen^7")
+            if callback then callback(false, "Ungültige Lizenz") end
             return
         end
         
-        if callback then callback(true, responseData) end
-    end, "GET", "", {
-        ["X-License-Key"] = CONFIG.LicenseKey,
-        ["X-Server-Key"] = CONFIG.ServerKey,
-        ["User-Agent"] = "FiveM-ForteX/1.0",
-        ["Accept"] = "text/plain"
-    })
+        local url = CONFIG.ServerUrl .. "/" .. filePath
+        
+        PerformHttpRequest(url, function(statusCode, responseData, responseHeaders)
+            if CONFIG.Debug then
+                DebugResponse(statusCode, responseData, responseHeaders)
+            end
+            
+            if statusCode ~= 200 then
+                print(ERROR_PREFIX .. " Fehler beim Abrufen der Datei: " .. tostring(statusCode) .. "^7")
+                if callback then callback(false, "Fehler: " .. tostring(statusCode)) end
+                return
+            end
+            
+            if callback then callback(true, responseData) end
+        end, "GET", "", {
+            ["X-License-Key"] = CONFIG.LicenseKey,
+            ["X-Server-Key"] = CONFIG.ServerKey,
+            ["User-Agent"] = "FiveM-ForteX/1.0",
+            ["Accept"] = "text/plain"
+        })
+    end)
 end
 
 -- Beispielfunktion zum Ausführen einer bestimmten Datei
@@ -248,6 +308,8 @@ end, true)
 AddEventHandler('onResourceStart', function(resourceName)
     if GetCurrentResourceName() == resourceName then
         print(SUCCESS_PREFIX .. " Ressource gestartet^7")
+        -- Logo direkt beim Resource-Start anzeigen
+        ShowASCIILogo()
         Wait(1000)
         LoadRemoteScript()
     end
