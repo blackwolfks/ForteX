@@ -7,6 +7,30 @@
   und erhalten dann automatisch Zugriff auf die freigegebenen Dateien.
 ]]
 
+-- ASCII Art für ForteX am Start anzeigen
+local function ShowASCIILogo()
+    print("^3") -- Gelbe Farbe
+    print([[
+     FFFFFFFFFFF                              tt                     XXXXXXX       XXXXXXX
+    F::::::::::::F                         tt:::t                    X:::::X       X:::::X
+   F::::::FFFFFF:::F                       t:::::t                   X:::::X       X:::::X
+   F:::::F      FFFFFF   ooooooooooo      t:::::t                   X::::::X     X::::::X
+   F:::::F             oo:::::::::::oo    t:::::t                   XXX:::::X   X:::::XXX
+   F::::::FFFFFFFFFF o:::::::::::::::o ttttt:::::ttttt                 X:::::X X:::::X
+   F:::::::::::::::F o:::::ooooo:::::o t:::::::::::::t                  X:::::X:::::X
+   F:::::::::::::::F o::::o     o::::o t:::::::::::::t                   X:::::::::X
+   F::::::FFFFFFFFFF o::::o     o::::o tttttt:::::::t                   X:::::::::X
+   F:::::F           o::::o     o::::o       t:::::t                   X:::::X:::::X
+   F:::::F           o::::o     o::::o       t:::::t                  X:::::X X:::::X
+ FF:::::::FF         o:::::ooooo:::::o       t:::::t               XXX:::::X   X:::::XXX
+ F::::::::FF         o:::::::::::::::o       t:::::t    tttttt    X::::::X     X::::::X
+ F::::::::FF          oo:::::::::::oo        t::::::tttt:::::t    X:::::X       X:::::X
+ FFFFFFFFFFF            ooooooooooo          tt::::::::::::::t    X:::::X       X:::::X
+                                               tttttttttttt      XXXXXXX       XXXXXXX
+    ]])
+    print("^0") -- Zurück zur Standardfarbe
+end
+
 -- Konfigurationsdatei laden
 local resourceName = GetCurrentResourceName()
 local configFile = LoadResourceFile(resourceName, "config.lua")
@@ -16,6 +40,9 @@ local PREFIX = "^8[^1CRX^8, ^3ForteX^8]^0"
 local SUCCESS_PREFIX = "^8[^1CRX^8, ^2ForteX^8]^0"
 local ERROR_PREFIX = "^8[^1CRX^8, ^1ForteX^8]^0"
 local DEBUG_PREFIX = "^8[^1CRX^8, ^3ForteX DEBUG^8]^0"
+
+-- Zeige Logo am Anfang
+ShowASCIILogo()
 
 if not configFile then
     print(ERROR_PREFIX .. " Fehler: config.lua konnte nicht geladen werden^7")
