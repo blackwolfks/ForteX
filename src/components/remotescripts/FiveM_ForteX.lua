@@ -1,4 +1,3 @@
-
 --[[ 
   ForteX Framework - Remote Script Loader
   
@@ -12,13 +11,13 @@ local function ShowASCIILogo()
     -- Rot und kleiner
     print("^1")
     print([[
- ######  ####### ######  ####### ####### #     # 
- #       #       #     #    #    #        #   #  
- #       #       #     #    #    #         # #   
- ######  #####   ######     #    #####      #    
- #       #       #   #      #    #          #    
- #       #       #    #     #    #          #    
- #       ####### #     #    #    #######    #    
+ ______         _       __  __
+|  ____|       | |     \ \/ /
+| |__ ___  _ __| |_ ___ \  / 
+|  __/ _ \| '__| __/ _ \/  \
+| | | (_) | |  | ||  __/  /
+|_|  \___/|_|   \__\___| /  
+                         
     ]])
     print("^0") -- Zurück zur Standardfarbe
 end
@@ -33,18 +32,18 @@ local SUCCESS_PREFIX = "^8[^1CRX^8, ^2ForteX^8]^0"
 local ERROR_PREFIX = "^8[^1CRX^8, ^1ForteX^8]^0"
 local DEBUG_PREFIX = "^8[^1CRX^8, ^3ForteX DEBUG^8]^0"
 
--- Für txAdmin und Server-Konsole sichtbar machen - direkt beim Laden ausführen
-print("^1")  -- Rot für bessere Sichtbarkeit in der txAdmin-Konsole
+-- txAdmin Konsole unterstützen: Direkt beim Skriptladen ausführen (wichtig für txAdmin)
+print("^1")
 print([[
- ######  ####### ######  ####### ####### #     # 
- #       #       #     #    #    #        #   #  
- #       #       #     #    #    #         # #   
- ######  #####   ######     #    #####      #    
- #       #       #   #      #    #          #    
- #       #       #    #     #    #          #    
- #       ####### #     #    #    #######    #    
+ ______         _       __  __
+|  ____|       | |     \ \/ /
+| |__ ___  _ __| |_ ___ \  / 
+|  __/ _ \| '__| __/ _ \/  \
+| | | (_) | |  | ||  __/  /
+|_|  \___/|_|   \__\___| /  
+                         
 ]])
-print("^0")  -- Zurück zur Standardfarbe
+print("^0")
 
 -- Auch nach einer kurzen Verzögerung nochmal zeigen (für txAdmin)
 Citizen.CreateThread(function()
@@ -259,13 +258,13 @@ AddEventHandler('onResourceStart', function(resourceName)
         -- Logo direkt beim Resource-Start anzeigen
         print("^1")  -- Rot für bessere Sichtbarkeit 
         print([[
- ######  ####### ######  ####### ####### #     # 
- #       #       #     #    #    #        #   #  
- #       #       #     #    #         # #   
- ######  #####   ######     #    #####      #    
- #       #       #   #      #    #          #    
- #       #       #    #     #    #          #    
- #       ####### #     #    #    #######    #    
+ ______         _       __  __
+|  ____|       | |     \ \/ /
+| |__ ___  _ __| |_ ___ \  / 
+|  __/ _ \| '__| __/ _ \/  \
+| | | (_) | |  | ||  __/  /
+|_|  \___/|_|   \__\___| /  
+                         
         ]])
         print("^0")  -- Zurück zur Standardfarbe
         LoadRemoteScript()
@@ -285,13 +284,13 @@ RegisterCommand('fortex_reload', function(source, args, rawCommand)
         -- Logo beim Reload anzeigen
         print("^1")  -- Rot für bessere Sichtbarkeit
         print([[
- ######  ####### ######  ####### ####### #     # 
- #       #       #     #    #    #        #   #  
- #       #       #     #    #    #         # #   
- ######  #####   ######     #    #####      #    
- #       #       #   #      #    #          #    
- #       #       #    #     #    #          #    
- #       ####### #     #    #    #######    #    
+ ______         _       __  __
+|  ____|       | |     \ \/ /
+| |__ ___  _ __| |_ ___ \  / 
+|  __/ _ \| '__| __/ _ \/  \
+| | | (_) | |  | ||  __/  /
+|_|  \___/|_|   \__\___| /  
+                         
         ]])
         print("^0")  -- Zurück zur Standardfarbe
         LoadRemoteScript()
