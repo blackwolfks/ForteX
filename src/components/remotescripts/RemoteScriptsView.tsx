@@ -87,16 +87,24 @@ const RemoteScriptsView = () => {
       });
       
       if (error) {
-        toast.error("Fehler beim Erstellen des Scripts");
-        console.error(error);
+        console.error("Fehler beim Erstellen des Scripts:", error);
+        toast.error("Fehler beim Erstellen des Scripts: " + error.message);
         return;
       }
       
       if (selectedFiles.length > 0) {
         const licenseId = data.id;
         
+        const bucketExists = await mediaService.ensureBucketExists('script-files');
+        if (!bucketExists) {
+          console.error("Fehler: Bucket 'script-files' konnte nicht erstellt werden");
+          toast.error("Fehler beim Erstellen des Storage-Buckets");
+        }
+        
         for (const file of selectedFiles) {
           let filePath = file.webkitRelativePath || file.name;
+          
+          console.log(`[RemoteScriptsView] Uploading file ${filePath} to script-files/${licenseId}`);
           
           const { error: uploadError } = await supabase.storage
             .from('script-files')
@@ -104,6 +112,7 @@ const RemoteScriptsView = () => {
             
           if (uploadError) {
             console.error("Error uploading file:", uploadError);
+            console.error("Full error details:", JSON.stringify(uploadError));
             toast.error(`Fehler beim Hochladen der Datei ${file.name}`);
           }
         }
@@ -578,4 +587,3 @@ Citizen.CreateThread(LoadRemoteScript)
 };
 
 export default RemoteScriptsView;
-
