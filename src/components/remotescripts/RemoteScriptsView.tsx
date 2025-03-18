@@ -7,12 +7,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, RefreshCw, Save, Trash2, Upload, Server, Copy, Check, Shield } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { callRPC } from "@/integrations/supabase/client";
+import { callRPC, supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Switch } from "@/components/ui/switch";
-import { supabase } from "@/integrations/supabase/client";
 import FileAccessManagement from "./FileAccessManagement";
+import { mediaService } from "@/services/media-service";
 
 interface License {
   id: string;
@@ -79,6 +79,12 @@ const RemoteScriptsView = () => {
 
     try {
       setUploading(true);
+      
+      console.log("Erstelle Lizenz mit folgenden Parametern:", {
+        p_script_name: newScript.name,
+        p_script_file: newScript.code || null,
+        p_server_ip: newScript.serverIp || null,
+      });
       
       const { data, error } = await callRPC('create_license', {
         p_script_name: newScript.name,
@@ -587,3 +593,4 @@ Citizen.CreateThread(LoadRemoteScript)
 };
 
 export default RemoteScriptsView;
+
