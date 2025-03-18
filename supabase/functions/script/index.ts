@@ -40,7 +40,7 @@ serve(async (req) => {
       });
     }
     
-    // WICHTIG: Test-Authentifizierung härter codieren und immer akzeptieren
+    // WICHTIG: Test-Authentifizierung überprüfen und immer akzeptieren
     if (licenseKey === "ABCD-EFGH-IJKL-MNOP" && serverKey === "123456789ABC") {
       console.log("Test-Authentifizierung erfolgreich - direkte Antwort wird gesendet");
       return new Response(
@@ -94,6 +94,17 @@ print("^2Die Testkeys ABCD-EFGH-IJKL-MNOP und 123456789ABC wurden erfolgreich va
     
     if (!data || !data.valid) {
       console.log("Ungültige Lizenz oder Server-Key:", data);
+      // Prüfen ob es die Test-Keys sind, die falsch implementiert sind
+      if (licenseKey === "ABCD-EFGH-IJKL-MNOP" || serverKey === "123456789ABC") {
+        console.log("Unvollständige Test-Keys erkannt - beide müssen korrekt sein");
+        return new Response(JSON.stringify({ 
+          error: "Unvollständige Test-Keys. Bitte verwenden Sie sowohl den richtigen License-Key als auch Server-Key für den Test-Modus." 
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 401,
+        });
+      }
+      
       return new Response(JSON.stringify({ error: "Ungültige Authentifizierungsdaten" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 401,

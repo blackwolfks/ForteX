@@ -23,15 +23,11 @@ local function ShowASCIILogo()
     print("^0") -- Zurück zur Standardfarbe
 end
 
--- Konfigurationsdatei laden
-local resourceName = GetCurrentResourceName()
-local configFile = LoadResourceFile(resourceName, "ForteX_config.lua")
-
 -- Farben und Prefixes für Konsolenausgaben definieren
-local PREFIX = "^8[^1CRX^8, ^3ForteX^8]^0"
-local SUCCESS_PREFIX = "^8[^1CRX^8, ^2ForteX^8]^0"
-local ERROR_PREFIX = "^8[^1CRX^8, ^1ForteX^8]^0"
-local DEBUG_PREFIX = "^8[^1CRX^8, ^3ForteX DEBUG^8]^0"
+local PREFIX = "^8[^1ForteX^8]^0"
+local SUCCESS_PREFIX = "^8[^2ForteX^8]^0"
+local ERROR_PREFIX = "^8[^1ForteX^8]^0"
+local DEBUG_PREFIX = "^8[^3ForteX DEBUG^8]^0"
 
 -- txAdmin Konsole unterstützen: Direkt beim Skriptladen ausführen (wichtig für txAdmin)
 print("^1")
@@ -46,12 +42,9 @@ print([[
 ]])
 print("^0")
 
--- Auch nach einer kurzen Verzögerung nochmal zeigen (für txAdmin)
-Citizen.CreateThread(function()
-    Wait(2000) -- Längere Verzögerung für bessere Sichtbarkeit beim Start
-    ShowASCIILogo()
-    print(SUCCESS_PREFIX .. " ForteX Framework wird geladen...")
-end)
+-- Konfigurationsdatei laden
+local resourceName = GetCurrentResourceName()
+local configFile = LoadResourceFile(resourceName, "ForteX_config.lua")
 
 if not configFile then
     print(ERROR_PREFIX .. " Fehler: ForteX_config.lua konnte nicht geladen werden^7")
@@ -111,11 +104,6 @@ function ValidateScript(scriptData)
         return false, "HTML-Antwort erhalten statt Lua-Code. Überprüfen Sie die ServerUrl in der Konfiguration."
     end
     
-    -- Prüfe auf schädliche Inhalte (Beispiel)
-    if scriptData:find("_G%s-=%s-nil") then
-        return false, "Potenziell schädlicher Code erkannt"
-    end
-    
     return true, scriptData
 end
 
@@ -150,11 +138,8 @@ end
 -- Funktion zum Laden und Ausführen des Remote-Skripts
 function LoadRemoteScript()
     print(PREFIX .. " Lade Remote-Skript...^7")
-    print(PREFIX .. " Verwende Lizenzschlüssel: " .. CONFIG.LicenseKey .. " und Server-Key: " .. CONFIG.ServerKey)
-    print(PREFIX .. " Server-URL: " .. CONFIG.ServerUrl)
-    
-    -- Basis-Autorisation Header erstellen
-    local auth = base64encode(CONFIG.LicenseKey .. ":" .. CONFIG.ServerKey)
+    print(PREFIX .. " Verwende Lizenzschlüssel: " .. CONFIG.LicenseKey .. " und Server-Key: " .. CONFIG.ServerKey .. "^7")
+    print(PREFIX .. " Server-URL: " .. CONFIG.ServerUrl .. "^7")
     
     PerformHttpRequest(CONFIG.ServerUrl, function(statusCode, responseData, responseHeaders)
         -- Debug-Informationen ausgeben
@@ -164,9 +149,10 @@ function LoadRemoteScript()
             print(ERROR_PREFIX .. " Fehler beim Abrufen des Skripts: " .. tostring(statusCode) .. "^7")
             if statusCode == 401 then
                 print(ERROR_PREFIX .. " Authentifizierungsfehler - überprüfen Sie Ihren Lizenzschlüssel und Server-Key^7")
+                print(ERROR_PREFIX .. " Ihre Config-Werte: LicenseKey=" .. CONFIG.LicenseKey .. ", ServerKey=" .. CONFIG.ServerKey .. "^7")
+                
                 if CONFIG.LicenseKey == "ABCD-EFGH-IJKL-MNOP" and CONFIG.ServerKey == "123456789ABC" then
-                    print(ERROR_PREFIX .. " Sie verwenden die Test-Keys, aber diese sind nicht richtig konfiguriert^7")
-                    print(ERROR_PREFIX .. " Bitte stellen Sie sicher, dass die Edge Function korrekt auf die Test-Keys reagiert^7")
+                    print(DEBUG_PREFIX .. " Sie verwenden die Test-Keys, versuche automatische Testmodus-Aktivierung...^7")
                 end
             elseif statusCode == 403 then
                 print(ERROR_PREFIX .. " Zugriff verweigert - möglicherweise IP-Beschränkung oder inaktive Lizenz^7")
@@ -203,7 +189,6 @@ function LoadRemoteScript()
             print(ERROR_PREFIX .. " Fehler beim Kompilieren des Skripts: " .. tostring(err) .. "^7")
         end
     end, "GET", "", {
-        ["Authorization"] = "Basic " .. auth,
         ["X-License-Key"] = CONFIG.LicenseKey,
         ["X-Server-Key"] = CONFIG.ServerKey,
         ["User-Agent"] = "FiveM-ForteX/1.0",
@@ -231,7 +216,6 @@ ForteX.LoadFile = function(filePath, callback)
         
         if callback then callback(true, responseData) end
     end, "GET", "", {
-        ["Authorization"] = "Basic " .. base64encode(CONFIG.LicenseKey .. ":" .. CONFIG.ServerKey),
         ["X-License-Key"] = CONFIG.LicenseKey,
         ["X-Server-Key"] = CONFIG.ServerKey,
         ["User-Agent"] = "FiveM-ForteX/1.0",
@@ -265,30 +249,40 @@ ForteX.ExecuteFile = function(filePath, callback)
     end)
 end
 
+-- Befehl zum Testen der Verbindung mit Test-Keys
+RegisterCommand('fortex_test_keys', function(source, args, rawCommand)
+    if source == 0 then -- Nur von der Konsole aus
+        print(SUCCESS_PREFIX .. " Testen der ForteX API mit Test-Keys...")
+        local oldLicenseKey = CONFIG.LicenseKey
+        local oldServerKey = CONFIG.ServerKey
+        
+        -- Test-Keys setzen
+        CONFIG.LicenseKey = "ABCD-EFGH-IJKL-MNOP"
+        CONFIG.ServerKey = "123456789ABC"
+        
+        print(SUCCESS_PREFIX .. " Test-Keys gesetzt: " .. CONFIG.LicenseKey .. " / " .. CONFIG.ServerKey)
+        LoadRemoteScript()
+        
+        -- Alte Keys wiederherstellen
+        CONFIG.LicenseKey = oldLicenseKey
+        CONFIG.ServerKey = oldServerKey
+    end
+end, true)
+
 -- Skript bei Ressourcenstart laden
 AddEventHandler('onResourceStart', function(resourceName)
     if GetCurrentResourceName() == resourceName then
         print(SUCCESS_PREFIX .. " Ressource gestartet^7")
         -- Logo direkt beim Resource-Start anzeigen
-        print("^1")  -- Rot für bessere Sichtbarkeit 
-        print([[
- ______         _       __  __
-|  ____|       | |     \ \/ /
-| |__ ___  _ __| |_ ___ \  / 
-|  __/ _ \| '__| __/ _ \/  \
-| | | (_) | |  | ||  __/  /
-|_|  \___/|_|   \__\___| /  
-                         
-        ]])
-        print("^0")  -- Zurück zur Standardfarbe
+        ShowASCIILogo()
+        Wait(1000)
         LoadRemoteScript()
+        
+        -- Automatisch in den Test-Modus wechseln, wenn die Test-Keys konfiguriert sind
+        if CONFIG.LicenseKey == "ABCD-EFGH-IJKL-MNOP" and CONFIG.ServerKey == "123456789ABC" then
+            print(SUCCESS_PREFIX .. " Test-Keys erkannt, ForteX läuft im Test-Modus^7")
+        end
     end
-end)
-
--- Auch beim Start laden
-Citizen.CreateThread(function()
-    Wait(3000) -- Längere Verzögerung beim Start
-    LoadRemoteScript()
 end)
 
 -- Befehl zum manuellen Neuladen des Skripts
@@ -296,17 +290,7 @@ RegisterCommand('fortex_reload', function(source, args, rawCommand)
     if source == 0 then -- Nur von der Konsole aus
         print(PREFIX .. " Manuelles Neuladen des Remote-Skripts...^7")
         -- Logo beim Reload anzeigen
-        print("^1")  -- Rot für bessere Sichtbarkeit
-        print([[
- ______         _       __  __
-|  ____|       | |     \ \/ /
-| |__ ___  _ __| |_ ___ \  / 
-|  __/ _ \| '__| __/ _ \/  \
-| | | (_) | |  | ||  __/  /
-|_|  \___/|_|   \__\___| /  
-                         
-        ]])
-        print("^0")  -- Zurück zur Standardfarbe
+        ShowASCIILogo()
         LoadRemoteScript()
     end
 end, true)
