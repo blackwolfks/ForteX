@@ -238,6 +238,13 @@ export type Database = {
             foreignKeyName: "script_file_access_license_id_fkey"
             columns: ["license_id"]
             isOneToOne: false
+            referencedRelation: "script_files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "script_file_access_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
             referencedRelation: "server_licenses"
             referencedColumns: ["id"]
           },
@@ -483,7 +490,48 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      script_files: {
+        Row: {
+          aktiv: boolean | null
+          created_at: string | null
+          has_file_upload: boolean | null
+          id: string | null
+          license_key: string | null
+          script_file: string | null
+          script_name: string | null
+          server_ip: string | null
+          server_key: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          aktiv?: boolean | null
+          created_at?: string | null
+          has_file_upload?: boolean | null
+          id?: string | null
+          license_key?: string | null
+          script_file?: string | null
+          script_name?: string | null
+          server_ip?: string | null
+          server_key?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          aktiv?: boolean | null
+          created_at?: string | null
+          has_file_upload?: boolean | null
+          id?: string | null
+          license_key?: string | null
+          script_file?: string | null
+          script_name?: string | null
+          server_ip?: string | null
+          server_key?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       add_website_change_history: {
@@ -652,6 +700,9 @@ export type Database = {
           script_file: string
           aktiv: boolean
           created_at: string
+          server_ip: string
+          has_file_upload: boolean
+          updated_at: string
         }[]
       }
       get_user_pro_status: {
