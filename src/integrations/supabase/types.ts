@@ -243,6 +243,48 @@ export type Database = {
           },
         ]
       }
+      script_files: {
+        Row: {
+          aktiv: boolean | null
+          created_at: string | null
+          has_file_upload: boolean | null
+          id: string
+          license_key: string
+          script_file: string | null
+          script_name: string
+          server_ip: string | null
+          server_key: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          aktiv?: boolean | null
+          created_at?: string | null
+          has_file_upload?: boolean | null
+          id?: string
+          license_key: string
+          script_file?: string | null
+          script_name: string
+          server_ip?: string | null
+          server_key: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          aktiv?: boolean | null
+          created_at?: string | null
+          has_file_upload?: boolean | null
+          id?: string
+          license_key?: string
+          script_file?: string | null
+          script_name?: string
+          server_ip?: string | null
+          server_key?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       server_licenses: {
         Row: {
           aktiv: boolean | null
@@ -282,6 +324,48 @@ export type Database = {
           server_key?: string
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      server_licenses_backup: {
+        Row: {
+          aktiv: boolean | null
+          created_at: string | null
+          has_file_upload: boolean | null
+          id: string | null
+          license_key: string | null
+          script_file: string | null
+          script_name: string | null
+          server_ip: string | null
+          server_key: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          aktiv?: boolean | null
+          created_at?: string | null
+          has_file_upload?: boolean | null
+          id?: string | null
+          license_key?: string | null
+          script_file?: string | null
+          script_name?: string | null
+          server_ip?: string | null
+          server_key?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          aktiv?: boolean | null
+          created_at?: string | null
+          has_file_upload?: boolean | null
+          id?: string | null
+          license_key?: string | null
+          script_file?: string | null
+          script_name?: string | null
+          server_ip?: string | null
+          server_key?: string | null
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
