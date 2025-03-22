@@ -105,25 +105,28 @@ const RemoteScriptsView = () => {
         const licenseId = data.id;
         
         // Ensure the bucket exists before uploading files
-        const bucketExists = await mediaService.ensureBucketExists('script-files');
+        const bucketExists = await mediaService.ensureBucketExists('script');
         if (!bucketExists) {
-          console.error("Fehler: Bucket 'script-files' konnte nicht erstellt werden");
+          console.error("Fehler: Bucket 'script' konnte nicht erstellt werden");
           toast.error("Fehler beim Erstellen des Storage-Buckets");
           return;
         }
         
-        console.log(`Uploading ${selectedFiles.length} files to bucket 'script-files/${licenseId}'`);
+        console.log(`Uploading ${selectedFiles.length} files to bucket 'script/${licenseId}'`);
         
         let uploadErrors = 0;
         
         for (const file of selectedFiles) {
           let filePath = file.webkitRelativePath || file.name;
           
-          console.log(`[RemoteScriptsView] Uploading file ${filePath} to script-files/${licenseId}`);
+          console.log(`[RemoteScriptsView] Uploading file ${filePath} to script/${licenseId}`);
           
           const { error: uploadError } = await supabase.storage
-            .from('script-files')
-            .upload(`${licenseId}/${filePath}`, file);
+            .from('script')
+            .upload(`${licenseId}/${filePath}`, file, {
+              cacheControl: '3600',
+              upsert: true
+            });
             
           if (uploadError) {
             console.error("Error uploading file:", uploadError);
@@ -215,7 +218,7 @@ const RemoteScriptsView = () => {
       }
 
       await supabase.storage
-        .from('script-files')
+        .from('script')
         .remove([`${licenseId}`]);
       
       toast.success("Script erfolgreich gelöscht");

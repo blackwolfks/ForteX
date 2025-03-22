@@ -92,7 +92,7 @@ export const checkStorageBucket = async (bucketName: string = 'script'): Promise
       console.log(`Bucket '${bucketName}' existiert nicht. Versuche ihn zu erstellen...`);
       
       const { data, error: createError } = await supabaseClient.storage.createBucket(bucketName, {
-        public: true
+        public: true  // Changed to true to ensure public access
       });
       
       if (createError) {

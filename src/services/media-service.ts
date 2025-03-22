@@ -30,7 +30,7 @@ export class MediaService {
       if (!bucketExists) {
         console.log(`Bucket '${bucketName}' existiert nicht, wird erstellt...`);
         const { error: createError } = await supabase.storage.createBucket(bucketName, {
-          public: false,
+          public: true,  // Changed to true to ensure public access
           fileSizeLimit: 52428800, // 50MB
         });
         
@@ -64,7 +64,7 @@ export class MediaService {
       
       console.log(`Lade Datei '${filePath}' in Bucket '${bucketName}' hoch...`);
       
-      // Datei hochladen
+      // Datei hochladen mit expliziten Optionen
       const { data, error } = await supabase.storage
         .from(bucketName)
         .upload(filePath, file, {
@@ -74,6 +74,7 @@ export class MediaService {
         
       if (error) {
         console.error(`Fehler beim Hochladen der Datei '${filePath}': ${error.message}`);
+        console.error(`Fehler-Details: ${JSON.stringify(error)}`);
         return { url: null, error };
       }
       

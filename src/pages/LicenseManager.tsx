@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -144,6 +145,14 @@ const LicenseManager = () => {
       const bucketName = 'script';
       const filePath = `${licenseId}/${file.name}`;
       
+      // First, ensure bucket exists
+      const bucketExists = await mediaService.ensureBucketExists(bucketName);
+      if (!bucketExists) {
+        throw new Error(`Bucket '${bucketName}' konnte nicht erstellt oder gefunden werden`);
+      }
+      
+      console.log(`[LicenseManager] Uploading file to ${bucketName}/${filePath}`);
+      
       const { url, error } = await mediaService.uploadFile(bucketName, filePath, file);
       if (error) throw error;
       
@@ -167,6 +176,7 @@ const LicenseManager = () => {
       });
     },
     onError: (error) => {
+      console.error("Upload error details:", error);
       toast({
         title: "Fehler beim Hochladen der Datei",
         description: error.message,

@@ -41,6 +41,34 @@ const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
   const fetchFiles = async () => {
     setLoading(true);
     try {
+      console.log(`[FileAccessManagement] Fetching files for license ${licenseId}...`);
+      
+      // First, check if bucket exists
+      const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+      
+      if (bucketsError) {
+        console.error("Error getting buckets:", bucketsError);
+        toast.error("Fehler beim Abrufen der Storage-Buckets");
+        setLoading(false);
+        return;
+      }
+      
+      const scriptBucketExists = buckets.some(bucket => bucket.name === "script");
+      
+      if (!scriptBucketExists) {
+        console.log("[FileAccessManagement] Script bucket doesn't exist, creating it...");
+        const { error: createError } = await supabase.storage.createBucket("script", {
+          public: true
+        });
+        
+        if (createError) {
+          console.error("Error creating script bucket:", createError);
+          toast.error("Fehler beim Erstellen des Script-Buckets");
+          setLoading(false);
+          return;
+        }
+      }
+      
       // Dateien auflisten
       const { data: storageFiles, error } = await supabase.storage
         .from("script")
@@ -66,25 +94,27 @@ const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
 
       // Dateien mit Zugriffsrechten zusammenführen
       const filesWithAccess = storageFiles
-        .filter(file => !file.name.startsWith(".")) // Versteckte Dateien ausblenden
-        .map(file => {
-          const fullPath = `${licenseId}/${file.name}`;
-          // Prüfen ob accessData ein Array ist und den richtigen Wert enthält
-          let isPublic = false;
-          
-          if (Array.isArray(accessData)) {
-            const accessInfo = accessData.find((a: FileAccess) => a.file_path === fullPath);
-            isPublic = accessInfo?.is_public || false;
-          }
-          
-          return {
-            name: file.name,
-            fullPath: fullPath,
-            isPublic: isPublic,
-            size: file.metadata?.size || 0,
-            isDirectory: file.metadata?.mimetype === 'inode/directory'
-          };
-        });
+        ? storageFiles
+            .filter(file => !file.name.startsWith(".")) // Versteckte Dateien ausblenden
+            .map(file => {
+              const fullPath = `${licenseId}/${file.name}`;
+              // Prüfen ob accessData ein Array ist und den richtigen Wert enthält
+              let isPublic = false;
+              
+              if (Array.isArray(accessData)) {
+                const accessInfo = accessData.find((a: FileAccess) => a.file_path === fullPath);
+                isPublic = accessInfo?.is_public || false;
+              }
+              
+              return {
+                name: file.name,
+                fullPath: fullPath,
+                isPublic: isPublic,
+                size: file.metadata?.size || 0,
+                isDirectory: file.metadata?.mimetype === 'inode/directory'
+              };
+            })
+        : [];
 
       setFiles(filesWithAccess);
     } catch (error) {
