@@ -9,7 +9,7 @@ CONFIG = {
     ServerKey = "145c9238dd5d",
     
     -- Die URL des API-Servers - WICHTIG: Verwenden Sie die korrekte Supabase-URL ohne Umleitungen
-    ServerUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/script",
+    ServerUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/verify-license",
     
     -- Debug-Modus (auf true setzen für mehr Informationen)
     Debug = true,

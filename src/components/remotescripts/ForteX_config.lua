@@ -20,7 +20,7 @@ if not CONFIG.ServerKey then
 end
 
 if not CONFIG.ServerUrl then
-    CONFIG.ServerUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/script"
+    CONFIG.ServerUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/verify-license"
 end
 
 if CONFIG.Debug == nil then
