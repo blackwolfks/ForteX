@@ -89,8 +89,6 @@ serve(async (req) => {
       });
     }
     
-    // Test-Authentifizierung wurde entfernt
-    
     // Supabase-Client initialisieren
     const supabaseUrl = Deno.env.get("SUPABASE_URL") as string;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") as string;

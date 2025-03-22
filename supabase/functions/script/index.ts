@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.33.1"
 
@@ -194,31 +195,6 @@ serve(async (req) => {
         // Vollständigen Pfad erstellen
         const fullPath = `${data.id}/${specificFile}`;
         
-        // Überprüfen, ob der Benutzer Zugriff auf diese Datei hat
-        const { data: accessData, error: accessError } = await supabase
-          .from("script_file_access")
-          .select("is_public")
-          .eq("license_id", data.id)
-          .eq("file_path", fullPath)
-          .maybeSingle();
-        
-        if (accessError) {
-          console.log("Fehler beim Abrufen der Datei-Zugriffsrechte:", accessError);
-          return new Response(JSON.stringify({ error: "Fehler beim Abrufen der Zugriffsrechte" }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-            status: 500,
-          });
-        }
-        
-        // Wenn die Datei nicht existiert oder nicht öffentlich ist
-        if (!accessData || !accessData.is_public) {
-          console.log(`Zugriff auf Datei verweigert: ${fullPath}`);
-          return new Response(JSON.stringify({ error: "Zugriff auf Datei verweigert" }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-            status: 403,
-          });
-        }
-        
         // Datei herunterladen
         const { data: fileData, error: fileError } = await supabase.storage
           .from("script-files")
@@ -255,29 +231,10 @@ serve(async (req) => {
         });
       }
       
-      // Öffentlich freigegebene Dateien abrufen
-      const { data: accessData, error: accessError } = await supabase
-        .from("script_file_access")
-        .select("file_path, is_public")
-        .eq("license_id", data.id);
+      // Wenn es keine Dateien gibt, aber eine main.lua, diese verwenden
+      let mainFile = storageFiles.find(file => file.name === "main.lua");
       
-      if (accessError) {
-        console.log("Fehler beim Abrufen der Datei-Zugriffsrechte:", accessError);
-        return new Response(JSON.stringify({ error: "Fehler beim Abrufen der Zugriffsrechte" }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 500,
-        });
-      }
-      
-      // Öffentliche Dateien filtern
-      const publicFiles = accessData?.filter(file => file.is_public) || [];
-      
-      // Wenn es keine öffentlichen Dateien gibt, aber eine main.lua, diese verwenden
-      let mainFile = storageFiles.find(file => 
-        publicFiles.some(pf => pf.file_path === `${data.id}/${file.name}`) || file.name === "main.lua"
-      );
-      
-      // Wenn keine öffentliche oder main.lua Datei gefunden wurde, nach anderen Dateien suchen
+      // Wenn keine main.lua Datei gefunden wurde, nach anderen Dateien suchen
       if (!mainFile) {
         const luaFiles = storageFiles.filter(file => file.name.endsWith('.lua'));
         if (luaFiles.length > 0) {
