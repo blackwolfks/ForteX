@@ -1,3 +1,4 @@
+
 --[[ 
   ForteX Framework - Remote Script Loader
   
@@ -216,7 +217,7 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
         else
             print(ERROR_PREFIX .. " Lizenz in der Datenbank nicht gültig oder nicht gefunden^7")
             if callback then callback(false, "Ungültige Lizenz") end
-        }
+        end
     end, "POST", json.encode({
         license_key = licenseKey,
         server_key = serverKey
@@ -227,7 +228,7 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
         ["X-Server-Key"] = serverKey,
         ["Authorization"] = authHeader
     })
-}
+end
 
 -- Funktion zum Laden und Ausführen des Remote-Skripts
 function LoadRemoteScript()
