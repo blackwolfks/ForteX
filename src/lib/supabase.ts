@@ -67,7 +67,7 @@ export type Invoice = {
 };
 
 // Hilfsfunktion, um den Status eines Storage-Buckets zu prüfen und zu erstellen
-export const checkStorageBucket = async (bucketName: string = 'websites'): Promise<boolean> => {
+export const checkStorageBucket = async (bucketName: string = 'script'): Promise<boolean> => {
   try {
     console.log(`Überprüfe Storage-Bucket '${bucketName}'...`);
     

@@ -197,7 +197,7 @@ serve(async (req) => {
         
         // Datei herunterladen
         const { data: fileData, error: fileError } = await supabase.storage
-          .from("script-files")
+          .from("script")
           .download(fullPath);
         
         if (fileError) {
@@ -220,7 +220,7 @@ serve(async (req) => {
       
       // Wenn keine spezifische Datei angefordert wurde, listet Dateien auf
       const { data: storageFiles, error: storageError } = await supabase.storage
-        .from("script-files")
+        .from("script")
         .list(data.id.toString());
       
       if (storageError) {
@@ -254,7 +254,7 @@ serve(async (req) => {
       
       // Skript-Datei herunterladen
       const { data: fileData, error: fileError } = await supabase.storage
-        .from("script-files")
+        .from("script")
         .download(`${data.id}/${mainFile.name}`);
       
       if (fileError) {

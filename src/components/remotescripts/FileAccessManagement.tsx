@@ -43,7 +43,7 @@ const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
     try {
       // Dateien auflisten
       const { data: storageFiles, error } = await supabase.storage
-        .from("script-files")
+        .from("script")
         .list(licenseId);
 
       if (error) {

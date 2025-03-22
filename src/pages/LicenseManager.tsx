@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,7 +37,6 @@ const LicenseManager = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch licenses
   const { data: licenses = [], isLoading, error } = useQuery({
     queryKey: ['licenses'],
     queryFn: async () => {
@@ -48,7 +46,6 @@ const LicenseManager = () => {
     }
   });
 
-  // Create license
   const createLicenseMutation = useMutation({
     mutationFn: async (variables: { script_name: string; script_file?: string; server_ip?: string; has_file_upload: boolean }) => {
       const { data, error } = await callRPC('create_license', {
@@ -68,7 +65,6 @@ const LicenseManager = () => {
       setServerIp("");
       setHasFileUpload(false);
       
-      // Aktualisiere die Lizenz mit has_file_upload
       if (data && data.id && hasFileUpload) {
         updateLicenseMutation.mutate({ 
           id: data.id, 
@@ -91,7 +87,6 @@ const LicenseManager = () => {
     }
   });
 
-  // Regenerate server key
   const regenerateServerKeyMutation = useMutation({
     mutationFn: async (licenseId: string) => {
       const { data, error } = await callRPC('regenerate_server_key', {
@@ -117,7 +112,6 @@ const LicenseManager = () => {
     }
   });
 
-  // Update license activation status
   const updateLicenseMutation = useMutation({
     mutationFn: async ({ id, aktiv, has_file_upload }: { id: string; aktiv?: boolean; has_file_upload?: boolean }) => {
       const { data, error } = await callRPC('update_license', {
@@ -145,16 +139,14 @@ const LicenseManager = () => {
     }
   });
 
-  // File upload mutation
   const uploadFileMutation = useMutation({
     mutationFn: async ({ licenseId, file }: { licenseId: string, file: File }) => {
-      const bucketName = 'script-files';
+      const bucketName = 'script';
       const filePath = `${licenseId}/${file.name}`;
       
       const { url, error } = await mediaService.uploadFile(bucketName, filePath, file);
       if (error) throw error;
       
-      // Aktualisiere die Lizenz mit dem neuen Skript-Dateipfad
       const { data: updateData, error: updateError } = await callRPC('update_license', {
         p_license_id: licenseId,
         p_script_file: filePath
@@ -363,7 +355,6 @@ const LicenseManager = () => {
             </DialogContent>
           </Dialog>
           
-          {/* File Upload Dialog */}
           <Dialog open={isFileUploadModalOpen} onOpenChange={setIsFileUploadModalOpen}>
             <DialogContent>
               <DialogHeader>
