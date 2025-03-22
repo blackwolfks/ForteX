@@ -24,8 +24,9 @@ export class MediaService {
         console.log(`Bucket '${bucketName}' existiert nicht, wird erstellt...`);
         
         try {
+          // Set public: true explicitly to ensure public access
           const { error: createError } = await supabase.storage.createBucket(bucketName, {
-            public: true,  // Explicitly set to true to ensure public access
+            public: true,
             fileSizeLimit: 52428800, // 50MB
           });
           
@@ -34,7 +35,7 @@ export class MediaService {
             
             // Check for RLS policy error
             if (createError.message.includes("new row violates row-level security policy")) {
-              console.warn("RLS policy error - this may require admin permissions");
+              console.warn("RLS policy error - dieses Projekt benötigt Admin-Rechte im Storage");
               
               // The bucket might exist but not be visible to the current user due to RLS
               // Try to use it anyway, as some operations might still work
@@ -87,6 +88,15 @@ export class MediaService {
       }
       
       console.log(`Lade Datei '${filePath}' in Bucket '${bucketName}' hoch...`);
+      
+      // Explicit user ID as first part of path to enforce ownership
+      const userId = (await supabase.auth.getUser()).data.user?.id;
+      if (!userId) {
+        return { url: null, error: new Error("Benutzer nicht angemeldet") };
+      }
+      
+      // For debugging
+      console.log(`User ID für Upload: ${userId}`);
       
       // Datei hochladen mit expliziten Optionen
       const { data, error } = await supabase.storage

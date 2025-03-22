@@ -110,7 +110,8 @@ export const checkStorageBucket = async (bucketName: string = 'script'): Promise
       
       // Create the bucket with public access
       const { data, error: createError } = await supabaseClient.storage.createBucket(bucketName, {
-        public: true  // Make bucket public
+        public: true,  // Make bucket public
+        fileSizeLimit: 50 * 1024 * 1024  // 50MB limit
       });
       
       if (createError) {
@@ -119,6 +120,16 @@ export const checkStorageBucket = async (bucketName: string = 'script'): Promise
       }
       
       console.log(`Bucket '${bucketName}' erfolgreich erstellt.`);
+      
+      // Set the bucket to have broader policies
+      const { error: policyError } = await supabaseClient.storage.updateBucket(bucketName, {
+        public: true
+      });
+      
+      if (policyError) {
+        console.error(`Fehler beim Setzen der Bucket-Policies:`, policyError);
+      }
+      
       return true;
     }
     

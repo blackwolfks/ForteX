@@ -103,7 +103,7 @@ export function useScriptManagement() {
           toast.success(`${selectedFiles.length} Dateien erfolgreich hochgeladen`);
         }
         
-        // Mark this license as having file uploads - Fixed parameter format here
+        // Mark this license as having file uploads - match the parameter order
         console.log("Updating license to set has_file_upload = true");
         await callRPC('update_license', {
           p_license_id: licenseId,
@@ -124,6 +124,14 @@ export function useScriptManagement() {
 
   const handleUpdateScript = async (licenseId: string, scriptName: string, scriptCode: string | null, serverIp: string | null, isActive: boolean) => {
     try {
+      console.log("Updating script with parameters:", {
+        p_license_id: licenseId,
+        p_script_name: scriptName,
+        p_script_file: scriptCode,
+        p_server_ip: serverIp,
+        p_aktiv: isActive,
+      });
+      
       const { error } = await callRPC('update_license', {
         p_license_id: licenseId,
         p_script_name: scriptName,
@@ -148,6 +156,10 @@ export function useScriptManagement() {
 
   const handleRegenerateServerKey = async (licenseId: string) => {
     try {
+      console.log("Regenerating server key with parameter:", {
+        p_license_id: licenseId,
+      });
+      
       const { error } = await callRPC('regenerate_server_key', {
         p_license_id: licenseId,
       });
@@ -168,6 +180,10 @@ export function useScriptManagement() {
 
   const handleDeleteScript = async (licenseId: string) => {
     try {
+      console.log("Deleting script with parameter:", {
+        p_license_id: licenseId,
+      });
+      
       const { error } = await callRPC('delete_license', {
         p_license_id: licenseId,
       });
@@ -178,6 +194,8 @@ export function useScriptManagement() {
         return;
       }
 
+      // Also clean up storage
+      console.log(`Removing storage files for license ${licenseId}`);
       await supabase.storage
         .from('script')
         .remove([`${licenseId}`]);
