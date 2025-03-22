@@ -106,72 +106,63 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseKey);
     
-    // Zuerst die neuere Tabelle 'server_licenses' abfragen
+    // Direkte Abfrage über beide Tabellen durchführen
     try {
+      // 1. Zuerst in server_licenses suchen
       console.log("Prüfe in server_licenses Tabelle");
       const { data: licenseData, error: licenseError } = await supabase
         .from('server_licenses')
         .select('*')
         .eq('license_key', licenseKey)
         .eq('server_key', serverKey)
-        .single();
-        
+        .maybeSingle();
+      
       if (licenseError) {
-        console.log("Fehler bei server_licenses oder keine Ergebnisse:", licenseError);
+        console.log("Fehler bei server_licenses:", licenseError);
+      }
+      
+      // Wenn ein Ergebnis gefunden wurde, direkt zurückgeben
+      if (licenseData) {
+        console.log("Lizenz in server_licenses gefunden:", licenseData);
         
-        // Fallback: Ältere Tabelle 'script_files' abfragen
-        console.log("Prüfe in script_files Tabelle");
-        const { data: oldLicenseData, error: oldLicenseError } = await supabase
-          .from('script_files')
-          .select('*')
-          .eq('license_key', licenseKey)
-          .eq('server_key', serverKey)
-          .single();
-          
-        if (oldLicenseError) {
-          console.log("Fehler bei script_files oder keine Ergebnisse:", oldLicenseError);
-          
-          // RPC-Funktion als letzte Option versuchen
-          console.log("Versuche RPC Funktion check_license_by_keys");
-          const { data: rpcData, error: rpcError } = await supabase.rpc("check_license_by_keys", {
-            p_license_key: licenseKey,
-            p_server_key: serverKey
-          });
-          
-          if (rpcError || !rpcData || !rpcData.valid) {
-            console.log("RPC-Funktion nicht erfolgreich:", rpcError || "Ungültiges Ergebnis");
-            
-            // Existieren die Tabellen überhaupt?
-            const { data: tableInfo, error: tableError } = await supabase
-              .from('server_licenses')
-              .select('id')
-              .limit(1);
-              
-            if (tableError) {
-              console.log("server_licenses Tabelle existiert nicht:", tableError);
-            } else {
-              console.log("server_licenses Tabelle existiert, aber keine Übereinstimmung für die angegebenen Schlüssel.");
-            }
-            
-            return new Response(JSON.stringify({ 
-              valid: false, 
-              error: "Ungültige Lizenz oder Server-Key" 
-            }), {
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-              status: 401
-            });
-          }
-          
-          return new Response(JSON.stringify(rpcData), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-            status: 200
-          });
-        }
+        return new Response(JSON.stringify({ 
+          valid: true,
+          id: licenseData.id,
+          license_key: licenseData.license_key,
+          server_key: licenseData.server_key, // Wichtig: Server-Key mit zurückgeben
+          script_name: licenseData.script_name,
+          script_file: licenseData.script_file,
+          server_ip: licenseData.server_ip,
+          aktiv: licenseData.aktiv,
+          has_file_upload: licenseData.has_file_upload
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200
+        });
+      }
+      
+      // 2. Dann in script_files suchen
+      console.log("Prüfe in script_files Tabelle");
+      const { data: oldLicenseData, error: oldLicenseError } = await supabase
+        .from('script_files')
+        .select('*')
+        .eq('license_key', licenseKey)
+        .eq('server_key', serverKey)
+        .maybeSingle();
+      
+      if (oldLicenseError) {
+        console.log("Fehler bei script_files:", oldLicenseError);
+      }
+      
+      // Wenn ein Ergebnis gefunden wurde, direkt zurückgeben
+      if (oldLicenseData) {
+        console.log("Lizenz in script_files gefunden:", oldLicenseData);
         
         return new Response(JSON.stringify({ 
           valid: true,
           id: oldLicenseData.id,
           license_key: oldLicenseData.license_key,
+          server_key: oldLicenseData.server_key, // Wichtig: Server-Key mit zurückgeben
           script_name: oldLicenseData.script_name,
           script_file: oldLicenseData.script_file,
           server_ip: oldLicenseData.server_ip,
@@ -183,15 +174,66 @@ serve(async (req) => {
         });
       }
       
-      return new Response(JSON.stringify({ 
+      // 3. RPC-Funktion als letzte Option versuchen
+      console.log("Versuche RPC Funktion check_license_by_keys");
+      const { data: rpcData, error: rpcError } = await supabase.rpc("check_license_by_keys", {
+        p_license_key: licenseKey,
+        p_server_key: serverKey
+      });
+      
+      if (rpcError) {
+        console.log("RPC-Funktion fehlgeschlagen:", rpcError);
+        
+        return new Response(JSON.stringify({ 
+          valid: false, 
+          error: "Datenbankfehler bei der Lizenzprüfung",
+          details: rpcError.message
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 500
+        });
+      }
+      
+      if (!rpcData || !rpcData.valid) {
+        console.log("Keine gültige Lizenz gefunden:", rpcData);
+        
+        // Explizite Abfrage zur Fehlerbehebung
+        const { data: allLicenses, error: licenseQueryError } = await supabase
+          .from('server_licenses')
+          .select('license_key, server_key')
+          .eq('license_key', licenseKey)
+          .limit(5);
+        
+        if (!licenseQueryError && allLicenses && allLicenses.length > 0) {
+          console.log("Gefundene Lizenzen für diesen Key (ohne Server-Key):", allLicenses);
+        }
+        
+        return new Response(JSON.stringify({ 
+          valid: false, 
+          error: "Ungültige Lizenz oder Server-Key",
+          provided: {
+            license_key: licenseKey,
+            server_key: serverKey
+          }
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 401
+        });
+      }
+      
+      // RPC-Ergebnis zurückgeben mit expliziter Einbeziehung des Server-Keys
+      console.log("Lizenz mit RPC-Funktion validiert:", rpcData);
+      
+      return new Response(JSON.stringify({
         valid: true,
-        id: licenseData.id,
-        license_key: licenseData.license_key,
-        script_name: licenseData.script_name,
-        script_file: licenseData.script_file,
-        server_ip: licenseData.server_ip,
-        aktiv: licenseData.aktiv,
-        has_file_upload: licenseData.has_file_upload
+        id: rpcData.id,
+        license_key: rpcData.license_key,
+        server_key: serverKey, // Explizit den erhaltenen Server-Key zurückgeben
+        script_name: rpcData.script_name,
+        script_file: rpcData.script_file,
+        server_ip: rpcData.server_ip,
+        aktiv: rpcData.aktiv,
+        has_file_upload: rpcData.has_file_upload
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200

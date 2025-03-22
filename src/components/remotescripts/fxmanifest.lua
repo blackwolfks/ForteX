@@ -10,8 +10,7 @@ version '1.0.0'
 -- Server-Scripts
 server_script {
     'config.lua',
-    'FiveM_ForteX.lua',
-    'ForteX_test.lua'
+    'FiveM_ForteX.lua'
 }
 
 -- Dateien, die mit der Ressource heruntergeladen werden sollen
