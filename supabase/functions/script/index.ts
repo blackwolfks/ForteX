@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.33.1"
 
@@ -97,7 +96,7 @@ serve(async (req) => {
     if (serverKey) serverKey = serverKey.trim();
     
     // IP-Adresse des anfragenden Servers erhalten
-    const clientIp = req.headers.get("x-forwarded-for") || "unknown";
+    const clientIp = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "unknown";
     
     console.log(`Anfrage von IP: ${clientIp}, Lizenzschlüssel: ${licenseKey}, Server-Key: ${serverKey}`);
     
@@ -250,10 +249,11 @@ serve(async (req) => {
     }
     
     // Überprüfen, ob eine IP-Beschränkung existiert
-    if (data.server_ip && data.server_ip !== clientIp && data.server_ip !== "*") {
+    if (data.server_ip && data.server_ip !== "*" && data.server_ip !== clientIp) {
       console.log(`IP-Beschränkung verletzt. Erwartet: ${data.server_ip}, Erhalten: ${clientIp}`);
       return new Response(JSON.stringify({ 
-        error: "Zugriff von nicht autorisierter IP-Adresse",
+        error: "IP-Adressüberprüfung fehlgeschlagen",
+        message: "Die IP-Adresse stimmt nicht mit der autorisierten IP überein",
         debug: {
           expected_ip: data.server_ip,
           client_ip: clientIp
@@ -262,6 +262,11 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 403,
       });
+    }
+    
+    // Wenn die IP-Adresse übereinstimmt oder keine Beschränkung vorhanden ist
+    if (data.server_ip) {
+      console.log(`IP-Überprüfung erfolgreich. Server-IP: ${data.server_ip}, Client-IP: ${clientIp}`);
     }
     
     // Extrahiere spezifischen Dateipfad aus der URL

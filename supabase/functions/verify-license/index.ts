@@ -106,6 +106,10 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseKey);
     
+    // IP-Adresse des anfragenden Clients erfassen
+    const clientIp = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "unknown";
+    console.log(`Client-IP: ${clientIp}`);
+    
     // Direkte Abfrage über beide Tabellen durchführen
     try {
       // 1. Zuerst in server_licenses suchen
@@ -121,9 +125,26 @@ serve(async (req) => {
         console.log("Fehler bei server_licenses:", licenseError);
       }
       
-      // Wenn ein Ergebnis gefunden wurde, direkt zurückgeben
+      // Wenn ein Ergebnis gefunden wurde, überprüfe IP-Beschränkung
       if (licenseData) {
         console.log("Lizenz in server_licenses gefunden:", licenseData);
+        
+        // IP-Adressüberprüfung
+        if (licenseData.server_ip && licenseData.server_ip !== "*") {
+          // Überprüfe, ob die Client-IP mit der gespeicherten IP übereinstimmt
+          if (licenseData.server_ip !== clientIp) {
+            console.log(`IP-Beschränkung verletzt. Erwartet: ${licenseData.server_ip}, Erhalten: ${clientIp}`);
+            return new Response(JSON.stringify({ 
+              valid: false, 
+              error: "IP-Adressüberprüfung fehlgeschlagen", 
+              message: "Die IP-Adresse stimmt nicht mit der autorisierten IP überein" 
+            }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 403
+            });
+          }
+          console.log("IP-Adressüberprüfung erfolgreich");
+        }
         
         return new Response(JSON.stringify({ 
           valid: true,
@@ -154,9 +175,26 @@ serve(async (req) => {
         console.log("Fehler bei script_files:", oldLicenseError);
       }
       
-      // Wenn ein Ergebnis gefunden wurde, direkt zurückgeben
+      // Wenn ein Ergebnis gefunden wurde, überprüfe IP-Beschränkung
       if (oldLicenseData) {
         console.log("Lizenz in script_files gefunden:", oldLicenseData);
+        
+        // IP-Adressüberprüfung
+        if (oldLicenseData.server_ip && oldLicenseData.server_ip !== "*") {
+          // Überprüfe, ob die Client-IP mit der gespeicherten IP übereinstimmt
+          if (oldLicenseData.server_ip !== clientIp) {
+            console.log(`IP-Beschränkung verletzt. Erwartet: ${oldLicenseData.server_ip}, Erhalten: ${clientIp}`);
+            return new Response(JSON.stringify({ 
+              valid: false, 
+              error: "IP-Adressüberprüfung fehlgeschlagen", 
+              message: "Die IP-Adresse stimmt nicht mit der autorisierten IP überein" 
+            }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 403
+            });
+          }
+          console.log("IP-Adressüberprüfung erfolgreich");
+        }
         
         return new Response(JSON.stringify({ 
           valid: true,
@@ -219,6 +257,23 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 401
         });
+      }
+      
+      // IP-Adressüberprüfung für RPC-Ergebnis
+      if (rpcData.server_ip && rpcData.server_ip !== "*") {
+        // Überprüfe, ob die Client-IP mit der gespeicherten IP übereinstimmt
+        if (rpcData.server_ip !== clientIp) {
+          console.log(`IP-Beschränkung verletzt. Erwartet: ${rpcData.server_ip}, Erhalten: ${clientIp}`);
+          return new Response(JSON.stringify({ 
+            valid: false, 
+            error: "IP-Adressüberprüfung fehlgeschlagen", 
+            message: "Die IP-Adresse stimmt nicht mit der autorisierten IP überein" 
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 403
+          });
+        }
+        console.log("IP-Adressüberprüfung erfolgreich");
       }
       
       // RPC-Ergebnis zurückgeben mit expliziter Einbeziehung des Server-Keys

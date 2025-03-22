@@ -1,4 +1,3 @@
-
 --[[ 
   ForteX Framework - Remote Script Loader
   
@@ -126,6 +125,16 @@ function DebugResponse(statusCode, responseData, responseHeaders)
                 if jsonData and jsonData.error then
                     print(ERROR_PREFIX .. " Fehler vom Server erhalten: " .. tostring(jsonData.error) .. "^7")
                     
+                    -- Spezielle Behandlung für IP-Fehler
+                    if jsonData.error == "IP-Adressüberprüfung fehlgeschlagen" then
+                        print(ERROR_PREFIX .. " Die Server-IP stimmt nicht mit der autorisierten IP überein.^7")
+                        if jsonData.debug and jsonData.debug.expected_ip and jsonData.debug.client_ip then
+                            print(ERROR_PREFIX .. " Erwartete IP: " .. jsonData.debug.expected_ip .. "^7")
+                            print(ERROR_PREFIX .. " Ihre IP: " .. jsonData.debug.client_ip .. "^7")
+                            print(ERROR_PREFIX .. " Bitte aktualisieren Sie die Server-IP in der Web-Admin-Oberfläche oder verwenden Sie '*' für alle IPs.^7")
+                        end
+                    end
+                    
                     -- Debug-Informationen anzeigen, wenn vorhanden
                     if jsonData.debug then
                         print(DEBUG_PREFIX .. " Debug-Informationen: ")
@@ -171,6 +180,22 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
         
         if statusCode ~= 200 then
             print(ERROR_PREFIX .. " Fehler bei der Datenbankabfrage: " .. tostring(statusCode) .. "^7")
+            
+            -- Prüfen auf IP-Beschränkungsfehler (403)
+            if statusCode == 403 then
+                local jsonData = json.decode(responseData)
+                if jsonData and jsonData.error == "IP-Adressüberprüfung fehlgeschlagen" then
+                    print(ERROR_PREFIX .. " Zugriff verweigert - Ihre Server-IP stimmt nicht mit der autorisierten IP überein^7")
+                    if jsonData.debug and jsonData.debug.expected_ip and jsonData.debug.client_ip then
+                        print(ERROR_PREFIX .. " Erwartete IP: " .. jsonData.debug.expected_ip .. "^7")
+                        print(ERROR_PREFIX .. " Ihre IP: " .. jsonData.debug.client_ip .. "^7")
+                    end
+                    print(ERROR_PREFIX .. " Bitte aktualisieren Sie die IP-Beschränkung in der Web-Admin-Oberfläche^7")
+                    if callback then callback(false, "IP-Beschränkung: Nicht autorisierte IP-Adresse") end
+                    return
+                end
+            end
+            
             if callback then callback(false, "Datenbankfehler: " .. tostring(statusCode)) end
             return
         end
@@ -184,11 +209,14 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
         
         if result.valid then
             print(SUCCESS_PREFIX .. " Lizenz erfolgreich in der Datenbank validiert!^7")
+            if result.server_ip then
+                print(SUCCESS_PREFIX .. " Server-IP: " .. (result.server_ip == "*" and "Alle IPs erlaubt" or result.server_ip) .. "^7")
+            end
             if callback then callback(true, result) end
         else
             print(ERROR_PREFIX .. " Lizenz in der Datenbank nicht gültig oder nicht gefunden^7")
             if callback then callback(false, "Ungültige Lizenz") end
-        end
+        }
     end, "POST", json.encode({
         license_key = licenseKey,
         server_key = serverKey
@@ -199,7 +227,7 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
         ["X-Server-Key"] = serverKey,
         ["Authorization"] = authHeader
     })
-end
+}
 
 -- Funktion zum Laden und Ausführen des Remote-Skripts
 function LoadRemoteScript()
