@@ -47,6 +47,7 @@ if not configFunc then
     return
 end
 
+-- Config ausführen, um die CONFIG-Tabelle zu erstellen
 configFunc()
 
 -- Überprüfen, ob die Konfiguration korrekt ist
@@ -57,15 +58,22 @@ end
 
 if not CONFIG.LicenseKey or not CONFIG.ServerKey then
     print(ERROR_PREFIX .. " Fehler: Lizenzschlüssel oder ServerKey nicht konfiguriert^7")
+    print(ERROR_PREFIX .. " Bitte geben Sie gültige Werte in config.lua ein^7")
     return
 end
 
-print(SUCCESS_PREFIX .. " Konfiguration geladen: Lizenzschlüssel = " .. CONFIG.LicenseKey .. ", Server-Key = " .. CONFIG.ServerKey)
+-- Ausgabe der Konfigurationswerte mit Formatierung, um Leerzeichen zu erkennen
+print(SUCCESS_PREFIX .. " Konfiguration geladen:")
+print(SUCCESS_PREFIX .. " Lizenzschlüssel = '" .. CONFIG.LicenseKey .. "'")
+print(SUCCESS_PREFIX .. " Server-Key = '" .. CONFIG.ServerKey .. "'")
+print(SUCCESS_PREFIX .. " Debug-Modus = " .. tostring(CONFIG.Debug))
 
 if not CONFIG.ServerUrl then
     CONFIG.ServerUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/script"
     print(DEBUG_PREFIX .. " Warnung: ServerUrl nicht konfiguriert, verwende Standard-URL^7")
 end
+
+print(SUCCESS_PREFIX .. " Server-URL = " .. CONFIG.ServerUrl)
 
 -- Hilfsfunktion für Base64-Encoding
 local b = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
@@ -196,7 +204,7 @@ end
 -- Funktion zum Laden und Ausführen des Remote-Skripts
 function LoadRemoteScript()
     print(PREFIX .. " Lade Remote-Skript...^7")
-    print(PREFIX .. " Verwende Lizenzschlüssel: " .. CONFIG.LicenseKey .. " und Server-Key: " .. CONFIG.ServerKey .. "^7")
+    print(PREFIX .. " Verwende Lizenzschlüssel: '" .. CONFIG.LicenseKey .. "' und Server-Key: '" .. CONFIG.ServerKey .. "'")
     print(PREFIX .. " Server-URL: " .. CONFIG.ServerUrl .. "^7")
     
     -- Zuerst die Lizenz in der Datenbank überprüfen
@@ -215,14 +223,20 @@ end
 
 -- Funktion zum direkten Laden des Skripts
 function LoadScriptDirectly()
+    -- Die Keys einmal trimmen, um Leerzeichen zu entfernen
+    local licenseKey = CONFIG.LicenseKey:gsub("^%s*(.-)%s*$", "%1")
+    local serverKey = CONFIG.ServerKey:gsub("^%s*(.-)%s*$", "%1")
+    
+    print(DEBUG_PREFIX .. " Verwende bereinigte Keys: LicenseKey='" .. licenseKey .. "', ServerKey='" .. serverKey .. "'")
+    
     -- Erstelle einen Basic-Auth Header für die Authentifizierung
-    local authHeader = "Basic " .. base64encode(CONFIG.LicenseKey .. ":" .. CONFIG.ServerKey)
+    local authHeader = "Basic " .. base64encode(licenseKey .. ":" .. serverKey)
     
     -- Trage alle wichtigen Header und vor allem den Authorization-Header ein
     local headers = {
         ["Content-Type"] = "application/json",
-        ["X-License-Key"] = CONFIG.LicenseKey,
-        ["X-Server-Key"] = CONFIG.ServerKey,
+        ["X-License-Key"] = licenseKey,
+        ["X-Server-Key"] = serverKey,
         ["Authorization"] = authHeader,
         ["User-Agent"] = "FiveM-ForteX/1.0",
         ["Accept"] = "text/plain"
@@ -241,6 +255,11 @@ function LoadScriptDirectly()
         end
     end
     
+    local requestBody = json.encode({
+        license_key = licenseKey,
+        server_key = serverKey
+    })
+    
     PerformHttpRequest(CONFIG.ServerUrl, function(statusCode, responseData, responseHeaders)
         -- Debug-Informationen ausgeben
         DebugResponse(statusCode, responseData, responseHeaders)
@@ -249,7 +268,7 @@ function LoadScriptDirectly()
             print(ERROR_PREFIX .. " Fehler beim Abrufen des Skripts: " .. tostring(statusCode) .. "^7")
             if statusCode == 401 then
                 print(ERROR_PREFIX .. " Authentifizierungsfehler - überprüfen Sie Ihren Lizenzschlüssel und Server-Key^7")
-                print(ERROR_PREFIX .. " Ihre Config-Werte: LicenseKey=" .. CONFIG.LicenseKey .. ", ServerKey=" .. CONFIG.ServerKey .. "^7")
+                print(ERROR_PREFIX .. " Ihre Config-Werte: LicenseKey='" .. licenseKey .. "', ServerKey='" .. serverKey .. "'")
                 print(ERROR_PREFIX .. " Prüfe ob die Authorization-Header korrekt gesendet wurden^7")
                 
                 -- Versuche erneut mit etwas Verzögerung und explizitem POST-Body
@@ -281,11 +300,40 @@ function LoadScriptDirectly()
                         end
                     else
                         print(ERROR_PREFIX .. " Auch zweiter Versuch fehlgeschlagen: " .. tostring(retryStatusCode) .. "^7")
+                        
+                        -- Versuche einen dritten Versuch mit einer anderen Methode
+                        print(PREFIX .. " Versuche dritten Versuch mit URL-Parameter...^7")
+                        
+                        local urlWithParams = CONFIG.ServerUrl .. "?license_key=" .. licenseKey .. "&server_key=" .. serverKey
+                        PerformHttpRequest(urlWithParams, function(thirdStatusCode, thirdResponseData, thirdResponseHeaders)
+                            DebugResponse(thirdStatusCode, thirdResponseData, thirdResponseHeaders)
+                            
+                            if thirdStatusCode == 200 then
+                                print(SUCCESS_PREFIX .. " Dritter Versuch erfolgreich!^7")
+                                -- Verarbeite die Antwort...
+                                local isValid, scriptOrError = ValidateScript(thirdResponseData)
+                                if isValid then
+                                    -- Skript ausführen
+                                    local func, err = load(scriptOrError)
+                                    if func then
+                                        local success, error = pcall(func)
+                                        if success then
+                                            print(SUCCESS_PREFIX .. " Skript erfolgreich geladen und ausgeführt^7")
+                                        else
+                                            print(ERROR_PREFIX .. " Fehler beim Ausführen des Skripts: " .. tostring(error) .. "^7")
+                                        end
+                                    else
+                                        print(ERROR_PREFIX .. " Fehler beim Kompilieren des Skripts: " .. tostring(err) .. "^7")
+                                    end
+                                else
+                                    print(ERROR_PREFIX .. " Skript-Validierung fehlgeschlagen: " .. scriptOrError .. "^7")
+                                end
+                            else
+                                print(ERROR_PREFIX .. " Alle Versuche fehlgeschlagen. Bitte überprüfen Sie Ihre Lizenzschlüssel und Server-URL.^7")
+                            end
+                        end, "GET", "", headers)
                     end
-                end, "POST", json.encode({
-                    license_key = CONFIG.LicenseKey,
-                    server_key = CONFIG.ServerKey
-                }), headers)
+                end, "POST", requestBody, headers)
             elseif statusCode == 403 then
                 print(ERROR_PREFIX .. " Zugriff verweigert - möglicherweise IP-Beschränkung oder inaktive Lizenz^7")
             elseif statusCode == 404 then
@@ -329,10 +377,7 @@ function LoadScriptDirectly()
         else
             print(ERROR_PREFIX .. " Fehler beim Kompilieren des Skripts: " .. tostring(err) .. "^7")
         end
-    end, "POST", json.encode({
-        license_key = CONFIG.LicenseKey,
-        server_key = CONFIG.ServerKey
-    }), headers)
+    end, "POST", requestBody, headers)
 end
 
 -- ForteX API für andere Ressourcen

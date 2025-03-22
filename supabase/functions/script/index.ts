@@ -30,6 +30,14 @@ serve(async (req) => {
     let serverKey = req.headers.get("x-server-key");
     let bodyData: any = {};
     
+    // URL-Parameter prüfen
+    const urlParams = url.searchParams;
+    if (urlParams.has("license_key") && urlParams.has("server_key")) {
+      console.log("Lizenzschlüssel und Server-Key aus URL-Parametern erkannt");
+      licenseKey = urlParams.get("license_key");
+      serverKey = urlParams.get("server_key");
+    }
+    
     // Basic Auth Header extrahieren
     const authHeader = req.headers.get("authorization");
     console.log("Authorization Header:", authHeader ? "vorhanden" : "nicht vorhanden");
@@ -84,6 +92,10 @@ serve(async (req) => {
       }
     }
     
+    // Keys trimmen, um Leerzeichen zu entfernen
+    if (licenseKey) licenseKey = licenseKey.trim();
+    if (serverKey) serverKey = serverKey.trim();
+    
     // IP-Adresse des anfragenden Servers erhalten
     const clientIp = req.headers.get("x-forwarded-for") || "unknown";
     
@@ -100,6 +112,10 @@ serve(async (req) => {
             license_key: req.headers.has("x-license-key"),
             server_key: req.headers.has("x-server-key"),
             authorization: req.headers.has("authorization")
+          },
+          url_params: {
+            license_key: urlParams.has("license_key"),
+            server_key: urlParams.has("server_key")
           },
           client_ip: clientIp,
           url: req.url
@@ -138,12 +154,13 @@ serve(async (req) => {
       p_server_key: serverKey
     });
     
-    // Wenn es einen Fehler gibt (z.B. wenn die server_licenses Tabelle noch als script_files heißt)
+    // Wenn es einen Fehler gibt, versuche alternative Abfragen
     if (error) {
       console.log("Fehler bei der ersten Lizenzüberprüfung, versuche alternative Methode:", error);
       
       // Probiere es mit einem direkten Datenbankzugriff
       try {
+        console.log("Prüfe in server_licenses Tabelle...");
         const { data: licenseData, error: licenseError } = await supabase
           .from('server_licenses')
           .select('*')
@@ -189,6 +206,16 @@ serve(async (req) => {
             console.log("Lizenz in script_files gefunden:", data);
           } else {
             console.log("Lizenz auch nicht in script_files gefunden:", oldLicenseError);
+            
+            // Versuche eine direkte Debug-Abfrage aller Lizenzen
+            const { data: allLicenses, error: allLicensesError } = await supabase
+              .from('server_licenses')
+              .select('license_key, server_key')
+              .limit(5);
+            
+            if (!allLicensesError && allLicenses) {
+              console.log("Vorhandene Lizenzen (max. 5):", allLicenses);
+            }
           }
         }
       } catch (dbError) {
@@ -271,6 +298,7 @@ serve(async (req) => {
               
               if (createBucketError) {
                 console.log("Fehler beim Erstellen des Buckets:", createBucketError);
+                // Trotzdem fortfahren, da der Bucket vielleicht doch existiert
               } else {
                 console.log("Script-Bucket erfolgreich erstellt");
               }
@@ -280,61 +308,23 @@ serve(async (req) => {
           }
         } catch (bucketError) {
           console.log("Fehler beim Überprüfen/Erstellen des Buckets:", bucketError);
+          // Fortfahren und versuchen, die Datei trotzdem zu laden
         }
         
-        // Datei herunterladen
-        const { data: fileData, error: fileError } = await supabase.storage
-          .from("script")
-          .download(fullPath);
-        
-        if (fileError) {
-          console.log("Fehler beim Herunterladen der Datei:", fileError);
-          return new Response(JSON.stringify({ 
-            error: "Fehler beim Herunterladen der Datei", 
-            debug: { 
-              path: fullPath,
-              error_message: fileError.message,
-              error_details: fileError
-            }
-          }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-            status: 500,
-          });
-        }
-        
-        // Datei als Text senden
-        const fileText = await fileData.text();
-        console.log(`Datei erfolgreich gesendet: ${fullPath}`);
-        
-        return new Response(fileText, {
-          headers: { ...corsHeaders, "Content-Type": "text/plain" },
-          status: 200,
-        });
-      }
-      
-      // Wenn keine spezifische Datei angefordert wurde, listet Dateien auf
-      const { data: storageFiles, error: storageError } = await supabase.storage
-        .from("script")
-        .list(data.id.toString());
-      
-      if (storageError) {
-        console.log("Fehler beim Abrufen der Script-Dateien:", storageError);
-        
-        // Versuche das Verzeichnis zu erstellen
         try {
-          // Workaround: Leere Datei hochladen, um ein Verzeichnis zu erstellen
-          const emptyFile = new Blob(['// Leere Datei'], { type: 'text/plain' });
-          const { error: uploadError } = await supabase.storage
+          // Datei herunterladen
+          const { data: fileData, error: fileError } = await supabase.storage
             .from("script")
-            .upload(`${data.id}/main.lua`, emptyFile);
+            .download(fullPath);
           
-          if (uploadError) {
-            console.log("Fehler beim Erstellen des Verzeichnisses:", uploadError);
+          if (fileError) {
+            console.log("Fehler beim Herunterladen der Datei:", fileError);
             return new Response(JSON.stringify({ 
-              error: "Fehler beim Erstellen des Verzeichnisses",
-              debug: {
-                error_message: uploadError.message,
-                license_id: data.id
+              error: "Fehler beim Herunterladen der Datei", 
+              debug: { 
+                path: fullPath,
+                error_message: fileError.message,
+                error_details: fileError
               }
             }), {
               headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -342,112 +332,228 @@ serve(async (req) => {
             });
           }
           
-          console.log("Verzeichnis erfolgreich erstellt, sende Standardskript");
+          // Datei als Text senden
+          const fileText = await fileData.text();
+          console.log(`Datei erfolgreich gesendet: ${fullPath}`);
           
-          // Standardskript zurückgeben
+          return new Response(fileText, {
+            headers: { ...corsHeaders, "Content-Type": "text/plain" },
+            status: 200,
+          });
+        } catch (downloadError) {
+          console.log("Fehler beim Herunterladen der Datei:", downloadError);
+          
+          // Wenn die Datei nicht gefunden wird, sende eine nützliche Fehlermeldung
           return new Response(`
-          -- ForteX Framework Skript
-          -- Generiert für Lizenz ${licenseKey}
+          -- Datei nicht gefunden: ${specificFile}
+          -- Für Lizenz: ${licenseKey}
           
-          print("^2ForteX Framework^0: Skript erfolgreich geladen!")
+          print("^1ForteX Framework^0: Datei '${specificFile}' konnte nicht gefunden werden!")
+          print("^1ForteX Framework^0: Bitte laden Sie die Datei über die Web-Admin-Oberfläche hoch.")
+          `, {
+            headers: { ...corsHeaders, "Content-Type": "text/plain" },
+            status: 200, // 200 statt 404 senden, damit der Code trotzdem ausgeführt wird
+          });
+        }
+      }
+      
+      // Versuchen wir, alle Dateien aufzulisten
+      try {
+        // Wenn keine spezifische Datei angefordert wurde, listet Dateien auf
+        const { data: storageFiles, error: storageError } = await supabase.storage
+          .from("script")
+          .list(data.id.toString());
+        
+        if (storageError) {
+          console.log("Fehler beim Abrufen der Script-Dateien:", storageError);
           
-          -- Fügen Sie hier Ihren eigenen Code ein oder laden Sie Dateien über die Web-Admin-Oberfläche hoch
+          // Versuche das Verzeichnis zu erstellen
+          try {
+            // Workaround: Leere Datei hochladen, um ein Verzeichnis zu erstellen
+            const emptyFile = new Blob(['-- Leere Datei'], { type: 'text/plain' });
+            const { error: uploadError } = await supabase.storage
+              .from("script")
+              .upload(`${data.id}/main.lua`, emptyFile);
+            
+            if (uploadError) {
+              console.log("Fehler beim Erstellen des Verzeichnisses:", uploadError);
+              return new Response(JSON.stringify({ 
+                error: "Fehler beim Erstellen des Verzeichnisses",
+                debug: {
+                  error_message: uploadError.message,
+                  license_id: data.id
+                }
+              }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+                status: 500,
+              });
+            }
+            
+            console.log("Verzeichnis erfolgreich erstellt, sende Standardskript");
+            
+            // Standardskript zurückgeben
+            return new Response(`
+            -- ForteX Framework Skript
+            -- Generiert für Lizenz ${licenseKey}
+            
+            print("^2ForteX Framework^0: Skript erfolgreich geladen!")
+            
+            -- Fügen Sie hier Ihren eigenen Code ein oder laden Sie Dateien über die Web-Admin-Oberfläche hoch
+            `, {
+              headers: { ...corsHeaders, "Content-Type": "text/plain" },
+              status: 200,
+            });
+          } catch (dirError) {
+            console.log("Unerwarteter Fehler beim Erstellen des Verzeichnisses:", dirError);
+          }
+          
+          // Falls es einen Fehler gibt, senden wir trotzdem eine gültige Lua-Antwort
+          return new Response(`
+          -- ForteX Framework - Fehler beim Abrufen von Dateien
+          -- Fehler: ${storageError.message}
+          
+          print("^2ForteX Framework^0: Verbindung hergestellt, aber keine Dateien gefunden.")
+          print("^2ForteX Framework^0: Bitte laden Sie Dateien über die Web-Admin-Oberfläche hoch.")
           `, {
             headers: { ...corsHeaders, "Content-Type": "text/plain" },
             status: 200,
           });
-        } catch (dirError) {
-          console.log("Unerwarteter Fehler beim Erstellen des Verzeichnisses:", dirError);
         }
         
-        return new Response(JSON.stringify({ 
-          error: "Fehler beim Abrufen der Script-Dateien",
-          debug: {
-            error_message: storageError.message,
-            license_id: data.id
+        // Wenn es keine Dateien gibt, aber wir den Bucket und das Verzeichnis haben
+        if (!storageFiles || storageFiles.length === 0) {
+          console.log("Keine Dateien im Verzeichnis gefunden, erstelle Standard-Skript");
+          
+          // Standard-Skript erzeugen
+          const defaultScript = `
+          -- ForteX Framework Skript
+          -- Generiert für Lizenz ${licenseKey}
+          
+          print("^2ForteX Framework^0: Skript erfolgreich geladen!")
+          print("^2ForteX Framework^0: Keine Dateien gefunden. Bitte laden Sie Dateien über die Web-Admin-Oberfläche hoch.")
+          
+          -- Fügen Sie hier Ihren eigenen Code ein oder laden Sie Dateien über die Web-Admin-Oberfläche hoch
+          `;
+          
+          try {
+            // Datei hochladen
+            const defaultScriptBlob = new Blob([defaultScript], { type: 'text/plain' });
+            const { error: uploadError } = await supabase.storage
+              .from("script")
+              .upload(`${data.id}/main.lua`, defaultScriptBlob);
+            
+            if (uploadError) {
+              console.log("Fehler beim Hochladen des Standardskripts:", uploadError);
+            } else {
+              console.log("Standardskript erfolgreich hochgeladen");
+            }
+          } catch (uploadError) {
+            console.log("Fehler beim Hochladen des Standardskripts:", uploadError);
           }
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 500,
-        });
-      }
-      
-      // Wenn es keine Dateien gibt, aber eine main.lua, diese verwenden
-      let mainFile = storageFiles.find(file => file.name === "main.lua");
-      
-      // Wenn keine main.lua Datei gefunden wurde, nach anderen Dateien suchen
-      if (!mainFile) {
-        const luaFiles = storageFiles.filter(file => file.name.endsWith('.lua'));
-        if (luaFiles.length > 0) {
-          mainFile = luaFiles[0]; // Erste .lua-Datei verwenden
-        } else if (storageFiles.length > 0) {
-          mainFile = storageFiles[0]; // Irgendeine Datei verwenden
+          
+          return new Response(defaultScript, {
+            headers: { ...corsHeaders, "Content-Type": "text/plain" },
+            status: 200,
+          });
         }
-      }
-      
-      if (!mainFile) {
-        console.log("Keine Skriptdateien gefunden");
         
-        // Standard-Skript erzeugen
+        // Wenn keine main.lua Datei gefunden wurde, nach anderen Dateien suchen
+        let mainFile = storageFiles.find(file => file.name === "main.lua");
+        
+        if (!mainFile) {
+          const luaFiles = storageFiles.filter(file => file.name.endsWith('.lua'));
+          if (luaFiles.length > 0) {
+            mainFile = luaFiles[0]; // Erste .lua-Datei verwenden
+          } else if (storageFiles.length > 0) {
+            mainFile = storageFiles[0]; // Irgendeine Datei verwenden
+          }
+        }
+        
+        if (!mainFile) {
+          console.log("Keine Skriptdateien gefunden, obwohl das Verzeichnis nicht leer ist");
+          
+          // Standard-Skript erzeugen
+          const defaultScript = `
+          -- ForteX Framework Skript
+          -- Generiert für Lizenz ${licenseKey}
+          
+          print("^2ForteX Framework^0: Skript erfolgreich geladen!")
+          print("^2ForteX Framework^0: Keine Lua-Dateien gefunden. Bitte laden Sie Lua-Dateien über die Web-Admin-Oberfläche hoch.")
+          
+          -- Verzeichnisinhalt:
+          ${storageFiles.map(file => `-- * ${file.name}`).join('\n')}
+          `;
+          
+          return new Response(defaultScript, {
+            headers: { ...corsHeaders, "Content-Type": "text/plain" },
+            status: 200,
+          });
+        }
+      
+        try {
+          // Skript-Datei herunterladen
+          const { data: fileData, error: fileError } = await supabase.storage
+            .from("script")
+            .download(`${data.id}/${mainFile.name}`);
+          
+          if (fileError) {
+            console.log("Fehler beim Herunterladen der Skriptdatei:", fileError);
+            return new Response(JSON.stringify({ 
+              error: "Fehler beim Herunterladen der Skriptdatei",
+              debug: {
+                file_name: mainFile.name,
+                license_id: data.id,
+                error_message: fileError.message
+              }
+            }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 500,
+            });
+          }
+          
+          // Datei als Text senden
+          const scriptText = await fileData.text();
+          console.log(`Skriptdatei erfolgreich gesendet: ${mainFile.name}`);
+          
+          return new Response(scriptText, {
+            headers: { ...corsHeaders, "Content-Type": "text/plain" },
+            status: 200,
+          });
+        } catch (downloadError) {
+          console.log("Unerwarteter Fehler beim Herunterladen der Datei:", downloadError);
+          
+          // Auch bei Fehler eine gültige Lua-Antwort senden
+          return new Response(`
+          -- ForteX Framework - Fehler beim Herunterladen der Datei
+          -- Datei: ${mainFile.name}
+          -- Fehler: ${downloadError.message}
+          
+          print("^3ForteX Framework^0: Fehler beim Laden der Datei '${mainFile.name}'")
+          print("^3ForteX Framework^0: " .. "${downloadError.message}")
+          `, {
+            headers: { ...corsHeaders, "Content-Type": "text/plain" },
+            status: 200,
+          });
+        }
+      } catch (error) {
+        console.log("Unerwarteter Fehler bei der Dateiabfrage:", error);
+        
+        // Standardskript erzeugen bei unerwartetem Fehler
         const defaultScript = `
-        -- ForteX Framework Skript
+        -- ForteX Framework Skript (Fehler-Fallback)
         -- Generiert für Lizenz ${licenseKey}
         
-        print("^2ForteX Framework^0: Skript erfolgreich geladen!")
+        print("^3ForteX Framework^0: Unerwarteter Fehler beim Laden der Dateien")
+        print("^2ForteX Framework^0: System läuft trotzdem im Basismodus")
         
         -- Fügen Sie hier Ihren eigenen Code ein oder laden Sie Dateien über die Web-Admin-Oberfläche hoch
         `;
-        
-        try {
-          // Datei hochladen
-          const defaultScriptBlob = new Blob([defaultScript], { type: 'text/plain' });
-          const { error: uploadError } = await supabase.storage
-            .from("script")
-            .upload(`${data.id}/main.lua`, defaultScriptBlob);
-          
-          if (uploadError) {
-            console.log("Fehler beim Hochladen des Standardskripts:", uploadError);
-          } else {
-            console.log("Standardskript erfolgreich hochgeladen");
-          }
-        } catch (uploadError) {
-          console.log("Fehler beim Hochladen des Standardskripts:", uploadError);
-        }
         
         return new Response(defaultScript, {
           headers: { ...corsHeaders, "Content-Type": "text/plain" },
           status: 200,
         });
       }
-      
-      // Skript-Datei herunterladen
-      const { data: fileData, error: fileError } = await supabase.storage
-        .from("script")
-        .download(`${data.id}/${mainFile.name}`);
-      
-      if (fileError) {
-        console.log("Fehler beim Herunterladen der Skriptdatei:", fileError);
-        return new Response(JSON.stringify({ 
-          error: "Fehler beim Herunterladen der Skriptdatei",
-          debug: {
-            file_name: mainFile.name,
-            license_id: data.id,
-            error_message: fileError.message
-          }
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 500,
-        });
-      }
-      
-      // Datei als Text senden
-      const scriptText = await fileData.text();
-      console.log(`Skriptdatei erfolgreich gesendet: ${mainFile.name}`);
-      
-      return new Response(scriptText, {
-        headers: { ...corsHeaders, "Content-Type": "text/plain" },
-        status: 200,
-      });
     }
     
     // Wenn kein Datei-Upload, dann das Skript aus der Datenbank senden
