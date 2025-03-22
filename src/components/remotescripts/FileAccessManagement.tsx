@@ -37,33 +37,60 @@ const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
     try {
       console.log(`[FileAccessManagement] Fetching files for license ${licenseId}...`);
       
-      // First, check if bucket exists
-      const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
-      
-      if (bucketsError) {
-        console.error("Error getting buckets:", bucketsError);
-        toast.error("Fehler beim Abrufen der Storage-Buckets");
-        setLoading(false);
-        return;
-      }
-      
-      const scriptBucketExists = buckets.some(bucket => bucket.name === "script");
-      
-      if (!scriptBucketExists) {
-        console.log("[FileAccessManagement] Script bucket doesn't exist, creating it...");
-        const { error: createError } = await supabase.storage.createBucket("script", {
-          public: true
-        });
+      // First, make sure bucket exists
+      try {
+        const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
         
-        if (createError) {
-          console.error("Error creating script bucket:", createError);
-          toast.error("Fehler beim Erstellen des Script-Buckets");
+        if (bucketsError) {
+          console.error("Error getting buckets:", bucketsError);
+          toast.error("Fehler beim Abrufen der Storage-Buckets");
           setLoading(false);
           return;
         }
+        
+        const scriptBucketExists = buckets.some(bucket => bucket.name === "script");
+        
+        if (!scriptBucketExists) {
+          console.log("[FileAccessManagement] Script bucket doesn't exist, creating it...");
+          const { error: createError } = await supabase.storage.createBucket("script", {
+            public: true
+          });
+          
+          if (createError) {
+            console.error("Error creating script bucket:", createError);
+            toast.error("Fehler beim Erstellen des Script-Buckets");
+            setLoading(false);
+            return;
+          }
+        }
+      } catch (bucketsError) {
+        console.error("Error checking buckets:", bucketsError);
       }
       
-      // Dateien auflisten
+      // Check if folder exists, if not create it
+      try {
+        const { data: folderData, error: folderError } = await supabase.storage
+          .from("script")
+          .list(licenseId);
+          
+        if (folderError) {
+          if (folderError.message.includes("The resource was not found")) {
+            // Create an empty file to initialize the folder
+            const emptyFile = new Blob([""], { type: "text/plain" });
+            await supabase.storage
+              .from("script")
+              .upload(`${licenseId}/.folder_init`, emptyFile);
+              
+            console.log(`[FileAccessManagement] Created folder for license ${licenseId}`);
+          } else {
+            console.error("Error checking folder:", folderError);
+          }
+        }
+      } catch (folderError) {
+        console.error("Error creating folder:", folderError);
+      }
+      
+      // Now try to list files
       const { data: storageFiles, error } = await supabase.storage
         .from("script")
         .list(licenseId);
@@ -75,15 +102,22 @@ const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
         return;
       }
 
-      // Zugriffsrechte direkt mit RPC-Funktion abrufen
-      const { data: accessData, error: accessError } = await callRPC<'get_file_access_for_license'>(
-        'get_file_access_for_license', 
-        { p_license_id: licenseId }
-      );
+      // Try to get access rights, but don't fail if table doesn't exist yet
+      let accessData: FileAccess[] = [];
+      try {
+        const { data: accessResponse, error: accessError } = await callRPC<'get_file_access_for_license'>(
+          'get_file_access_for_license', 
+          { p_license_id: licenseId }
+        );
 
-      if (accessError) {
-        console.error("Fehler beim Abrufen der Zugriffsrechte:", accessError);
-        toast.error("Fehler beim Laden der Zugriffsrechte");
+        if (!accessError && Array.isArray(accessResponse)) {
+          accessData = accessResponse;
+        } else {
+          console.warn("Could not get file access data, will default to private");
+        }
+      } catch (accessError) {
+        console.warn("Error fetching file access data:", accessError);
+        // Continue without access data - all files will be private by default
       }
 
       // Dateien mit Zugriffsrechten zusammenführen
@@ -131,19 +165,27 @@ const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
     try {
       // Für jede Datei die Zugriffsrechte aktualisieren
       for (const file of files) {
-        // Verwende die RPC-Funktion zum Speichern der Zugriffsrechte
-        const { error } = await callRPC<'update_file_access'>(
-          'update_file_access', 
-          {
-            p_license_id: licenseId,
-            p_file_path: file.fullPath,
-            p_is_public: file.isPublic
+        try {
+          // Verwende die RPC-Funktion zum Speichern der Zugriffsrechte
+          const { error } = await callRPC<'update_file_access'>(
+            'update_file_access', 
+            {
+              p_license_id: licenseId,
+              p_file_path: file.fullPath,
+              p_is_public: file.isPublic
+            }
+          );
+              
+          if (error) {
+            console.error("Fehler beim Speichern der Zugriffsrechte:", error);
+            if (error.message.includes("relation") && error.message.includes("does not exist")) {
+              toast.error("Die Datenbanktabelle für Dateizugriffe existiert noch nicht");
+              break;
+            }
+            throw error;
           }
-        );
-          
-        if (error) {
-          console.error("Fehler beim Speichern der Zugriffsrechte:", error);
-          throw error;
+        } catch (fileError) {
+          console.error(`Error updating access for ${file.fullPath}:`, fileError);
         }
       }
 

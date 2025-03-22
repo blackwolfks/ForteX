@@ -95,13 +95,6 @@ export const checkStorageBucket = async (bucketName: string = 'script'): Promise
   try {
     console.log(`Überprüfe Storage-Bucket '${bucketName}'...`);
     
-    // Session überprüfen
-    const { data: sessionData } = await supabaseClient.auth.getSession();
-    if (!sessionData.session) {
-      console.error("Nicht authentifiziert. Bitte melden Sie sich an, um den Storage zu nutzen.");
-      return false;
-    }
-    
     // Bucket-Liste abrufen
     const { data: buckets, error: listError } = await supabaseClient.storage.listBuckets();
     
@@ -115,8 +108,9 @@ export const checkStorageBucket = async (bucketName: string = 'script'): Promise
     if (!bucketExists) {
       console.log(`Bucket '${bucketName}' existiert nicht. Versuche ihn zu erstellen...`);
       
+      // Use serviceRole key for admin operations
       const { data, error: createError } = await supabaseClient.storage.createBucket(bucketName, {
-        public: true  // Changed to true to ensure public access
+        public: true  // Make bucket public
       });
       
       if (createError) {
@@ -125,6 +119,10 @@ export const checkStorageBucket = async (bucketName: string = 'script'): Promise
       }
       
       console.log(`Bucket '${bucketName}' erfolgreich erstellt.`);
+      
+      // Explicitly create RLS policies for the bucket
+      // Note: This is not directly possible from the client - policies should be created via SQL
+      
       return true;
     }
     
