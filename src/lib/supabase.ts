@@ -104,6 +104,17 @@ export const checkStorageBucket = async (bucketName: string = 'script'): Promise
       return true;
     }
     
+    // Ensure bucket is public
+    const { error: updateError } = await supabaseClient.storage.updateBucket(bucketName, {
+      public: true
+    });
+    
+    if (updateError) {
+      console.error(`Fehler beim Aktualisieren des Buckets '${bucketName}':`, updateError);
+    } else {
+      console.log(`Bucket '${bucketName}' auf public gesetzt.`);
+    }
+    
     console.log(`Bucket '${bucketName}' existiert bereits.`);
     return true;
   } catch (error) {

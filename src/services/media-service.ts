@@ -30,7 +30,7 @@ export class MediaService {
       if (!bucketExists) {
         console.log(`Bucket '${bucketName}' existiert nicht, wird erstellt...`);
         const { error: createError } = await supabase.storage.createBucket(bucketName, {
-          public: true,  // Changed to true to ensure public access
+          public: true,  // Explicitly set to true to ensure public access
           fileSizeLimit: 52428800, // 50MB
         });
         
@@ -42,6 +42,17 @@ export class MediaService {
         console.log(`Bucket '${bucketName}' erfolgreich erstellt`);
       } else {
         console.log(`Bucket '${bucketName}' existiert bereits`);
+        
+        // Update bucket to ensure it's public
+        const { error: updateError } = await supabase.storage.updateBucket(bucketName, {
+          public: true
+        });
+        
+        if (updateError) {
+          console.error(`Fehler beim Aktualisieren des Buckets '${bucketName}': ${updateError.message}`);
+        } else {
+          console.log(`Bucket '${bucketName}' auf public gesetzt`);
+        }
       }
       
       return true;
