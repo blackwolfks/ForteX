@@ -152,10 +152,10 @@ function checkIpRestriction(licenseData: any, clientIp: string): { passed: boole
   return { passed: true };
 }
 
-// Get specific file from storage
+// Get specific file from storage - Updated to be more flexible with paths
 async function getScriptFile(supabase: any, licenseId: string, filePath: string): Promise<{ content: string | null, error: string | null }> {
   try {
-    console.log(`Attempting to download file ${licenseId}/${filePath} from 'script' bucket`);
+    console.log(`Attempting to download file for license ${licenseId}, requested file: ${filePath}`);
     
     // Check if script bucket exists
     const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
@@ -172,30 +172,51 @@ async function getScriptFile(supabase: any, licenseId: string, filePath: string)
       return { content: null, error: "Storage error: Script bucket does not exist" };
     }
     
-    // Attempt to download file with explicit public access header
-    const { data: fileData, error: fileError } = await supabase.storage
+    // First try with license ID path structure
+    let fileData;
+    let fileError;
+    
+    // First attempt: Try with license folder structure {licenseId}/{filePath}
+    console.log(`First attempt: Trying path ${licenseId}/${filePath}`);
+    const licensePathResult = await supabase.storage
       .from("script")
       .download(`${licenseId}/${filePath}`, {
-        transform: {
-          public: true
-        }
+        transform: { public: true }
       });
     
+    fileData = licensePathResult.data;
+    fileError = licensePathResult.error;
+    
+    // Second attempt: If not found, try direct filename
     if (fileError) {
-      console.error(`File download error for ${licenseId}/${filePath}:`, fileError);
+      console.log(`First attempt failed: ${fileError.message}`);
+      console.log(`Second attempt: Trying direct path ${filePath}`);
+      
+      const directPathResult = await supabase.storage
+        .from("script")
+        .download(filePath, {
+          transform: { public: true }
+        });
+      
+      fileData = directPathResult.data;
+      fileError = directPathResult.error;
+    }
+    
+    if (fileError) {
+      console.error(`All file download attempts failed for license ${licenseId}, file ${filePath}:`, fileError);
       return { content: null, error: `File '${filePath}' not found: ${fileError.message}` };
     }
     
-    console.log(`Successfully downloaded file ${licenseId}/${filePath}`);
+    console.log(`Successfully downloaded file for license ${licenseId}, file ${filePath}`);
     const scriptContent = await fileData.text();
     return { content: scriptContent, error: null };
   } catch (downloadError) {
-    console.error(`Exception in getScriptFile for ${licenseId}/${filePath}:`, downloadError);
+    console.error(`Exception in getScriptFile for license ${licenseId}, file ${filePath}:`, downloadError);
     return { content: null, error: `Could not download file '${filePath}': ${downloadError.message}` };
   }
 }
 
-// List available files from storage
+// List available files from storage - Updated to be more flexible with paths
 async function listScriptFiles(supabase: any, licenseId: string): Promise<{ files: any[] | null, error: string | null }> {
   try {
     console.log(`Listing files in bucket 'script' for license ${licenseId}`);
@@ -215,31 +236,43 @@ async function listScriptFiles(supabase: any, licenseId: string): Promise<{ file
       return { files: null, error: "Storage error: Script bucket does not exist. Please create it in the Supabase dashboard." };
     }
     
-    // First check if the license folder exists
-    const { data: files, error: listError } = await supabase.storage
+    // First try license folder
+    const { data: licenseFiles, error: licenseListError } = await supabase.storage
       .from("script")
-      .list(licenseId.toString());
+      .list(licenseId);
     
-    if (listError) {
-      console.error(`Error listing files for license ${licenseId}:`, listError);
+    // If license folder exists and has files, use those
+    if (!licenseListError && licenseFiles && licenseFiles.length > 0) {
+      console.log(`Found ${licenseFiles.length} files in folder ${licenseId}`);
+      return { files: licenseFiles, error: null };
+    }
+    
+    // If license folder doesn't exist or is empty, list root files
+    console.log(`No files found in license folder ${licenseId}, checking root folder`);
+    const { data: rootFiles, error: rootListError } = await supabase.storage
+      .from("script")
+      .list();
+    
+    if (rootListError) {
+      console.error(`Error listing files at root:`, rootListError);
       return { 
         files: null, 
-        error: `Unable to list files: ${listError.message}` 
+        error: `Unable to list files: ${rootListError.message}` 
       };
     }
     
-    if (!files || files.length === 0) {
-      console.log(`No files found for license ${licenseId}`);
+    if (!rootFiles || rootFiles.length === 0) {
+      console.log(`No files found in root folder either`);
       return { 
         files: null, 
         error: "No files found. Please upload files via web interface." 
       };
     }
     
-    console.log(`Found ${files.length} files for license ${licenseId}:`, 
-      files.map((f: any) => f.name).join(", "));
+    console.log(`Found ${rootFiles.length} files at root level:`, 
+      rootFiles.map((f: any) => f.name).join(", "));
     
-    return { files, error: null };
+    return { files: rootFiles, error: null };
   } catch (error) {
     console.error(`Exception in listScriptFiles for license ${licenseId}:`, error);
     return { files: null, error: `Could not access script storage: ${error.message}` };
@@ -288,7 +321,7 @@ RegisterCommand('fortex_demo', function(source, args, rawCommand)
     end
 end, false)
 
-print("^3Demo command 'fortex_demo' has been registered.^0")
+print("^3Demo command 'fortex_demo' has been registered.^0");
 `;
 }
 
