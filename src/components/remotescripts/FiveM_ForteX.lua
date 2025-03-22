@@ -276,7 +276,7 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
                         print(ERROR_PREFIX .. " Unerwartete Antwort vom Script-Server. Inhalt: " .. scriptContent:sub(1, 100) .. "^7")
                         if callback then callback(false, "Unerwartetes Antwortformat vom Script-Server") end
                     end
-                }
+                end
             end, "GET", "", {
                 ["Authorization"] = authHeader,
                 ["X-License-Key"] = licenseKey,

@@ -157,7 +157,7 @@ local function TestApiRequest()
                     if errorData and errorData.error then
                         print("^1Server-Fehler: " .. errorData.error .. "^0")
                     end
-                }
+                end
             end, "GET", "", {
                 ["Authorization"] = "Basic " .. auth,
                 ["X-License-Key"] = CONFIG.LicenseKey,
@@ -171,7 +171,7 @@ local function TestApiRequest()
             if jsonData.error then
                 print("^1Fehler: ^0" .. jsonData.error)
             end
-        }
+        end
     end, "POST", json.encode({
         license_key = CONFIG.LicenseKey,
         server_key = CONFIG.ServerKey
@@ -193,7 +193,7 @@ end)
 
 -- Befehle zum Testen
 RegisterCommand('fortex_test', function(source, args, rawCommand)
-    if source == 0 then
+    if source == 0 then -- Nur von der Konsole aus
         ShowLogo()
         TestApiRequest()
     end
