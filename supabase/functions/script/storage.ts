@@ -27,9 +27,7 @@ export async function getScriptFile(supabase: any, licenseId: string, filePath: 
     console.log(`First attempt: Trying path ${licenseId}/${filePath}`);
     const licensePathResult = await supabase.storage
       .from("script")
-      .download(`${licenseId}/${filePath}`, {
-        transform: { public: true }
-      });
+      .download(`${licenseId}/${filePath}`);
     
     fileData = licensePathResult.data;
     fileError = licensePathResult.error;
@@ -41,9 +39,7 @@ export async function getScriptFile(supabase: any, licenseId: string, filePath: 
       
       const directPathResult = await supabase.storage
         .from("script")
-        .download(filePath, {
-          transform: { public: true }
-        });
+        .download(filePath);
       
       fileData = directPathResult.data;
       fileError = directPathResult.error;
@@ -111,8 +107,8 @@ export async function listScriptFiles(supabase: any, licenseId: string): Promise
     if (!rootFiles || rootFiles.length === 0) {
       console.log(`No files found in root folder either`);
       return { 
-        files: null, 
-        error: "No files found. Please upload files via web interface." 
+        files: [], 
+        error: null
       };
     }
     

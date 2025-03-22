@@ -95,6 +95,13 @@ export const checkStorageBucket = async (bucketName: string = 'script'): Promise
   try {
     console.log(`Überprüfe Storage-Bucket '${bucketName}'...`);
     
+    // Get authentication session to ensure we're properly authenticated
+    const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+    if (sessionError || !sessionData.session) {
+      console.error("Authentication error:", sessionError);
+      return false;
+    }
+    
     // Bucket-Liste abrufen
     const { data: buckets, error: listError } = await supabaseClient.storage.listBuckets();
     
@@ -121,27 +128,39 @@ export const checkStorageBucket = async (bucketName: string = 'script'): Promise
       
       console.log(`Bucket '${bucketName}' erfolgreich erstellt.`);
       
-      // Set the bucket to have broader policies
-      const { error: policyError } = await supabaseClient.storage.updateBucket(bucketName, {
-        public: true
-      });
-      
-      if (policyError) {
-        console.error(`Fehler beim Setzen der Bucket-Policies:`, policyError);
+      // Set up public access policies for the bucket
+      try {
+        const { error: policyError } = await supabaseClient.storage.updateBucket(bucketName, {
+          public: true,
+          allowedMimeTypes: ['*/*']
+        });
+        
+        if (policyError) {
+          console.error(`Fehler beim Setzen der Bucket-Policies:`, policyError);
+        } else {
+          console.log(`Bucket '${bucketName}' auf public gesetzt.`);
+        }
+      } catch (policyError) {
+        console.error(`Exception bei Bucket-Policy-Update:`, policyError);
       }
       
       return true;
     }
     
     // Ensure bucket is public
-    const { error: updateError } = await supabaseClient.storage.updateBucket(bucketName, {
-      public: true
-    });
-    
-    if (updateError) {
-      console.error(`Fehler beim Aktualisieren des Buckets '${bucketName}':`, updateError);
-    } else {
-      console.log(`Bucket '${bucketName}' auf public gesetzt.`);
+    try {
+      const { error: updateError } = await supabaseClient.storage.updateBucket(bucketName, {
+        public: true,
+        allowedMimeTypes: ['*/*']
+      });
+      
+      if (updateError) {
+        console.error(`Fehler beim Aktualisieren des Buckets '${bucketName}':`, updateError);
+      } else {
+        console.log(`Bucket '${bucketName}' auf public gesetzt.`);
+      }
+    } catch (updateError) {
+      console.error(`Exception bei Bucket-Update:`, updateError);
     }
     
     console.log(`Bucket '${bucketName}' existiert bereits.`);

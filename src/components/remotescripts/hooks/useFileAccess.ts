@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { callRPC, supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { checkStorageBucket } from "@/lib/supabase";
 
 export interface FileItem {
   name: string;
@@ -22,7 +23,16 @@ export function useFileAccess(licenseId: string) {
     try {
       console.log(`Fetching files for license ${licenseId}`);
       
-      // First, get the access settings
+      // First, check if the storage bucket exists
+      const bucketExists = await checkStorageBucket();
+      if (!bucketExists) {
+        console.error("Storage bucket does not exist or could not be created");
+        toast.error("Fehler beim Zugriff auf den Speicher");
+        setLoading(false);
+        return;
+      }
+      
+      // Get the access settings
       const { data: accessData, error: accessError } = await callRPC('get_file_access_for_license', {
         p_license_id: licenseId
       });
@@ -111,14 +121,19 @@ export function useFileAccess(licenseId: string) {
       for (const file of files) {
         console.log(`Updating access for ${file.fullPath}: isPublic=${file.isPublic}`);
         
-        const { error } = await callRPC('update_file_access', {
-          p_license_id: licenseId,
-          p_file_path: file.fullPath,
-          p_is_public: file.isPublic
-        });
-        
-        if (error) {
-          console.error(`Error updating file access for ${file.fullPath}:`, error);
+        try {
+          const { error } = await callRPC('update_file_access', {
+            p_license_id: licenseId,
+            p_file_path: file.fullPath,
+            p_is_public: file.isPublic
+          });
+          
+          if (error) {
+            console.error(`Error updating file access for ${file.fullPath}:`, error);
+            errorCount++;
+          }
+        } catch (error) {
+          console.error(`Error in saveFileAccess for ${file.fullPath}:`, error);
           errorCount++;
         }
       }

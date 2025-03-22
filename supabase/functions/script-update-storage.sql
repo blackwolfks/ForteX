@@ -1,11 +1,11 @@
 
 -- Create storage bucket for scripts if it doesn't exist
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES ('script', 'Script Files', true, 10485760, '{text/plain,application/octet-stream}')
+VALUES ('script', 'Script Files', true, 10485760, array['text/plain', 'application/octet-stream', 'application/x-lua', '*/*']::text[])
 ON CONFLICT (id) DO UPDATE
 SET public = true,
     file_size_limit = 10485760,
-    allowed_mime_types = '{text/plain,application/octet-stream}';
+    allowed_mime_types = array['text/plain', 'application/octet-stream', 'application/x-lua', '*/*']::text[];
 
 -- Create storage policy to allow users to upload their own files
 BEGIN;
@@ -14,32 +14,40 @@ DROP POLICY IF EXISTS "Allow users to upload their license files" ON storage.obj
 DROP POLICY IF EXISTS "Allow public to download any script file" ON storage.objects;
 DROP POLICY IF EXISTS "Allow users to manage their license files" ON storage.objects;
 
--- Create policy for uploading files - restricted to script bucket and user-specific paths
+-- Create policy for uploading files - authenticated users can upload to their folders
 CREATE POLICY "Allow users to upload their license files"
 ON storage.objects
 FOR INSERT
 TO authenticated
 WITH CHECK (
   bucket_id = 'script' AND 
-  (auth.uid())::text = SPLIT_PART(name, '/', 1)
+  EXISTS (
+    SELECT 1 FROM public.server_licenses
+    WHERE user_id = auth.uid() 
+    AND (auth.uid())::text = SPLIT_PART(name, '/', 1)
+  )
 );
 
--- Create policy for viewing files - public access to enable FiveM scripts to download them
+-- Create policy for viewing files - public access for public files
 CREATE POLICY "Allow public to download any script file"
 ON storage.objects
 FOR SELECT
-TO anon
+TO PUBLIC
 USING (
   bucket_id = 'script'
 );
 
--- Create policy for managing files
+-- Create policy for managing files - authenticated users can update/delete their own files
 CREATE POLICY "Allow users to manage their license files"
 ON storage.objects
 FOR UPDATE, DELETE
 TO authenticated
 USING (
   bucket_id = 'script' AND 
-  (auth.uid())::text = SPLIT_PART(name, '/', 1)
+  EXISTS (
+    SELECT 1 FROM public.server_licenses
+    WHERE user_id = auth.uid() 
+    AND (auth.uid())::text = SPLIT_PART(name, '/', 1)
+  )
 );
 COMMIT;

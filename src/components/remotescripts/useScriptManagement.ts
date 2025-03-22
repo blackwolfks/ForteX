@@ -4,6 +4,7 @@ import { License, NewScriptFormData } from "./types";
 import { callRPC, supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { mediaService } from "@/services/media-service";
+import { checkStorageBucket } from "@/lib/supabase";
 
 export function useScriptManagement() {
   const [licenses, setLicenses] = useState<License[]>([]);
@@ -38,7 +39,7 @@ export function useScriptManagement() {
   const handleCreateScript = async (newScript: NewScriptFormData, selectedFiles: File[]) => {
     if (!newScript.name) {
       toast.error("Bitte geben Sie einen Namen für das Script ein");
-      return;
+      return false;
     }
 
     try {
@@ -58,7 +59,7 @@ export function useScriptManagement() {
       if (error) {
         console.error("Error creating license:", error);
         toast.error("Fehler beim Erstellen des Scripts: " + error.message);
-        return;
+        return false;
       }
       
       console.log("License created successfully:", data);
@@ -68,11 +69,11 @@ export function useScriptManagement() {
         
         // Ensure the bucket exists before uploading files
         console.log("Ensuring storage bucket 'script' exists");
-        const bucketExists = await mediaService.ensureBucketExists('script');
+        const bucketExists = await checkStorageBucket('script');
         if (!bucketExists) {
           console.error("Failed to create or find 'script' bucket");
           toast.error("Fehler beim Erstellen des Storage-Buckets");
-          return;
+          return false;
         }
         
         console.log(`Uploading ${selectedFiles.length} files to bucket 'script/${licenseId}'`);
@@ -103,12 +104,16 @@ export function useScriptManagement() {
           toast.success(`${selectedFiles.length} Dateien erfolgreich hochgeladen`);
         }
         
-        // Mark this license as having file uploads - match the parameter order
+        // Mark this license as having file uploads
         console.log("Updating license to set has_file_upload = true");
-        await callRPC('update_license', {
+        const updateResult = await callRPC('update_license', {
           p_license_id: licenseId,
           p_has_file_upload: true
         });
+        
+        if (updateResult.error) {
+          console.error("Error updating license has_file_upload:", updateResult.error);
+        }
       }
       
       toast.success("Script erfolgreich erstellt");
@@ -137,20 +142,22 @@ export function useScriptManagement() {
         p_script_name: scriptName,
         p_script_file: scriptCode,
         p_server_ip: serverIp,
-        p_aktiv: isActive,
+        p_aktiv: isActive
       });
       
       if (error) {
+        console.error("Error updating script:", error);
         toast.error("Fehler beim Aktualisieren des Scripts");
-        console.error(error);
-        return;
+        return false;
       }
       
       toast.success("Script erfolgreich aktualisiert");
-      fetchLicenses();
+      await fetchLicenses();
+      return true;
     } catch (error) {
       console.error("Error updating script:", error);
       toast.error("Fehler beim Aktualisieren des Scripts");
+      return false;
     }
   };
 
@@ -165,16 +172,18 @@ export function useScriptManagement() {
       });
       
       if (error) {
+        console.error("Error regenerating server key:", error);
         toast.error("Fehler beim Regenerieren des Server-Keys");
-        console.error(error);
-        return;
+        return false;
       }
       
       toast.success("Server-Key erfolgreich regeneriert");
-      fetchLicenses();
+      await fetchLicenses();
+      return true;
     } catch (error) {
       console.error("Error regenerating server key:", error);
       toast.error("Fehler beim Regenerieren des Server-Keys");
+      return false;
     }
   };
 
@@ -189,22 +198,36 @@ export function useScriptManagement() {
       });
       
       if (error) {
+        console.error("Error deleting script:", error);
         toast.error("Fehler beim Löschen des Scripts");
-        console.error(error);
-        return;
+        return false;
       }
 
       // Also clean up storage
-      console.log(`Removing storage files for license ${licenseId}`);
-      await supabase.storage
-        .from('script')
-        .remove([`${licenseId}`]);
+      try {
+        console.log(`Removing storage files for license ${licenseId}`);
+        const { data, error: listError } = await supabase.storage
+          .from('script')
+          .list(licenseId);
+          
+        if (!listError && data && data.length > 0) {
+          const filePaths = data.map(file => `${licenseId}/${file.name}`);
+          await supabase.storage
+            .from('script')
+            .remove(filePaths);
+        }
+      } catch (storageError) {
+        console.error("Error removing storage files:", storageError);
+        // Continue with success even if storage cleanup fails
+      }
       
       toast.success("Script erfolgreich gelöscht");
-      fetchLicenses();
+      await fetchLicenses();
+      return true;
     } catch (error) {
       console.error("Error deleting script:", error);
       toast.error("Fehler beim Löschen des Scripts");
+      return false;
     }
   };
 
