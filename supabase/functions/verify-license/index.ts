@@ -106,16 +106,16 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseKey);
     
-    // IP-Adresse des anfragenden Clients erfassen
-    let clientIp = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "unknown";
-    console.log(`Client-IP (original): ${clientIp}`);
+    // Extrahiere die Client-IP mit besserer Fehlerbehandlung
+    let rawClientIp = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "unknown";
+    console.log(`Raw Client-IP: ${rawClientIp}`);
     
-    // IP-Adresse bereinigen: Nehme nur die erste IP, wenn mehrere durch Komma getrennt sind
-    if (clientIp.includes(",")) {
-      clientIp = clientIp.split(",")[0].trim();
+    // Bereinige die IP-Adresse: extrahiere die erste IP, wenn mehrere vorhanden sind
+    let clientIp = rawClientIp;
+    if (rawClientIp && rawClientIp.includes(",")) {
+      clientIp = rawClientIp.split(",")[0].trim();
+      console.log(`Bereinigte Client-IP: ${clientIp}`);
     }
-    
-    console.log(`Client-IP (bereinigt): ${clientIp}`);
     
     // Direkte Abfrage über beide Tabellen durchführen
     try {
@@ -136,15 +136,24 @@ serve(async (req) => {
       if (licenseData) {
         console.log("Lizenz in server_licenses gefunden:", licenseData);
         
-        // IP-Adressüberprüfung
+        // IP-Adressüberprüfung mit verbesserter Vergleichslogik
         if (licenseData.server_ip && licenseData.server_ip !== "*") {
+          // Bereinigen der gespeicherten IP für den Vergleich
+          const storedIp = licenseData.server_ip.trim();
+          console.log(`Vergleiche IPs - Gespeichert: '${storedIp}', Client: '${clientIp}'`);
+          
           // Überprüfe, ob die Client-IP mit der gespeicherten IP übereinstimmt
-          if (licenseData.server_ip !== clientIp) {
-            console.log(`IP-Beschränkung verletzt. Erwartet: ${licenseData.server_ip}, Erhalten: ${clientIp}`);
+          if (storedIp !== clientIp) {
+            console.log(`IP-Beschränkung verletzt. Erwartet: ${storedIp}, Erhalten: ${clientIp}, Original: ${rawClientIp}`);
             return new Response(JSON.stringify({ 
               valid: false, 
               error: "IP-Adressüberprüfung fehlgeschlagen", 
-              message: "Die IP-Adresse stimmt nicht mit der autorisierten IP überein" 
+              message: "Die IP-Adresse stimmt nicht mit der autorisierten IP überein",
+              debug: {
+                expected_ip: storedIp,
+                client_ip: clientIp,
+                raw_client_ip: rawClientIp
+              }
             }), {
               headers: { ...corsHeaders, "Content-Type": "application/json" },
               status: 403
@@ -186,15 +195,24 @@ serve(async (req) => {
       if (oldLicenseData) {
         console.log("Lizenz in script_files gefunden:", oldLicenseData);
         
-        // IP-Adressüberprüfung
+        // IP-Adressüberprüfung mit verbesserter Vergleichslogik
         if (oldLicenseData.server_ip && oldLicenseData.server_ip !== "*") {
+          // Bereinigen der gespeicherten IP für den Vergleich
+          const storedIp = oldLicenseData.server_ip.trim();
+          console.log(`Vergleiche IPs - Gespeichert: '${storedIp}', Client: '${clientIp}'`);
+          
           // Überprüfe, ob die Client-IP mit der gespeicherten IP übereinstimmt
-          if (oldLicenseData.server_ip !== clientIp) {
-            console.log(`IP-Beschränkung verletzt. Erwartet: ${oldLicenseData.server_ip}, Erhalten: ${clientIp}`);
+          if (storedIp !== clientIp) {
+            console.log(`IP-Beschränkung verletzt. Erwartet: ${storedIp}, Erhalten: ${clientIp}, Original: ${rawClientIp}`);
             return new Response(JSON.stringify({ 
               valid: false, 
               error: "IP-Adressüberprüfung fehlgeschlagen", 
-              message: "Die IP-Adresse stimmt nicht mit der autorisierten IP überein" 
+              message: "Die IP-Adresse stimmt nicht mit der autorisierten IP überein",
+              debug: {
+                expected_ip: storedIp,
+                client_ip: clientIp,
+                raw_client_ip: rawClientIp
+              }
             }), {
               headers: { ...corsHeaders, "Content-Type": "application/json" },
               status: 403
@@ -207,7 +225,7 @@ serve(async (req) => {
           valid: true,
           id: oldLicenseData.id,
           license_key: oldLicenseData.license_key,
-          server_key: oldLicenseData.server_key, // Wichtig: Server-Key mit zurückgeben
+          server_key: oldLicenseData.server_key,
           script_name: oldLicenseData.script_name,
           script_file: oldLicenseData.script_file,
           server_ip: oldLicenseData.server_ip,
@@ -266,15 +284,24 @@ serve(async (req) => {
         });
       }
       
-      // IP-Adressüberprüfung für RPC-Ergebnis
+      // IP-Adressüberprüfung für RPC-Ergebnis mit verbesserter Logik
       if (rpcData.server_ip && rpcData.server_ip !== "*") {
+        // Bereinigen der gespeicherten IP für den Vergleich
+        const storedIp = rpcData.server_ip.trim();
+        console.log(`Vergleiche IPs - Gespeichert: '${storedIp}', Client: '${clientIp}'`);
+        
         // Überprüfe, ob die Client-IP mit der gespeicherten IP übereinstimmt
-        if (rpcData.server_ip !== clientIp) {
-          console.log(`IP-Beschränkung verletzt. Erwartet: ${rpcData.server_ip}, Erhalten: ${clientIp}`);
+        if (storedIp !== clientIp) {
+          console.log(`IP-Beschränkung verletzt. Erwartet: ${storedIp}, Erhalten: ${clientIp}, Original: ${rawClientIp}`);
           return new Response(JSON.stringify({ 
             valid: false, 
             error: "IP-Adressüberprüfung fehlgeschlagen", 
-            message: "Die IP-Adresse stimmt nicht mit der autorisierten IP überein" 
+            message: "Die IP-Adresse stimmt nicht mit der autorisierten IP überein",
+            debug: {
+              expected_ip: storedIp,
+              client_ip: clientIp,
+              raw_client_ip: rawClientIp
+            }
           }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
             status: 403

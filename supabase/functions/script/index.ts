@@ -95,10 +95,16 @@ serve(async (req) => {
     if (licenseKey) licenseKey = licenseKey.trim();
     if (serverKey) serverKey = serverKey.trim();
     
-    // IP-Adresse des anfragenden Servers erhalten
-    const clientIp = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "unknown";
+    // Verbesserte IP-Adress-Extraktion
+    let rawClientIp = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "unknown";
     
-    console.log(`Anfrage von IP: ${clientIp}, Lizenzschlüssel: ${licenseKey}, Server-Key: ${serverKey}`);
+    // Extrahiere die erste IP, wenn mehrere durch Komma getrennt sind
+    let clientIp = rawClientIp;
+    if (rawClientIp.includes(",")) {
+      clientIp = rawClientIp.split(",")[0].trim();
+    }
+    
+    console.log(`Anfrage von IP: ${clientIp} (Original: ${rawClientIp}), Lizenzschlüssel: ${licenseKey}, Server-Key: ${serverKey}`);
     
     // Überprüfen, ob die erforderlichen Authentifizierungsdaten vorhanden sind
     if (!licenseKey || !serverKey) {
@@ -117,6 +123,7 @@ serve(async (req) => {
             server_key: urlParams.has("server_key")
           },
           client_ip: clientIp,
+          raw_client_ip: rawClientIp,
           url: req.url
         }
       }), {
@@ -248,20 +255,26 @@ serve(async (req) => {
       });
     }
     
-    // Überprüfen, ob eine IP-Beschränkung existiert
-    if (data.server_ip && data.server_ip !== "*" && data.server_ip !== clientIp) {
-      console.log(`IP-Beschränkung verletzt. Erwartet: ${data.server_ip}, Erhalten: ${clientIp}`);
-      return new Response(JSON.stringify({ 
-        error: "IP-Adressüberprüfung fehlgeschlagen",
-        message: "Die IP-Adresse stimmt nicht mit der autorisierten IP überein",
-        debug: {
-          expected_ip: data.server_ip,
-          client_ip: clientIp
-        }
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 403,
-      });
+    // Verbesserte IP-Beschränkungsprüfung
+    if (data.server_ip && data.server_ip !== "*") {
+      const storedIp = data.server_ip.trim();
+      console.log(`Vergleiche IPs - Gespeichert: '${storedIp}', Client: '${clientIp}'`);
+      
+      if (storedIp !== clientIp) {
+        console.log(`IP-Beschränkung verletzt. Erwartet: ${storedIp}, Erhalten: ${clientIp}, Original: ${rawClientIp}`);
+        return new Response(JSON.stringify({ 
+          error: "IP-Adressüberprüfung fehlgeschlagen",
+          message: "Die IP-Adresse stimmt nicht mit der autorisierten IP überein",
+          debug: {
+            expected_ip: storedIp,
+            client_ip: clientIp,
+            raw_client_ip: rawClientIp
+          }
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 403,
+        });
+      }
     }
     
     // Wenn die IP-Adresse übereinstimmt oder keine Beschränkung vorhanden ist
