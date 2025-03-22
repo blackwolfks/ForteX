@@ -246,34 +246,44 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
                 print(SUCCESS_PREFIX .. " Server-IP: " .. (result.server_ip == "*" and "Alle IPs erlaubt" or result.server_ip) .. "^7")
             end
             
-            -- Laden des Script-Files, wenn es in der JSON-Antwort angegeben ist
-            if result.script_file and result.script_file ~= "" then
-                print(SUCCESS_PREFIX .. " Script-Datei gefunden: " .. result.script_file .. "^7")
-                
-                -- Neuen Request an die Script-URL senden
-                local scriptUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/script"
-                if CONFIG.Debug then
-                    print(DEBUG_PREFIX .. " Lade Script von URL: " .. scriptUrl .. "^7")
+            -- Jetzt den Skript-Endpunkt aufrufen, um das Skript zu laden
+            local scriptUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/script"
+            print(SUCCESS_PREFIX .. " Versuche Skript zu laden von: " .. scriptUrl .. "^7")
+            
+            PerformHttpRequest(scriptUrl, function(scriptStatusCode, scriptContent, scriptHeaders)
+                if scriptStatusCode ~= 200 then
+                    print(ERROR_PREFIX .. " Fehler beim Laden des Scripts: " .. tostring(scriptStatusCode) .. "^7")
+                    if callback then callback(false, "Script-Ladefehler: " .. tostring(scriptStatusCode)) end
+                    return
                 end
                 
-                PerformHttpRequest(scriptUrl, function(scriptStatusCode, scriptContent, scriptHeaders)
-                    if scriptStatusCode ~= 200 then
-                        print(ERROR_PREFIX .. " Fehler beim Laden des Scripts: " .. tostring(scriptStatusCode) .. "^7")
-                        if callback then callback(false, "Script-Ladefehler: " .. tostring(scriptStatusCode)) end
-                        return
+                -- Überprüfen, ob die Antwort Lua-Code oder eine Fehlermeldung ist
+                if scriptContent:match("^%s*--") or scriptContent:match("^%s*function") or scriptContent:match("^%s*local") then
+                    -- Sieht wie Lua-Code aus
+                    print(SUCCESS_PREFIX .. " Script erfolgreich geladen. Führe aus...^7")
+                    if CONFIG.Debug then
+                        print(DEBUG_PREFIX .. " Skript-Inhalt (ersten 100 Zeichen): " .. scriptContent:sub(1, 100))
                     end
-                    
-                    print(SUCCESS_PREFIX .. " Script erfolgreich geladen!^7")
                     if callback then callback(true, result, scriptContent) end
-                end, "GET", "", {
-                    ["Authorization"] = authHeader,
-                    ["X-License-Key"] = licenseKey,
-                    ["X-Server-Key"] = serverKey,
-                    ["User-Agent"] = "FiveM-ForteX/1.0",
-                })
-            else
-                if callback then callback(true, result) end
-            end
+                else
+                    -- Versuche es als JSON zu parsen (könnte eine Fehlermeldung sein)
+                    local errorData, _ = DecodeJSON(scriptContent)
+                    if errorData and errorData.error then
+                        print(ERROR_PREFIX .. " Server-Fehler: " .. errorData.error .. "^7")
+                        if callback then callback(false, errorData.error) end
+                    else
+                        -- Wenn es kein JSON ist, geben wir den Inhalt als Fehler zurück
+                        print(ERROR_PREFIX .. " Unerwartete Antwort vom Script-Server. Inhalt: " .. scriptContent:sub(1, 100) .. "^7")
+                        if callback then callback(false, "Unerwartetes Antwortformat vom Script-Server") end
+                    end
+                }
+            end, "GET", "", {
+                ["Authorization"] = authHeader,
+                ["X-License-Key"] = licenseKey,
+                ["X-Server-Key"] = serverKey,
+                ["User-Agent"] = "FiveM-ForteX/1.0",
+                ["Accept"] = "text/plain"
+            })
         else
             print(ERROR_PREFIX .. " Lizenz in der Datenbank nicht gültig oder nicht gefunden^7")
             if callback then callback(false, "Ungültige Lizenz") end
@@ -348,6 +358,8 @@ ForteX.LoadFile = function(filePath, callback)
         local scriptUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/script/" .. filePath
         local authHeader = "Basic " .. base64encode(CONFIG.LicenseKey .. ":" .. CONFIG.ServerKey)
         
+        print(SUCCESS_PREFIX .. " Versuche Datei zu laden: " .. scriptUrl .. "^7")
+        
         PerformHttpRequest(scriptUrl, function(statusCode, responseData, responseHeaders)
             if CONFIG.Debug then
                 DebugResponse(statusCode, responseData, responseHeaders)
@@ -359,6 +371,7 @@ ForteX.LoadFile = function(filePath, callback)
                 return
             end
             
+            print(SUCCESS_PREFIX .. " Datei erfolgreich geladen: " .. filePath .. "^7")
             if callback then callback(true, responseData) end
         end, "GET", "", {
             ["X-License-Key"] = CONFIG.LicenseKey,

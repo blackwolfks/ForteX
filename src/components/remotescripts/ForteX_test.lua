@@ -93,6 +93,7 @@ local function TestApiRequest()
     -- Basis-Autorisation Header erstellen
     local auth = base64encode(CONFIG.LicenseKey .. ":" .. CONFIG.ServerKey)
     
+    -- Zuerst die Lizenz verifizieren
     PerformHttpRequest(CONFIG.ServerUrl, function(statusCode, responseData, responseHeaders)
         if statusCode ~= 200 then
             print("^1API-Test fehlgeschlagen: Status " .. tostring(statusCode) .. "^0")
@@ -103,8 +104,6 @@ local function TestApiRequest()
             end
             return
         end
-        
-        print("^2API-Test erfolgreich!^0")
         
         -- Versuche die JSON-Antwort zu parsen
         local jsonData, jsonError = DecodeJSON(responseData)
@@ -130,13 +129,49 @@ local function TestApiRequest()
             if jsonData.server_ip then
                 print("^3Server-IP: ^0" .. (jsonData.server_ip == "*" and "Alle IPs erlaubt" or jsonData.server_ip))
             end
+            
+            -- Jetzt testen wir das Laden des Skripts
+            print("^2Jetzt versuche ich das Skript zu laden...^0")
+            
+            -- Jetzt die eigentliche Skriptdatei laden
+            local scriptUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/script"
+            
+            PerformHttpRequest(scriptUrl, function(scriptStatusCode, scriptContent, scriptHeaders)
+                if scriptStatusCode ~= 200 then
+                    print("^1Skript-Ladefehler: Status " .. tostring(scriptStatusCode) .. "^0")
+                    return
+                end
+                
+                print("^2Skript erfolgreich geladen!^0")
+                print("^3Skript-Inhalt (erste 100 Zeichen): ^0" .. scriptContent:sub(1, 100) .. "...")
+                
+                -- Prüfen, ob das Skript ausführbar ist
+                local func, err = load(scriptContent)
+                if func then
+                    print("^2Skript ist syntaktisch korrekt und kann ausgeführt werden.^0")
+                else
+                    print("^1Skript kann nicht kompiliert werden: " .. tostring(err) .. "^0")
+                    
+                    -- Prüfen, ob es sich um eine JSON-Antwort handelt
+                    local errorData, _ = DecodeJSON(scriptContent)
+                    if errorData and errorData.error then
+                        print("^1Server-Fehler: " .. errorData.error .. "^0")
+                    end
+                }
+            end, "GET", "", {
+                ["Authorization"] = "Basic " .. auth,
+                ["X-License-Key"] = CONFIG.LicenseKey,
+                ["X-Server-Key"] = CONFIG.ServerKey,
+                ["User-Agent"] = "FiveM-ForteX-Test/1.0",
+                ["Accept"] = "text/plain"
+            })
         else
             print("^1Lizenz ist nicht gültig.^0")
             
             if jsonData.error then
                 print("^1Fehler: ^0" .. jsonData.error)
             end
-        end
+        }
     end, "POST", json.encode({
         license_key = CONFIG.LicenseKey,
         server_key = CONFIG.ServerKey
