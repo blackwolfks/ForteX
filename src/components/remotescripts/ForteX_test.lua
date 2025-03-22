@@ -86,9 +86,20 @@ local function DecodeJSON(jsonString)
     return result, nil
 end
 
+-- Prüfe, ob die Konfigurationswerte den Testdaten entsprechen
+local function IsUsingTestData()
+    return CONFIG.LicenseKey == "ABCD-EFGH-IJKL-MNOP" and CONFIG.ServerKey == "123456789ABC"
+end
+
 -- API-Anfrage Beispiel
 local function TestApiRequest()
     print("^3Teste API-Verbindung...^0")
+    
+    -- Zeige Warnung, wenn es sich um die echten Keys handelt
+    if not IsUsingTestData() then
+        print("^3HINWEIS: Sie verwenden Ihre echten API-Keys. Wenn der Test fehlschlägt, überprüfen Sie die Keys in der config.lua.^0")
+        print("^3Sie können 'fortex_test_keys' ausführen, um die Test-Keys zu verwenden.^0")
+    end
     
     -- Basis-Autorisation Header erstellen
     local auth = base64encode(CONFIG.LicenseKey .. ":" .. CONFIG.ServerKey)
@@ -99,11 +110,14 @@ local function TestApiRequest()
             print("^1API-Test fehlgeschlagen: Status " .. tostring(statusCode) .. "^0")
             if statusCode == 401 then
                 print("^1Authentifizierungsfehler - überprüfen Sie Ihren Lizenzschlüssel und Server-Key^0")
-                print("^3Hinweis: Stellen Sie sicher, dass die Test-Keys in der Datenbank eingetragen sind.^0")
+                print("^3Hinweis: Stellen Sie sicher, dass die Keys in der Datenbank eingetragen sind.^0")
                 print("^3Für Test-Zwecke: LicenseKey = ABCD-EFGH-IJKL-MNOP, ServerKey = 123456789ABC^0")
             end
             return
         end
+        
+        print("^3Status Code: " .. tostring(statusCode) .. "^0")
+        print("^3Antwortdaten (ersten 100 Zeichen): ^0" .. responseData:sub(1, 100))
         
         -- Versuche die JSON-Antwort zu parsen
         local jsonData, jsonError = DecodeJSON(responseData)
@@ -112,6 +126,16 @@ local function TestApiRequest()
             print("^1JSON-Parsing fehlgeschlagen: " .. jsonError .. "^0")
             print("^3Rohe Antwort: ^0" .. responseData:sub(1, 100) .. "...")
             return
+        end
+        
+        -- Debug-Info zu den empfangenen Daten
+        print("^3Empfangene JSON-Daten: ^0")
+        for k, v in pairs(jsonData) do
+            if type(v) == "table" then
+                print("  " .. k .. ": [Tabelle]")
+            else
+                print("  " .. k .. ": " .. tostring(v))
+            end
         end
         
         if jsonData.valid then
@@ -149,6 +173,13 @@ local function TestApiRequest()
                 local func, err = load(scriptContent)
                 if func then
                     print("^2Skript ist syntaktisch korrekt und kann ausgeführt werden.^0")
+                    -- Hier können wir das Skript optional ausführen
+                    -- local success, error = pcall(func)
+                    -- if success then
+                    --     print("^2Skript erfolgreich ausgeführt!^0")
+                    -- else
+                    --     print("^1Fehler beim Ausführen des Skripts: " .. tostring(error) .. "^0")
+                    -- end
                 else
                     print("^1Skript kann nicht kompiliert werden: " .. tostring(err) .. "^0")
                     
@@ -221,5 +252,18 @@ RegisterCommand('fortex_test_keys', function(source, args, rawCommand)
     end
 end, true)
 
+-- Befehl zum Anzeigen der aktuellen Konfiguration
+RegisterCommand('fortex_config', function(source, args, rawCommand)
+    if source == 0 then
+        print("^2Aktuelle ForteX Konfiguration:^0")
+        print("^3License Key: ^0" .. CONFIG.LicenseKey)
+        print("^3Server Key: ^0" .. CONFIG.ServerKey)
+        print("^3Server URL: ^0" .. CONFIG.ServerUrl)
+        print("^3Debug Modus: ^0" .. tostring(CONFIG.Debug or false))
+        print("^3Auto-Update: ^0" .. tostring(CONFIG.AutoUpdate or false))
+    end
+end, true)
+
 print("^2ForteX Test Script ist bereit.^0")
 print("^3Verwenden Sie 'fortex_test' zum Testen oder 'fortex_test_keys' für Test mit Standard-Keys.^0")
+print("^3Oder 'fortex_config' um die aktuelle Konfiguration anzuzeigen.^0")

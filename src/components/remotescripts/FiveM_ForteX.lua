@@ -286,6 +286,9 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
             })
         else
             print(ERROR_PREFIX .. " Lizenz in der Datenbank nicht gültig oder nicht gefunden^7")
+            if result.error then
+                print(ERROR_PREFIX .. " Server-Fehler: " .. tostring(result.error) .. "^7")
+            end
             if callback then callback(false, "Ungültige Lizenz") end
         end
     end, "POST", json.encode({
@@ -416,6 +419,18 @@ RegisterCommand('fortex_reload', function(source, args, rawCommand)
         -- Logo beim Reload anzeigen
         ShowASCIILogo()
         LoadRemoteScript()
+    end
+end, true)
+
+-- Befehl zum Anzeigen der aktuellen Konfiguration
+RegisterCommand('fortex_config', function(source, args, rawCommand)
+    if source == 0 then
+        print("^2Aktuelle ForteX Konfiguration:^0")
+        print("^3License Key: ^0" .. CONFIG.LicenseKey)
+        print("^3Server Key: ^0" .. CONFIG.ServerKey)
+        print("^3Server URL: ^0" .. CONFIG.ServerUrl)
+        print("^3Debug Modus: ^0" .. tostring(CONFIG.Debug or false))
+        print("^3Auto-Update: ^0" .. tostring(CONFIG.AutoUpdate or false))
     end
 end, true)
 
