@@ -26,10 +26,10 @@ ShowLogo()
 
 -- Konfiguration einbinden
 local resourceName = GetCurrentResourceName()
-local configFile = LoadResourceFile(resourceName, "ForteX_config.lua")
+local configFile = LoadResourceFile(resourceName, "config.lua")
 
 if not configFile then
-    print("^1Fehler: ForteX_config.lua nicht gefunden^0")
+    print("^1Fehler: config.lua nicht gefunden^0")
     return
 end
 

@@ -1,4 +1,3 @@
-
 --[[ 
   ForteX Framework - Remote Script Loader
   
@@ -69,7 +68,7 @@ print(SUCCESS_PREFIX .. " Server-Key = '" .. CONFIG.ServerKey .. "'")
 print(SUCCESS_PREFIX .. " Debug-Modus = " .. tostring(CONFIG.Debug))
 
 if not CONFIG.ServerUrl then
-    CONFIG.ServerUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/script"
+    CONFIG.ServerUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/verify-license"
     print(DEBUG_PREFIX .. " Warnung: ServerUrl nicht konfiguriert, verwende Standard-URL^7")
 end
 
