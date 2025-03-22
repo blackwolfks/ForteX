@@ -15,9 +15,9 @@ import { toast } from "sonner";
 
 interface ScriptCardProps {
   license: License;
-  onUpdateScript: (licenseId: string, scriptName: string, scriptCode: string | null, serverIp: string | null, isActive: boolean) => Promise<void>;
-  onRegenerateServerKey: (licenseId: string) => Promise<void>;
-  onDeleteScript: (licenseId: string) => Promise<void>;
+  onUpdateScript: (licenseId: string, scriptName: string, scriptCode: string | null, serverIp: string | null, isActive: boolean) => Promise<boolean>;
+  onRegenerateServerKey: (licenseId: string) => Promise<boolean>;
+  onDeleteScript: (licenseId: string) => Promise<boolean>;
 }
 
 const ScriptCard = ({ license, onUpdateScript, onRegenerateServerKey, onDeleteScript }: ScriptCardProps) => {
