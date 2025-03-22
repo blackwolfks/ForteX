@@ -53,7 +53,7 @@ print("^3License Key: ^0" .. CONFIG.LicenseKey)
 print("^3Server Key: ^0" .. CONFIG.ServerKey)
 print("^3Server URL: ^0" .. CONFIG.ServerUrl)
 
--- Base64-Encoding Funktion (von FiveM_ForteX.lua kopiert)
+-- Base64-Encoding Funktion
 local b = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 function base64encode(data)
     return ((data:gsub('.', function(x) 
@@ -66,6 +66,24 @@ function base64encode(data)
         for i=1,6 do c=c+(x:sub(i,i)=='1' and 2^(6-i) or 0) end
         return b:sub(c+1,c+1)
     end)..({ '', '==', '=' })[#data%3+1])
+end
+
+-- JSON-Parsing Funktion
+local function DecodeJSON(jsonString)
+    if not jsonString or jsonString == "" then
+        return nil, "Empty JSON string"
+    end
+    
+    -- Verwenden des nativen FiveM JSON-Decoders
+    local success, result = pcall(function()
+        return json.decode(jsonString)
+    end)
+    
+    if not success then
+        return nil, "JSON decoding error: " .. tostring(result)
+    end
+    
+    return result, nil
 end
 
 -- API-Anfrage Beispiel
@@ -87,15 +105,48 @@ local function TestApiRequest()
         end
         
         print("^2API-Test erfolgreich!^0")
-        if responseData then
-            print("^3Erste 100 Zeichen der Antwort: ^0" .. responseData:sub(1, 100) .. "...")
+        
+        -- Versuche die JSON-Antwort zu parsen
+        local jsonData, jsonError = DecodeJSON(responseData)
+        
+        if jsonError then
+            print("^1JSON-Parsing fehlgeschlagen: " .. jsonError .. "^0")
+            print("^3Rohe Antwort: ^0" .. responseData:sub(1, 100) .. "...")
+            return
         end
-    end, "GET", "", {
+        
+        if jsonData.valid then
+            print("^2Lizenz ist gültig!^0")
+            
+            -- Zeige weitere Informationen an, wenn verfügbar
+            if jsonData.script_name then
+                print("^3Script-Name: ^0" .. jsonData.script_name)
+            end
+            
+            if jsonData.script_file then
+                print("^3Script-Datei: ^0" .. jsonData.script_file)
+            end
+            
+            if jsonData.server_ip then
+                print("^3Server-IP: ^0" .. (jsonData.server_ip == "*" and "Alle IPs erlaubt" or jsonData.server_ip))
+            end
+        else
+            print("^1Lizenz ist nicht gültig.^0")
+            
+            if jsonData.error then
+                print("^1Fehler: ^0" .. jsonData.error)
+            end
+        end
+    end, "POST", json.encode({
+        license_key = CONFIG.LicenseKey,
+        server_key = CONFIG.ServerKey
+    }), {
+        ["Content-Type"] = "application/json",
         ["Authorization"] = "Basic " .. auth,
         ["X-License-Key"] = CONFIG.LicenseKey,
         ["X-Server-Key"] = CONFIG.ServerKey,
         ["User-Agent"] = "FiveM-ForteX-Test/1.0",
-        ["Accept"] = "text/plain"
+        ["Accept"] = "application/json"
     })
 end
 

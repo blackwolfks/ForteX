@@ -1,3 +1,4 @@
+
 --[[ 
   ForteX Framework - Remote Script Loader
   
@@ -89,6 +90,25 @@ function base64encode(data)
     end)..({ '', '==', '=' })[#data%3+1])
 end
 
+-- Hilfsfunktion zur JSON-Dekodierung
+local function DecodeJSON(jsonString)
+    -- Prüfen ob die Eingabe gültig ist
+    if not jsonString or jsonString == "" then
+        return nil, "Leerer JSON-String"
+    end
+    
+    -- Wir verwenden das native FiveM JSON-Dekodierungssystem
+    local success, result = pcall(function()
+        return json.decode(jsonString)
+    end)
+    
+    if not success then
+        return nil, "JSON-Dekodierungsfehler: " .. tostring(result)
+    end
+    
+    return result, nil
+end
+
 -- Hilfsfunktion zur Skript-Validierung
 function ValidateScript(scriptData)
     if not scriptData or scriptData == "" then
@@ -119,19 +139,31 @@ function DebugResponse(statusCode, responseData, responseHeaders)
                 print(ERROR_PREFIX .. " Überprüfen Sie die ServerUrl in config.lua und stellen Sie sicher, dass sie direkt auf die Edge Function zeigt.^7")
             end
             
-            -- Prüfe auf JSON-Antwort (wahrscheinlich ein Fehler)
+            -- Prüfe auf JSON-Antwort
             if preview:match("^%s*{") then
-                local jsonData = json.decode(responseData)
-                if jsonData and jsonData.error then
-                    print(ERROR_PREFIX .. " Fehler vom Server erhalten: " .. tostring(jsonData.error) .. "^7")
-                    
-                    -- Spezielle Behandlung für IP-Fehler
-                    if jsonData.error == "IP-Adressüberprüfung fehlgeschlagen" then
-                        print(ERROR_PREFIX .. " Die Server-IP stimmt nicht mit der autorisierten IP überein.^7")
-                        if jsonData.debug and jsonData.debug.expected_ip and jsonData.debug.client_ip then
-                            print(ERROR_PREFIX .. " Erwartete IP: " .. jsonData.debug.expected_ip .. "^7")
-                            print(ERROR_PREFIX .. " Ihre IP: " .. jsonData.debug.client_ip .. "^7")
-                            print(ERROR_PREFIX .. " Bitte aktualisieren Sie die Server-IP in der Web-Admin-Oberfläche oder verwenden Sie '*' für alle IPs.^7")
+                print(DEBUG_PREFIX .. " Die Antwort enthält JSON, versuche zu dekodieren...^7")
+                local jsonData, jsonError = DecodeJSON(responseData)
+                
+                if jsonError then
+                    print(ERROR_PREFIX .. " Fehler beim Dekodieren des JSON: " .. tostring(jsonError) .. "^7")
+                elseif jsonData then
+                    -- Verarbeite JSON je nach Inhalt
+                    if jsonData.error then
+                        print(ERROR_PREFIX .. " Fehler vom Server erhalten: " .. tostring(jsonData.error) .. "^7")
+                        
+                        -- Spezielle Behandlung für IP-Fehler
+                        if jsonData.error == "IP-Adressüberprüfung fehlgeschlagen" then
+                            print(ERROR_PREFIX .. " Die Server-IP stimmt nicht mit der autorisierten IP überein.^7")
+                            if jsonData.debug and jsonData.debug.expected_ip and jsonData.debug.client_ip then
+                                print(ERROR_PREFIX .. " Erwartete IP: " .. jsonData.debug.expected_ip .. "^7")
+                                print(ERROR_PREFIX .. " Ihre IP: " .. jsonData.debug.client_ip .. "^7")
+                                print(ERROR_PREFIX .. " Bitte aktualisieren Sie die Server-IP in der Web-Admin-Oberfläche oder verwenden Sie '*' für alle IPs.^7")
+                            end
+                        end
+                    elseif jsonData.valid then
+                        print(SUCCESS_PREFIX .. " Lizenz erfolgreich validiert.^7")
+                        if jsonData.script_file then
+                            print(SUCCESS_PREFIX .. " Script-Datei: " .. tostring(jsonData.script_file) .. "^7")
                         end
                     end
                     
@@ -166,9 +198,9 @@ end
 
 -- Funktion zur direkten Überprüfung der Lizenz in der Datenbank
 function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
-    local verificationUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/verify-license"
+    local verificationUrl = CONFIG.ServerUrl
     
-    print(DEBUG_PREFIX .. " Überprüfe Lizenz direkt in der Datenbank: " .. licenseKey .. " / " .. serverKey .. "^7")
+    print(DEBUG_PREFIX .. " Überprüfe Lizenz: " .. licenseKey .. " / " .. serverKey .. "^7")
     
     -- Erstelle einen Basic-Auth Header für die Authentifizierung
     local authHeader = "Basic " .. base64encode(licenseKey .. ":" .. serverKey)
@@ -183,7 +215,7 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
             
             -- Prüfen auf IP-Beschränkungsfehler (403)
             if statusCode == 403 then
-                local jsonData = json.decode(responseData)
+                local jsonData, jsonError = DecodeJSON(responseData)
                 if jsonData and jsonData.error == "IP-Adressüberprüfung fehlgeschlagen" then
                     print(ERROR_PREFIX .. " Zugriff verweigert - Ihre Server-IP stimmt nicht mit der autorisierten IP überein^7")
                     if jsonData.debug and jsonData.debug.expected_ip and jsonData.debug.client_ip then
@@ -200,9 +232,10 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
             return
         end
         
-        local result = json.decode(responseData)
-        if not result then
-            print(ERROR_PREFIX .. " Fehler beim Dekodieren der Server-Antwort^7")
+        -- JSON-Antwort parsen
+        local result, parseError = DecodeJSON(responseData)
+        if parseError or not result then
+            print(ERROR_PREFIX .. " Fehler beim Dekodieren der Server-Antwort: " .. tostring(parseError or "Ungültiges Format") .. "^7")
             if callback then callback(false, "Ungültiges Antwortformat") end
             return
         end
@@ -212,7 +245,35 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
             if result.server_ip then
                 print(SUCCESS_PREFIX .. " Server-IP: " .. (result.server_ip == "*" and "Alle IPs erlaubt" or result.server_ip) .. "^7")
             end
-            if callback then callback(true, result) end
+            
+            -- Laden des Script-Files, wenn es in der JSON-Antwort angegeben ist
+            if result.script_file and result.script_file ~= "" then
+                print(SUCCESS_PREFIX .. " Script-Datei gefunden: " .. result.script_file .. "^7")
+                
+                -- Neuen Request an die Script-URL senden
+                local scriptUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/script"
+                if CONFIG.Debug then
+                    print(DEBUG_PREFIX .. " Lade Script von URL: " .. scriptUrl .. "^7")
+                end
+                
+                PerformHttpRequest(scriptUrl, function(scriptStatusCode, scriptContent, scriptHeaders)
+                    if scriptStatusCode ~= 200 then
+                        print(ERROR_PREFIX .. " Fehler beim Laden des Scripts: " .. tostring(scriptStatusCode) .. "^7")
+                        if callback then callback(false, "Script-Ladefehler: " .. tostring(scriptStatusCode)) end
+                        return
+                    end
+                    
+                    print(SUCCESS_PREFIX .. " Script erfolgreich geladen!^7")
+                    if callback then callback(true, result, scriptContent) end
+                end, "GET", "", {
+                    ["Authorization"] = authHeader,
+                    ["X-License-Key"] = licenseKey,
+                    ["X-Server-Key"] = serverKey,
+                    ["User-Agent"] = "FiveM-ForteX/1.0",
+                })
+            else
+                if callback then callback(true, result) end
+            end
         else
             print(ERROR_PREFIX .. " Lizenz in der Datenbank nicht gültig oder nicht gefunden^7")
             if callback then callback(false, "Ungültige Lizenz") end
@@ -236,176 +297,38 @@ function LoadRemoteScript()
     print(PREFIX .. " Server-URL: " .. CONFIG.ServerUrl .. "^7")
     
     -- Zuerst die Lizenz in der Datenbank überprüfen
-    VerifyLicenseWithDatabase(CONFIG.LicenseKey, CONFIG.ServerKey, function(isValid, result)
+    VerifyLicenseWithDatabase(CONFIG.LicenseKey, CONFIG.ServerKey, function(isValid, result, scriptContent)
         if not isValid then
-            print(ERROR_PREFIX .. " Lizenzprüfung in der Datenbank fehlgeschlagen - versuche direkt das Skript zu laden^7")
-            LoadScriptDirectly() -- Trotzdem versuchen, das Skript direkt zu laden
+            print(ERROR_PREFIX .. " Lizenzprüfung fehlgeschlagen^7")
             return
         end
         
-        -- Nach erfolgreicher Datenbankprüfung das Skript laden
-        print(SUCCESS_PREFIX .. " Lizenz in der Datenbank bestätigt, lade Skript...^7")
-        LoadScriptDirectly()
-    end)
-end
-
--- Funktion zum direkten Laden des Skripts
-function LoadScriptDirectly()
-    -- Die Keys einmal trimmen, um Leerzeichen zu entfernen
-    local licenseKey = CONFIG.LicenseKey:gsub("^%s*(.-)%s*$", "%1")
-    local serverKey = CONFIG.ServerKey:gsub("^%s*(.-)%s*$", "%1")
-    
-    print(DEBUG_PREFIX .. " Verwende bereinigte Keys: LicenseKey='" .. licenseKey .. "', ServerKey='" .. serverKey .. "'")
-    
-    -- Erstelle einen Basic-Auth Header für die Authentifizierung
-    local authHeader = "Basic " .. base64encode(licenseKey .. ":" .. serverKey)
-    
-    -- Trage alle wichtigen Header und vor allem den Authorization-Header ein
-    local headers = {
-        ["Content-Type"] = "application/json",
-        ["X-License-Key"] = licenseKey,
-        ["X-Server-Key"] = serverKey,
-        ["Authorization"] = authHeader,
-        ["User-Agent"] = "FiveM-ForteX/1.0",
-        ["Accept"] = "text/plain"
-    }
-    
-    -- Debug: Zeige alle verwendeten Header an
-    if CONFIG.Debug then
-        print(DEBUG_PREFIX .. " Sende folgende Header:")
-        for k, v in pairs(headers) do
-            -- Wenn es ein Authorization-Header ist, zeige nur den Anfang an
-            if k == "Authorization" then
-                print("  " .. k .. ": " .. v:sub(1, 15) .. "...")
-            else
-                print("  " .. k .. ": " .. v)
-            end
-        end
-    end
-    
-    local requestBody = json.encode({
-        license_key = licenseKey,
-        server_key = serverKey
-    })
-    
-    PerformHttpRequest(CONFIG.ServerUrl, function(statusCode, responseData, responseHeaders)
-        -- Debug-Informationen ausgeben
-        DebugResponse(statusCode, responseData, responseHeaders)
-        
-        if statusCode ~= 200 then
-            print(ERROR_PREFIX .. " Fehler beim Abrufen des Skripts: " .. tostring(statusCode) .. "^7")
-            if statusCode == 401 then
-                print(ERROR_PREFIX .. " Authentifizierungsfehler - überprüfen Sie Ihren Lizenzschlüssel und Server-Key^7")
-                print(ERROR_PREFIX .. " Ihre Config-Werte: LicenseKey='" .. licenseKey .. "', ServerKey='" .. serverKey .. "'")
-                print(ERROR_PREFIX .. " Prüfe ob die Authorization-Header korrekt gesendet wurden^7")
-                
-                -- Versuche erneut mit etwas Verzögerung und explizitem POST-Body
-                Wait(1000)
-                print(PREFIX .. " Versuche erneut mit explizitem POST-Body...^7")
-                
-                PerformHttpRequest(CONFIG.ServerUrl, function(retryStatusCode, retryResponseData, retryResponseHeaders)
-                    DebugResponse(retryStatusCode, retryResponseData, retryResponseHeaders)
-                    
-                    if retryStatusCode == 200 then
-                        print(SUCCESS_PREFIX .. " Zweiter Versuch erfolgreich!^7")
-                        -- Skript validieren und ausführen
-                        local isValid, scriptOrError = ValidateScript(retryResponseData)
-                        if isValid then
-                            -- Skript ausführen
-                            local func, err = load(scriptOrError)
-                            if func then
-                                local success, error = pcall(func)
-                                if success then
-                                    print(SUCCESS_PREFIX .. " Skript erfolgreich geladen und ausgeführt^7")
-                                else
-                                    print(ERROR_PREFIX .. " Fehler beim Ausführen des Skripts: " .. tostring(error) .. "^7")
-                                end
-                            else
-                                print(ERROR_PREFIX .. " Fehler beim Kompilieren des Skripts: " .. tostring(err) .. "^7")
-                            end
-                        else
-                            print(ERROR_PREFIX .. " Skript-Validierung fehlgeschlagen: " .. scriptOrError .. "^7")
-                        end
-                    else
-                        print(ERROR_PREFIX .. " Auch zweiter Versuch fehlgeschlagen: " .. tostring(retryStatusCode) .. "^7")
-                        
-                        -- Versuche einen dritten Versuch mit einer anderen Methode
-                        print(PREFIX .. " Versuche dritten Versuch mit URL-Parameter...^7")
-                        
-                        local urlWithParams = CONFIG.ServerUrl .. "?license_key=" .. licenseKey .. "&server_key=" .. serverKey
-                        PerformHttpRequest(urlWithParams, function(thirdStatusCode, thirdResponseData, thirdResponseHeaders)
-                            DebugResponse(thirdStatusCode, thirdResponseData, thirdResponseHeaders)
-                            
-                            if thirdStatusCode == 200 then
-                                print(SUCCESS_PREFIX .. " Dritter Versuch erfolgreich!^7")
-                                -- Verarbeite die Antwort...
-                                local isValid, scriptOrError = ValidateScript(thirdResponseData)
-                                if isValid then
-                                    -- Skript ausführen
-                                    local func, err = load(scriptOrError)
-                                    if func then
-                                        local success, error = pcall(func)
-                                        if success then
-                                            print(SUCCESS_PREFIX .. " Skript erfolgreich geladen und ausgeführt^7")
-                                        else
-                                            print(ERROR_PREFIX .. " Fehler beim Ausführen des Skripts: " .. tostring(error) .. "^7")
-                                        end
-                                    else
-                                        print(ERROR_PREFIX .. " Fehler beim Kompilieren des Skripts: " .. tostring(err) .. "^7")
-                                    end
-                                else
-                                    print(ERROR_PREFIX .. " Skript-Validierung fehlgeschlagen: " .. scriptOrError .. "^7")
-                                end
-                            else
-                                print(ERROR_PREFIX .. " Alle Versuche fehlgeschlagen. Bitte überprüfen Sie Ihre Lizenzschlüssel und Server-URL.^7")
-                            end
-                        end, "GET", "", headers)
-                    end
-                end, "POST", requestBody, headers)
-            elseif statusCode == 403 then
-                print(ERROR_PREFIX .. " Zugriff verweigert - möglicherweise IP-Beschränkung oder inaktive Lizenz^7")
-            elseif statusCode == 404 then
-                print(ERROR_PREFIX .. " Skript nicht gefunden^7")
-            elseif statusCode == 0 then
-                print(ERROR_PREFIX .. " Verbindungsfehler - überprüfen Sie die ServerUrl in der Konfiguration^7")
-            elseif statusCode >= 500 then
-                print(ERROR_PREFIX .. " Serverfehler - bitte kontaktieren Sie den Support^7")
-            end
-            return
-        end
-        
-        -- Prüfen ob die Antwort ein JSON-Fehlerobjekt ist
-        if responseData:match("^%s*{") then
-            local jsonData = json.decode(responseData)
-            if jsonData and jsonData.error then
-                print(ERROR_PREFIX .. " Serverfehler: " .. tostring(jsonData.error) .. "^7")
+        -- Wenn ein Script zurückgegeben wurde, führe es aus
+        if scriptContent then
+            -- Skript validieren
+            local isValid, scriptOrError = ValidateScript(scriptContent)
+            if not isValid then
+                print(ERROR_PREFIX .. " Skript-Validierung fehlgeschlagen: " .. scriptOrError .. "^7")
                 return
             end
-        end
-        
-        print(SUCCESS_PREFIX .. " Skript erfolgreich abgerufen^7")
-        
-        -- Skript validieren
-        local isValid, scriptOrError = ValidateScript(responseData)
-        if not isValid then
-            print(ERROR_PREFIX .. " Skript-Validierung fehlgeschlagen: " .. scriptOrError .. "^7")
-            return
-        end
-        
-        -- Skript ausführen
-        print(PREFIX .. " Führe Skript aus...^7")
-        local func, err = load(scriptOrError)
-        if func then
-            local success, error = pcall(func)
-            if success then
-                print(SUCCESS_PREFIX .. " Skript erfolgreich geladen und ausgeführt^7")
+            
+            -- Skript ausführen
+            print(PREFIX .. " Führe Skript aus...^7")
+            local func, err = load(scriptContent)
+            if func then
+                local success, error = pcall(func)
+                if success then
+                    print(SUCCESS_PREFIX .. " Skript erfolgreich geladen und ausgeführt^7")
+                else
+                    print(ERROR_PREFIX .. " Fehler beim Ausführen des Skripts: " .. tostring(error) .. "^7")
+                end
             else
-                print(ERROR_PREFIX .. " Fehler beim Ausführen des Skripts: " .. tostring(error) .. "^7")
+                print(ERROR_PREFIX .. " Fehler beim Kompilieren des Skripts: " .. tostring(err) .. "^7")
             end
         else
-            print(ERROR_PREFIX .. " Fehler beim Kompilieren des Skripts: " .. tostring(err) .. "^7")
+            print(SUCCESS_PREFIX .. " Lizenz validiert, aber kein Script zum Ausführen gefunden.^7")
         end
-    end, "POST", requestBody, headers)
+    end)
 end
 
 -- ForteX API für andere Ressourcen
@@ -421,10 +344,11 @@ ForteX.LoadFile = function(filePath, callback)
             return
         end
         
-        local url = CONFIG.ServerUrl .. "/" .. filePath
+        -- Jetzt die eigentliche Datei laden
+        local scriptUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/script/" .. filePath
         local authHeader = "Basic " .. base64encode(CONFIG.LicenseKey .. ":" .. CONFIG.ServerKey)
         
-        PerformHttpRequest(url, function(statusCode, responseData, responseHeaders)
+        PerformHttpRequest(scriptUrl, function(statusCode, responseData, responseHeaders)
             if CONFIG.Debug then
                 DebugResponse(statusCode, responseData, responseHeaders)
             end
