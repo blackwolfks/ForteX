@@ -247,10 +247,12 @@ export type Database = {
         Row: {
           aktiv: boolean | null
           created_at: string | null
+          has_file_upload: boolean | null
           id: string
           license_key: string
           script_file: string | null
           script_name: string
+          server_ip: string | null
           server_key: string
           updated_at: string | null
           user_id: string
@@ -258,10 +260,12 @@ export type Database = {
         Insert: {
           aktiv?: boolean | null
           created_at?: string | null
+          has_file_upload?: boolean | null
           id?: string
           license_key: string
           script_file?: string | null
           script_name: string
+          server_ip?: string | null
           server_key: string
           updated_at?: string | null
           user_id: string
@@ -269,10 +273,12 @@ export type Database = {
         Update: {
           aktiv?: boolean | null
           created_at?: string | null
+          has_file_upload?: boolean | null
           id?: string
           license_key?: string
           script_file?: string | null
           script_name?: string
+          server_ip?: string | null
           server_key?: string
           updated_at?: string | null
           user_id?: string
