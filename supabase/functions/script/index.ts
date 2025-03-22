@@ -28,24 +28,27 @@ serve(async (req) => {
     // Lizenzschlüssel und Server-Key aus den Headers extrahieren
     let licenseKey = req.headers.get("x-license-key");
     let serverKey = req.headers.get("x-server-key");
-    let bodyData = {};
+    let bodyData: any = {};
     
     // Basic Auth Header extrahieren
     const authHeader = req.headers.get("authorization");
+    console.log("Authorization Header:", authHeader ? "vorhanden" : "nicht vorhanden");
+    
     if (authHeader && authHeader.startsWith("Basic ")) {
       try {
         const base64Credentials = authHeader.split(" ")[1];
         const credentials = atob(base64Credentials);
+        console.log("Dekodierte Credentials:", credentials);
         const [extractedLicenseKey, extractedServerKey] = credentials.split(":");
         
         if (!licenseKey && extractedLicenseKey) {
           licenseKey = extractedLicenseKey;
-          console.log("Lizenzschlüssel aus Basic Auth extrahiert");
+          console.log("Lizenzschlüssel aus Basic Auth extrahiert:", licenseKey);
         }
         
         if (!serverKey && extractedServerKey) {
           serverKey = extractedServerKey;
-          console.log("Server-Key aus Basic Auth extrahiert");
+          console.log("Server-Key aus Basic Auth extrahiert:", serverKey);
         }
       } catch (e) {
         console.log("Fehler beim Dekodieren des Basic Auth Headers:", e.message);
@@ -56,14 +59,24 @@ serve(async (req) => {
     if (!licenseKey || !serverKey) {
       try {
         if (req.method === "POST") {
-          bodyData = await req.json();
-          if (!licenseKey && bodyData.license_key) {
-            licenseKey = bodyData.license_key;
-            console.log("Lizenzschlüssel aus dem Body extrahiert");
-          }
-          if (!serverKey && bodyData.server_key) {
-            serverKey = bodyData.server_key;
-            console.log("Server-Key aus dem Body extrahiert");
+          const clonedReq = req.clone();
+          const text = await clonedReq.text();
+          console.log("Request body:", text);
+          
+          try {
+            bodyData = JSON.parse(text);
+            console.log("Parsed body data:", bodyData);
+            
+            if (!licenseKey && bodyData.license_key) {
+              licenseKey = bodyData.license_key;
+              console.log("Lizenzschlüssel aus dem Body extrahiert:", licenseKey);
+            }
+            if (!serverKey && bodyData.server_key) {
+              serverKey = bodyData.server_key;
+              console.log("Server-Key aus dem Body extrahiert:", serverKey);
+            }
+          } catch (jsonError) {
+            console.log("JSON-Parsing-Fehler:", jsonError.message);
           }
         }
       } catch (e) {
@@ -120,26 +133,67 @@ serve(async (req) => {
     console.log("Überprüfe Lizenz mit check_license_by_keys Funktion");
     
     // Lizenz in der Datenbank überprüfen mit beiden Schlüsseln
-    const { data, error } = await supabase.rpc("check_license_by_keys", {
+    let { data, error } = await supabase.rpc("check_license_by_keys", {
       p_license_key: licenseKey,
       p_server_key: serverKey
     });
     
+    // Wenn es einen Fehler gibt (z.B. wenn die server_licenses Tabelle noch als script_files heißt)
     if (error) {
-      console.log("Fehler bei der Lizenzüberprüfung:", error);
-      return new Response(JSON.stringify({ 
-        error: "Fehler bei der Lizenzüberprüfung",
-        debug: {
-          db_error: error.message,
-          query_params: {
-            license_key: licenseKey,
-            server_key: serverKey
+      console.log("Fehler bei der ersten Lizenzüberprüfung, versuche alternative Methode:", error);
+      
+      // Probiere es mit einem direkten Datenbankzugriff
+      try {
+        const { data: licenseData, error: licenseError } = await supabase
+          .from('server_licenses')
+          .select('*')
+          .eq('license_key', licenseKey)
+          .eq('server_key', serverKey)
+          .single();
+        
+        if (!licenseError && licenseData) {
+          // Umwandeln in das erwartete Format
+          data = {
+            valid: true,
+            id: licenseData.id,
+            license_key: licenseData.license_key,
+            script_name: licenseData.script_name,
+            script_file: licenseData.script_file,
+            server_ip: licenseData.server_ip,
+            aktiv: licenseData.aktiv,
+            has_file_upload: licenseData.has_file_upload
+          };
+          console.log("Lizenz direkt aus der Datenbank gefunden:", data);
+        } else {
+          console.log("Lizenz nicht in server_licenses gefunden, versuche script_files:", licenseError);
+          
+          // Versuche es mit der alten Tabelle "script_files"
+          const { data: oldLicenseData, error: oldLicenseError } = await supabase
+            .from('script_files')
+            .select('*')
+            .eq('license_key', licenseKey)
+            .eq('server_key', serverKey)
+            .single();
+          
+          if (!oldLicenseError && oldLicenseData) {
+            data = {
+              valid: true,
+              id: oldLicenseData.id,
+              license_key: oldLicenseData.license_key,
+              script_name: oldLicenseData.script_name,
+              script_file: oldLicenseData.script_file,
+              server_ip: oldLicenseData.server_ip,
+              aktiv: oldLicenseData.aktiv,
+              has_file_upload: oldLicenseData.has_file_upload
+            };
+            console.log("Lizenz in script_files gefunden:", data);
+          } else {
+            console.log("Lizenz auch nicht in script_files gefunden:", oldLicenseError);
           }
         }
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
-      });
+      } catch (dbError) {
+        console.log("Fehler beim direkten Datenbankzugriff:", dbError);
+      }
     }
     
     if (!data || !data.valid) {
@@ -147,7 +201,9 @@ serve(async (req) => {
       return new Response(JSON.stringify({ 
         error: "Ungültige Authentifizierungsdaten",
         debug: {
-          data_received: data || "keine Daten"
+          data_received: data || "keine Daten",
+          license_key_provided: licenseKey,
+          server_key_provided: serverKey
         }
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -195,6 +251,37 @@ serve(async (req) => {
         // Vollständigen Pfad erstellen
         const fullPath = `${data.id}/${specificFile}`;
         
+        // Prüfen, ob der Bucket existiert
+        try {
+          // Buckets auflisten
+          const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+          
+          if (bucketsError) {
+            console.log("Fehler beim Auflisten der Buckets:", bucketsError);
+          } else {
+            const scriptBucketExists = buckets.some(bucket => bucket.name === "script");
+            
+            if (!scriptBucketExists) {
+              console.log("Script-Bucket existiert nicht, versuche ihn zu erstellen");
+              
+              // Bucket erstellen
+              const { error: createBucketError } = await supabase.storage.createBucket("script", {
+                public: false
+              });
+              
+              if (createBucketError) {
+                console.log("Fehler beim Erstellen des Buckets:", createBucketError);
+              } else {
+                console.log("Script-Bucket erfolgreich erstellt");
+              }
+            } else {
+              console.log("Script-Bucket existiert bereits");
+            }
+          }
+        } catch (bucketError) {
+          console.log("Fehler beim Überprüfen/Erstellen des Buckets:", bucketError);
+        }
+        
         // Datei herunterladen
         const { data: fileData, error: fileError } = await supabase.storage
           .from("script")
@@ -202,7 +289,14 @@ serve(async (req) => {
         
         if (fileError) {
           console.log("Fehler beim Herunterladen der Datei:", fileError);
-          return new Response(JSON.stringify({ error: "Fehler beim Herunterladen der Datei" }), {
+          return new Response(JSON.stringify({ 
+            error: "Fehler beim Herunterladen der Datei", 
+            debug: { 
+              path: fullPath,
+              error_message: fileError.message,
+              error_details: fileError
+            }
+          }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
             status: 500,
           });
@@ -225,7 +319,54 @@ serve(async (req) => {
       
       if (storageError) {
         console.log("Fehler beim Abrufen der Script-Dateien:", storageError);
-        return new Response(JSON.stringify({ error: "Fehler beim Abrufen der Script-Dateien" }), {
+        
+        // Versuche das Verzeichnis zu erstellen
+        try {
+          // Workaround: Leere Datei hochladen, um ein Verzeichnis zu erstellen
+          const emptyFile = new Blob(['// Leere Datei'], { type: 'text/plain' });
+          const { error: uploadError } = await supabase.storage
+            .from("script")
+            .upload(`${data.id}/main.lua`, emptyFile);
+          
+          if (uploadError) {
+            console.log("Fehler beim Erstellen des Verzeichnisses:", uploadError);
+            return new Response(JSON.stringify({ 
+              error: "Fehler beim Erstellen des Verzeichnisses",
+              debug: {
+                error_message: uploadError.message,
+                license_id: data.id
+              }
+            }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 500,
+            });
+          }
+          
+          console.log("Verzeichnis erfolgreich erstellt, sende Standardskript");
+          
+          // Standardskript zurückgeben
+          return new Response(`
+          -- ForteX Framework Skript
+          -- Generiert für Lizenz ${licenseKey}
+          
+          print("^2ForteX Framework^0: Skript erfolgreich geladen!")
+          
+          -- Fügen Sie hier Ihren eigenen Code ein oder laden Sie Dateien über die Web-Admin-Oberfläche hoch
+          `, {
+            headers: { ...corsHeaders, "Content-Type": "text/plain" },
+            status: 200,
+          });
+        } catch (dirError) {
+          console.log("Unerwarteter Fehler beim Erstellen des Verzeichnisses:", dirError);
+        }
+        
+        return new Response(JSON.stringify({ 
+          error: "Fehler beim Abrufen der Script-Dateien",
+          debug: {
+            error_message: storageError.message,
+            license_id: data.id
+          }
+        }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 500,
         });
@@ -246,9 +387,36 @@ serve(async (req) => {
       
       if (!mainFile) {
         console.log("Keine Skriptdateien gefunden");
-        return new Response(JSON.stringify({ error: "Keine Skriptdateien gefunden" }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 404,
+        
+        // Standard-Skript erzeugen
+        const defaultScript = `
+        -- ForteX Framework Skript
+        -- Generiert für Lizenz ${licenseKey}
+        
+        print("^2ForteX Framework^0: Skript erfolgreich geladen!")
+        
+        -- Fügen Sie hier Ihren eigenen Code ein oder laden Sie Dateien über die Web-Admin-Oberfläche hoch
+        `;
+        
+        try {
+          // Datei hochladen
+          const defaultScriptBlob = new Blob([defaultScript], { type: 'text/plain' });
+          const { error: uploadError } = await supabase.storage
+            .from("script")
+            .upload(`${data.id}/main.lua`, defaultScriptBlob);
+          
+          if (uploadError) {
+            console.log("Fehler beim Hochladen des Standardskripts:", uploadError);
+          } else {
+            console.log("Standardskript erfolgreich hochgeladen");
+          }
+        } catch (uploadError) {
+          console.log("Fehler beim Hochladen des Standardskripts:", uploadError);
+        }
+        
+        return new Response(defaultScript, {
+          headers: { ...corsHeaders, "Content-Type": "text/plain" },
+          status: 200,
         });
       }
       
@@ -259,7 +427,14 @@ serve(async (req) => {
       
       if (fileError) {
         console.log("Fehler beim Herunterladen der Skriptdatei:", fileError);
-        return new Response(JSON.stringify({ error: "Fehler beim Herunterladen der Skriptdatei" }), {
+        return new Response(JSON.stringify({ 
+          error: "Fehler beim Herunterladen der Skriptdatei",
+          debug: {
+            file_name: mainFile.name,
+            license_id: data.id,
+            error_message: fileError.message
+          }
+        }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 500,
         });
@@ -277,12 +452,20 @@ serve(async (req) => {
     
     // Wenn kein Datei-Upload, dann das Skript aus der Datenbank senden
     if (!data.script_file) {
-      console.log("Kein Skript in der Datenbank gefunden");
-      return new Response(JSON.stringify({ 
-        error: "Kein Skript gefunden"
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 404,
+      // Wenn kein Skript in der Datenbank, ein Standardskript senden
+      const defaultScript = `
+      -- ForteX Framework Skript
+      -- Generiert für Lizenz ${licenseKey}
+      
+      print("^2ForteX Framework^0: Skript erfolgreich geladen!")
+      
+      -- Fügen Sie hier Ihren eigenen Code ein oder laden Sie ein Skript über die Web-Admin-Oberfläche hoch
+      `;
+      
+      console.log("Kein Skript in der Datenbank gefunden, sende Standardskript");
+      return new Response(defaultScript, {
+        headers: { ...corsHeaders, "Content-Type": "text/plain" },
+        status: 200,
       });
     }
     

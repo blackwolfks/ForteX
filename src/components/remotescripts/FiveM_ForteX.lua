@@ -218,6 +218,29 @@ function LoadScriptDirectly()
     -- Erstelle einen Basic-Auth Header für die Authentifizierung
     local authHeader = "Basic " .. base64encode(CONFIG.LicenseKey .. ":" .. CONFIG.ServerKey)
     
+    -- Trage alle wichtigen Header und vor allem den Authorization-Header ein
+    local headers = {
+        ["Content-Type"] = "application/json",
+        ["X-License-Key"] = CONFIG.LicenseKey,
+        ["X-Server-Key"] = CONFIG.ServerKey,
+        ["Authorization"] = authHeader,
+        ["User-Agent"] = "FiveM-ForteX/1.0",
+        ["Accept"] = "text/plain"
+    }
+    
+    -- Debug: Zeige alle verwendeten Header an
+    if CONFIG.Debug then
+        print(DEBUG_PREFIX .. " Sende folgende Header:")
+        for k, v in pairs(headers) do
+            -- Wenn es ein Authorization-Header ist, zeige nur den Anfang an
+            if k == "Authorization" then
+                print("  " .. k .. ": " .. v:sub(1, 15) .. "...")
+            else
+                print("  " .. k .. ": " .. v)
+            end
+        end
+    end
+    
     PerformHttpRequest(CONFIG.ServerUrl, function(statusCode, responseData, responseHeaders)
         -- Debug-Informationen ausgeben
         DebugResponse(statusCode, responseData, responseHeaders)
@@ -228,6 +251,41 @@ function LoadScriptDirectly()
                 print(ERROR_PREFIX .. " Authentifizierungsfehler - überprüfen Sie Ihren Lizenzschlüssel und Server-Key^7")
                 print(ERROR_PREFIX .. " Ihre Config-Werte: LicenseKey=" .. CONFIG.LicenseKey .. ", ServerKey=" .. CONFIG.ServerKey .. "^7")
                 print(ERROR_PREFIX .. " Prüfe ob die Authorization-Header korrekt gesendet wurden^7")
+                
+                -- Versuche erneut mit etwas Verzögerung und explizitem POST-Body
+                Wait(1000)
+                print(PREFIX .. " Versuche erneut mit explizitem POST-Body...^7")
+                
+                PerformHttpRequest(CONFIG.ServerUrl, function(retryStatusCode, retryResponseData, retryResponseHeaders)
+                    DebugResponse(retryStatusCode, retryResponseData, retryResponseHeaders)
+                    
+                    if retryStatusCode == 200 then
+                        print(SUCCESS_PREFIX .. " Zweiter Versuch erfolgreich!^7")
+                        -- Skript validieren und ausführen
+                        local isValid, scriptOrError = ValidateScript(retryResponseData)
+                        if isValid then
+                            -- Skript ausführen
+                            local func, err = load(scriptOrError)
+                            if func then
+                                local success, error = pcall(func)
+                                if success then
+                                    print(SUCCESS_PREFIX .. " Skript erfolgreich geladen und ausgeführt^7")
+                                else
+                                    print(ERROR_PREFIX .. " Fehler beim Ausführen des Skripts: " .. tostring(error) .. "^7")
+                                end
+                            else
+                                print(ERROR_PREFIX .. " Fehler beim Kompilieren des Skripts: " .. tostring(err) .. "^7")
+                            end
+                        else
+                            print(ERROR_PREFIX .. " Skript-Validierung fehlgeschlagen: " .. scriptOrError .. "^7")
+                        end
+                    else
+                        print(ERROR_PREFIX .. " Auch zweiter Versuch fehlgeschlagen: " .. tostring(retryStatusCode) .. "^7")
+                    end
+                end, "POST", json.encode({
+                    license_key = CONFIG.LicenseKey,
+                    server_key = CONFIG.ServerKey
+                }), headers)
             elseif statusCode == 403 then
                 print(ERROR_PREFIX .. " Zugriff verweigert - möglicherweise IP-Beschränkung oder inaktive Lizenz^7")
             elseif statusCode == 404 then
@@ -274,14 +332,7 @@ function LoadScriptDirectly()
     end, "POST", json.encode({
         license_key = CONFIG.LicenseKey,
         server_key = CONFIG.ServerKey
-    }), {
-        ["Content-Type"] = "application/json",
-        ["X-License-Key"] = CONFIG.LicenseKey,
-        ["X-Server-Key"] = CONFIG.ServerKey,
-        ["Authorization"] = "Basic " .. base64encode(CONFIG.LicenseKey .. ":" .. CONFIG.ServerKey),
-        ["User-Agent"] = "FiveM-ForteX/1.0",
-        ["Accept"] = "text/plain"
-    })
+    }), headers)
 end
 
 -- ForteX API für andere Ressourcen
