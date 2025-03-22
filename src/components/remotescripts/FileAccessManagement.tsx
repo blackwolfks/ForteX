@@ -16,7 +16,7 @@ const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
     files, 
     loading, 
     saving, 
-    saveAccessRights, 
+    saveFileAccess, 
     toggleFileVisibility, 
     formatFileSize 
   } = useFileAccess(licenseId);
@@ -47,7 +47,7 @@ const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
             saving={saving}
-            onSave={saveAccessRights}
+            onSave={saveFileAccess}
           />
 
           {loading ? (
