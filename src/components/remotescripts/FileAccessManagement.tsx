@@ -10,6 +10,7 @@ import { Eye, EyeOff, Search, Save } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase, callRPC } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import type { FileAccess } from "@/lib/supabase";
 
 interface FileAccessProps {
   licenseId: string;
@@ -22,13 +23,6 @@ interface FileItem {
   size: number;
   isDirectory?: boolean;
   children?: FileItem[];
-}
-
-interface FileAccess {
-  id?: string;
-  license_id: string;
-  file_path: string;
-  is_public: boolean;
 }
 
 const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
@@ -82,7 +76,7 @@ const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
       }
 
       // Zugriffsrechte direkt mit RPC-Funktion abrufen
-      const { data: accessData, error: accessError } = await callRPC(
+      const { data: accessData, error: accessError } = await callRPC<'get_file_access_for_license'>(
         'get_file_access_for_license', 
         { p_license_id: licenseId }
       );
@@ -138,7 +132,7 @@ const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
       // Für jede Datei die Zugriffsrechte aktualisieren
       for (const file of files) {
         // Verwende die RPC-Funktion zum Speichern der Zugriffsrechte
-        const { error } = await callRPC(
+        const { error } = await callRPC<'update_file_access'>(
           'update_file_access', 
           {
             p_license_id: licenseId,

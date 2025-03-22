@@ -66,6 +66,30 @@ export type Invoice = {
   invoice_url?: string;
 };
 
+// Type for server licenses with fully qualified fields
+export type ServerLicense = {
+  id: string;
+  license_key: string;
+  server_key: string;
+  script_name: string;
+  script_file?: string | null;
+  server_ip?: string | null;
+  aktiv: boolean;
+  has_file_upload: boolean;
+  created_at: string;
+  updated_at?: string;
+};
+
+// Type for file access permissions
+export type FileAccess = {
+  id: string;
+  license_id: string;
+  file_path: string;
+  is_public: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 // Hilfsfunktion, um den Status eines Storage-Buckets zu prüfen und zu erstellen
 export const checkStorageBucket = async (bucketName: string = 'script'): Promise<boolean> => {
   try {
