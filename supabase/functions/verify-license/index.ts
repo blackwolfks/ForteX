@@ -107,8 +107,15 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
     
     // IP-Adresse des anfragenden Clients erfassen
-    const clientIp = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "unknown";
-    console.log(`Client-IP: ${clientIp}`);
+    let clientIp = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "unknown";
+    console.log(`Client-IP (original): ${clientIp}`);
+    
+    // IP-Adresse bereinigen: Nehme nur die erste IP, wenn mehrere durch Komma getrennt sind
+    if (clientIp.includes(",")) {
+      clientIp = clientIp.split(",")[0].trim();
+    }
+    
+    console.log(`Client-IP (bereinigt): ${clientIp}`);
     
     // Direkte Abfrage über beide Tabellen durchführen
     try {
