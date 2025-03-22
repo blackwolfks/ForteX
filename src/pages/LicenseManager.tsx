@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -145,7 +144,6 @@ const LicenseManager = () => {
       const bucketName = 'script';
       const filePath = `${licenseId}/${file.name}`;
       
-      // First, ensure bucket exists
       const bucketExists = await mediaService.ensureBucketExists(bucketName);
       if (!bucketExists) {
         throw new Error(`Bucket '${bucketName}' konnte nicht erstellt oder gefunden werden`);

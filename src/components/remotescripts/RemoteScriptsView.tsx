@@ -45,17 +45,19 @@ const RemoteScriptsView = () => {
   const fetchLicenses = async () => {
     setLoading(true);
     try {
+      console.log("Fetching licenses from RPC function: get_user_licenses");
       const { data, error } = await callRPC('get_user_licenses', {});
       
       if (error) {
+        console.error("Error fetching licenses:", error);
         toast.error("Fehler beim Laden der Scripts");
-        console.error(error);
         return;
       }
       
+      console.log("Licenses fetched successfully:", data);
       setLicenses(data || []);
     } catch (error) {
-      console.error("Error fetching licenses:", error);
+      console.error("Exception in fetchLicenses:", error);
       toast.error("Fehler beim Laden der Scripts");
     } finally {
       setLoading(false);
@@ -82,13 +84,13 @@ const RemoteScriptsView = () => {
     try {
       setUploading(true);
       
-      console.log("Erstelle Lizenz mit folgenden Parametern:", {
+      console.log("Creating license with the following parameters:", {
         p_script_name: newScript.name,
         p_script_file: newScript.code || null,
         p_server_ip: newScript.serverIp || null,
       });
       
-      // Make sure we call the function with the correct parameter names and order
+      // Create the license first
       const { data, error } = await callRPC('create_license', {
         p_script_name: newScript.name,
         p_script_file: newScript.code || null,
@@ -96,18 +98,21 @@ const RemoteScriptsView = () => {
       });
       
       if (error) {
-        console.error("Fehler beim Erstellen des Scripts:", error);
+        console.error("Error creating license:", error);
         toast.error("Fehler beim Erstellen des Scripts: " + error.message);
         return;
       }
+      
+      console.log("License created successfully:", data);
       
       if (selectedFiles.length > 0) {
         const licenseId = data.id;
         
         // Ensure the bucket exists before uploading files
+        console.log("Ensuring storage bucket 'script' exists");
         const bucketExists = await mediaService.ensureBucketExists('script');
         if (!bucketExists) {
-          console.error("Fehler: Bucket 'script' konnte nicht erstellt werden");
+          console.error("Failed to create or find 'script' bucket");
           toast.error("Fehler beim Erstellen des Storage-Buckets");
           return;
         }
@@ -119,7 +124,7 @@ const RemoteScriptsView = () => {
         for (const file of selectedFiles) {
           let filePath = file.webkitRelativePath || file.name;
           
-          console.log(`[RemoteScriptsView] Uploading file ${filePath} to script/${licenseId}`);
+          console.log(`Uploading file ${filePath} to script/${licenseId}`);
           
           const { error: uploadError } = await supabase.storage
             .from('script')
@@ -130,7 +135,6 @@ const RemoteScriptsView = () => {
             
           if (uploadError) {
             console.error("Error uploading file:", uploadError);
-            console.error("Full error details:", JSON.stringify(uploadError));
             uploadErrors++;
           }
         }
@@ -141,10 +145,11 @@ const RemoteScriptsView = () => {
           toast.success(`${selectedFiles.length} Dateien erfolgreich hochgeladen`);
         }
         
-        // Mark this license as having file uploads
+        // Mark this license as having file uploads - Fixed parameter format here
+        console.log("Updating license to set has_file_upload = true");
         await callRPC('update_license', {
           p_license_id: licenseId,
-          p_has_file_upload: true,
+          p_has_file_upload: true
         });
       }
       
@@ -152,7 +157,8 @@ const RemoteScriptsView = () => {
       setDialogOpen(false);
       setNewScript({ name: "", code: "", serverIp: "" });
       setSelectedFiles([]);
-      fetchLicenses();
+      // Reload licenses to show the new one
+      await fetchLicenses();
     } catch (error) {
       console.error("Error creating script:", error);
       toast.error("Fehler beim Erstellen des Scripts");

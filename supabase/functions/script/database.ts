@@ -22,6 +22,8 @@ export function initSupabaseClient(): { client: any, error: string | null } {
 // Verify license using Supabase RPC
 export async function verifyLicense(supabase: any, licenseKey: string, serverKey: string): Promise<any> {
   try {
+    console.log("Überprüfe Lizenz mit check_license_by_keys Funktion");
+    
     const { data, error } = await supabase.rpc("check_license_by_keys", {
       p_license_key: licenseKey,
       p_server_key: serverKey
@@ -33,13 +35,16 @@ export async function verifyLicense(supabase: any, licenseKey: string, serverKey
     }
     
     if (!data || !data.valid) {
+      console.error("Invalid license or server key");
       return { valid: false, error: "Invalid license or server key" };
     }
     
     if (!data.aktiv) {
+      console.error("License is not active");
       return { valid: false, error: "License is not active" };
     }
     
+    console.log("License verification successful:", data);
     return { valid: true, data };
   } catch (error) {
     console.error("License verification error:", error);
