@@ -28,7 +28,7 @@ WITH CHECK (
 CREATE POLICY "Allow public to download any script file"
 ON storage.objects
 FOR SELECT
-TO authenticated, anon
+TO anon
 USING (
   bucket_id = 'script'
 );

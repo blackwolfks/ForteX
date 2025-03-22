@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { supabase as supabaseClient } from '@/integrations/supabase/client';
 
@@ -108,7 +107,7 @@ export const checkStorageBucket = async (bucketName: string = 'script'): Promise
     if (!bucketExists) {
       console.log(`Bucket '${bucketName}' existiert nicht. Versuche ihn zu erstellen...`);
       
-      // Use serviceRole key for admin operations
+      // Create the bucket with public access
       const { data, error: createError } = await supabaseClient.storage.createBucket(bucketName, {
         public: true  // Make bucket public
       });
@@ -119,10 +118,6 @@ export const checkStorageBucket = async (bucketName: string = 'script'): Promise
       }
       
       console.log(`Bucket '${bucketName}' erfolgreich erstellt.`);
-      
-      // Explicitly create RLS policies for the bucket
-      // Note: This is not directly possible from the client - policies should be created via SQL
-      
       return true;
     }
     

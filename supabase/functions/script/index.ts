@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.33.1"
 
@@ -173,9 +172,14 @@ async function getScriptFile(supabase: any, licenseId: string, filePath: string)
       return { content: null, error: "Storage error: Script bucket does not exist" };
     }
     
+    // Attempt to download file with explicit public access header
     const { data: fileData, error: fileError } = await supabase.storage
       .from("script")
-      .download(`${licenseId}/${filePath}`);
+      .download(`${licenseId}/${filePath}`, {
+        transform: {
+          public: true
+        }
+      });
     
     if (fileError) {
       console.error(`File download error for ${licenseId}/${filePath}:`, fileError);

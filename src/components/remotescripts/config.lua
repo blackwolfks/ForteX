@@ -3,10 +3,10 @@
 
 CONFIG = {
     -- Ihr Lizenzschlüssel (erhalten Sie von der Web-Admin-Oberfläche)
-    LicenseKey = "ABCD-EFGH-IJKL-MNOP",  -- Ändere diesen Wert zu deinem tatsächlichen Lizenzschlüssel
+    LicenseKey = "84f9-0c61-9df9-b88d",  -- Your license key from the screenshot
     
     -- Ihr Server-Key (erhalten Sie von der Web-Admin-Oberfläche)
-    ServerKey = "123456789ABC",  -- Ändere diesen Wert zu deinem tatsächlichen Server-Key
+    ServerKey = "a55a5f0a9938",  -- Your server key from the screenshot
     
     -- Die URL des API-Servers - WICHTIG: Verwenden Sie die korrekte Supabase-URL ohne Umleitungen
     ServerUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/verify-license",

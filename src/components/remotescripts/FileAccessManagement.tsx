@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -90,10 +89,12 @@ const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
         console.error("Error creating folder:", folderError);
       }
       
-      // Now try to list files
+      // Now try to list files with explicit public access
       const { data: storageFiles, error } = await supabase.storage
         .from("script")
-        .list(licenseId);
+        .list(licenseId, {
+          sortBy: { column: 'name', order: 'asc' }
+        });
 
       if (error) {
         console.error("Fehler beim Abrufen der Dateien:", error);
