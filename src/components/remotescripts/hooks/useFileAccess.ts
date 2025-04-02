@@ -1,13 +1,13 @@
 
-import { useState, useEffect } from "react";
-import { callRPC, supabase } from "@/integrations/supabase/client";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
+import { callRPC, supabase } from "@/integrations/supabase/client";
 import { checkStorageBucket } from "@/lib/supabase";
 
 export interface FileItem {
   name: string;
-  fullPath: string;
-  size: number;
+  id?: string;
+  size?: number;
   isPublic: boolean;
 }
 
@@ -15,153 +15,129 @@ export function useFileAccess(licenseId: string) {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [accessMap, setAccessMap] = useState<Record<string, boolean>>({});
 
-  // Get all files in the storage for this license
-  const fetchFiles = async () => {
+  const fetchFiles = useCallback(async () => {
+    if (!licenseId) return;
+    
     setLoading(true);
     try {
-      console.log(`Fetching files for license ${licenseId}`);
+      console.log(`Fetching file list for license ${licenseId}`);
       
-      // First, check if the storage bucket exists
-      const bucketExists = await checkStorageBucket();
+      // Ensure the bucket exists
+      const bucketExists = await checkStorageBucket('script');
       if (!bucketExists) {
-        console.error("Storage bucket does not exist or could not be created");
-        toast.error("Fehler beim Zugriff auf den Speicher");
-        setLoading(false);
-        return;
-      }
-      
-      // Get the access settings
-      const { data: accessData, error: accessError } = await callRPC('get_file_access_for_license', {
-        p_license_id: licenseId
-      });
-      
-      if (accessError) {
-        console.error("Error fetching file access:", accessError);
-        toast.error("Fehler beim Laden der Datei-Zugriffsrechte");
-        setLoading(false);
-        return;
-      }
-      
-      console.log("File access data:", accessData);
-      
-      // Create a map for quick lookup
-      const newAccessMap: Record<string, boolean> = {};
-      if (accessData) {
-        accessData.forEach((item: any) => {
-          newAccessMap[item.file_path] = item.is_public;
-        });
-      }
-      setAccessMap(newAccessMap);
-      
-      // Then, get the files from storage
-      const { data: storageData, error: storageError } = await supabase.storage
-        .from('script')
-        .list(licenseId, {
-          sortBy: { column: 'name', order: 'asc' }
-        });
-        
-      if (storageError) {
-        console.error("Error fetching storage files:", storageError);
-        toast.error("Fehler beim Laden der Dateien");
-        setLoading(false);
-        return;
-      }
-      
-      console.log("Storage files:", storageData);
-      
-      if (!storageData) {
+        console.error("Storage bucket does not exist");
         setFiles([]);
         setLoading(false);
         return;
       }
+
+      // Load files from storage
+      const { data: storageFiles, error: storageError } = await supabase.storage
+        .from('script')
+        .list(licenseId, { 
+          limit: 100,
+          sortBy: { column: 'name', order: 'asc' }
+        });
+
+      if (storageError) {
+        console.error("Error listing files from storage:", storageError);
+        if (storageError.message.includes("bucket") && storageError.message.includes("not found")) {
+          // No files yet, not necessarily an error to show to user
+          console.log("No storage bucket or no files yet");
+          setFiles([]);
+          setLoading(false);
+          return;
+        } else {
+          toast.error("Fehler beim Laden der Dateien aus dem Speicher");
+        }
+      }
       
-      // Convert to our file item format
-      const fileItems: FileItem[] = storageData
-        .filter(item => !item.id.endsWith('/')) // Filter out folders
-        .map(item => ({
-          name: item.name,
-          fullPath: `${licenseId}/${item.name}`,
-          size: item.metadata?.size || 0,
-          isPublic: newAccessMap[`${licenseId}/${item.name}`] || false
-        }));
+      // Get file access permissions
+      const { data: accessData, error: accessError } = await callRPC('get_file_access_for_license', {
+        p_license_id: licenseId,
+      });
+      
+      if (accessError) {
+        console.error("Error fetching file access permissions:", accessError);
+        toast.error("Fehler beim Laden der Dateizugriffsrechte");
+      }
+      
+      // Combine storage files with access permissions
+      const filesList: FileItem[] = (storageFiles || []).map(file => {
+        const accessEntry = accessData?.find((access: any) => 
+          access.file_path === file.name
+        );
         
-      setFiles(fileItems);
+        return {
+          name: file.name,
+          id: file.id,
+          size: file.metadata?.size,
+          isPublic: accessEntry ? accessEntry.is_public : false
+        };
+      });
+      
+      setFiles(filesList);
     } catch (error) {
-      console.error("Error in fetchFiles:", error);
+      console.error("Exception in fetchFiles:", error);
       toast.error("Fehler beim Laden der Dateien");
     } finally {
       setLoading(false);
     }
-  };
-
-  // Initial fetch
-  useEffect(() => {
-    if (licenseId) {
-      fetchFiles();
-    }
   }, [licenseId]);
 
-  // Toggle file public/private status
+  useEffect(() => {
+    fetchFiles();
+  }, [fetchFiles]);
+
   const toggleFileVisibility = (index: number) => {
-    const newFiles = [...files];
-    newFiles[index].isPublic = !newFiles[index].isPublic;
-    setFiles(newFiles);
+    setFiles(prevFiles => {
+      const newFiles = [...prevFiles];
+      newFiles[index] = {
+        ...newFiles[index],
+        isPublic: !newFiles[index].isPublic
+      };
+      return newFiles;
+    });
   };
 
-  // Save all file access settings
   const saveFileAccess = async () => {
+    if (!licenseId || files.length === 0) return;
+    
     setSaving(true);
     try {
-      console.log("Saving file access settings for files:", files);
+      console.log(`Saving file access rights for ${files.length} files`);
       
-      let errorCount = 0;
+      const updatePromises = files.map(file => 
+        callRPC('update_file_access', {
+          p_license_id: licenseId,
+          p_file_path: file.name,
+          p_is_public: file.isPublic
+        })
+      );
       
-      for (const file of files) {
-        console.log(`Updating access for ${file.fullPath}: isPublic=${file.isPublic}`);
-        
-        try {
-          const { error } = await callRPC('update_file_access', {
-            p_license_id: licenseId,
-            p_file_path: file.fullPath,
-            p_is_public: file.isPublic
-          });
-          
-          if (error) {
-            console.error(`Error updating file access for ${file.fullPath}:`, error);
-            errorCount++;
-          }
-        } catch (error) {
-          console.error(`Error in saveFileAccess for ${file.fullPath}:`, error);
-          errorCount++;
-        }
-      }
+      const results = await Promise.all(updatePromises);
+      const errors = results.filter(result => result.error);
       
-      if (errorCount > 0) {
-        toast.error(`${errorCount} Datei-Zugriffsrechte konnten nicht gespeichert werden`);
+      if (errors.length > 0) {
+        console.error("Errors updating file access:", errors);
+        toast.error(`Fehler beim Speichern von ${errors.length} Dateizugriffsrechten`);
       } else {
-        toast.success("Datei-Zugriffsrechte erfolgreich gespeichert");
+        toast.success("Dateizugriffsrechte erfolgreich gespeichert");
       }
-      
-      // Refresh the file list
-      await fetchFiles();
     } catch (error) {
       console.error("Error saving file access:", error);
-      toast.error("Fehler beim Speichern der Datei-Zugriffsrechte");
+      toast.error("Fehler beim Speichern der Dateizugriffsrechte");
     } finally {
       setSaving(false);
     }
   };
 
-  // Format file size for display
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    
+    if (!bytes) return "n/a";
     const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    
-    return parseFloat((bytes / Math.pow(1024, i)).toFixed(2)) + ' ' + sizes[i];
+    return `${Math.round(bytes / Math.pow(1024, i))} ${sizes[i]}`;
   };
 
   return {

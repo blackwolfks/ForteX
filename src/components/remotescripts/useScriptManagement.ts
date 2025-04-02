@@ -36,6 +36,18 @@ export function useScriptManagement() {
     fetchLicenses();
   }, []);
 
+  // Function to pre-create the storage bucket before we need it
+  const ensureScriptBucketExists = async () => {
+    console.log("Ensuring 'script' bucket exists before creating license");
+    const bucketExists = await checkStorageBucket('script');
+    if (!bucketExists) {
+      console.error("Failed to create or find 'script' bucket");
+      toast.error("Fehler beim Erstellen des Storage-Buckets");
+      return false;
+    }
+    return true;
+  };
+
   const handleCreateScript = async (newScript: NewScriptFormData, selectedFiles: File[]) => {
     if (!newScript.name) {
       toast.error("Bitte geben Sie einen Namen für das Script ein");
@@ -43,6 +55,12 @@ export function useScriptManagement() {
     }
 
     try {
+      // First ensure bucket exists
+      if (selectedFiles.length > 0) {
+        const bucketReady = await ensureScriptBucketExists();
+        if (!bucketReady) return false;
+      }
+      
       console.log("Creating license with the following parameters:", {
         p_script_name: newScript.name,
         p_script_file: newScript.code || null,
@@ -66,15 +84,6 @@ export function useScriptManagement() {
       
       if (selectedFiles.length > 0) {
         const licenseId = data.id;
-        
-        // Ensure the bucket exists before uploading files
-        console.log("Ensuring storage bucket 'script' exists");
-        const bucketExists = await checkStorageBucket('script');
-        if (!bucketExists) {
-          console.error("Failed to create or find 'script' bucket");
-          toast.error("Fehler beim Erstellen des Storage-Buckets");
-          return false;
-        }
         
         console.log(`Uploading ${selectedFiles.length} files to bucket 'script/${licenseId}'`);
         
@@ -137,6 +146,7 @@ export function useScriptManagement() {
         p_aktiv: isActive,
       });
       
+      // Use the exact parameter names expected by the RPC function
       const { error } = await callRPC('update_license', {
         p_license_id: licenseId,
         p_script_name: scriptName,
@@ -147,7 +157,7 @@ export function useScriptManagement() {
       
       if (error) {
         console.error("Error updating script:", error);
-        toast.error("Fehler beim Aktualisieren des Scripts");
+        toast.error("Fehler beim Aktualisieren des Scripts: " + error.message);
         return false;
       }
       
@@ -173,7 +183,7 @@ export function useScriptManagement() {
       
       if (error) {
         console.error("Error regenerating server key:", error);
-        toast.error("Fehler beim Regenerieren des Server-Keys");
+        toast.error("Fehler beim Regenerieren des Server-Keys: " + error.message);
         return false;
       }
       
@@ -199,7 +209,7 @@ export function useScriptManagement() {
       
       if (error) {
         console.error("Error deleting script:", error);
-        toast.error("Fehler beim Löschen des Scripts");
+        toast.error("Fehler beim Löschen des Scripts: " + error.message);
         return false;
       }
 

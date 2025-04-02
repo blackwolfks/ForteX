@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { supabase as supabaseClient } from '@/integrations/supabase/client';
 
@@ -90,10 +89,10 @@ export type FileAccess = {
   updated_at: string;
 };
 
-// Hilfsfunktion, um den Status eines Storage-Buckets zu prüfen und zu erstellen
+// Improved function to check and create a storage bucket
 export const checkStorageBucket = async (bucketName: string = 'script'): Promise<boolean> => {
   try {
-    console.log(`Überprüfe Storage-Bucket '${bucketName}'...`);
+    console.log(`Checking storage bucket '${bucketName}'...`);
     
     // Get authentication session to ensure we're properly authenticated
     const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
@@ -102,71 +101,64 @@ export const checkStorageBucket = async (bucketName: string = 'script'): Promise
       return false;
     }
     
-    // Bucket-Liste abrufen
-    const { data: buckets, error: listError } = await supabaseClient.storage.listBuckets();
+    // First try to get the bucket directly to see if it exists
+    const { data: bucketData, error: bucketError } = await supabaseClient.storage.getBucket(bucketName);
     
-    if (listError) {
-      console.error("Fehler beim Abrufen der Buckets:", listError);
-      return false;
-    }
-    
-    const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
-    
-    if (!bucketExists) {
-      console.log(`Bucket '${bucketName}' existiert nicht. Versuche ihn zu erstellen...`);
+    if (!bucketError && bucketData) {
+      console.log(`Bucket '${bucketName}' exists, ensuring it's public...`);
       
-      // Create the bucket with public access
-      const { data, error: createError } = await supabaseClient.storage.createBucket(bucketName, {
-        public: true,  // Make bucket public
+      // Update the bucket to be public
+      const { error: updateError } = await supabaseClient.storage.updateBucket(bucketName, {
+        public: true,
+        allowedMimeTypes: ['*/*'],
         fileSizeLimit: 50 * 1024 * 1024  // 50MB limit
       });
       
-      if (createError) {
-        console.error(`Fehler beim Erstellen des Buckets '${bucketName}':`, createError);
-        return false;
-      }
-      
-      console.log(`Bucket '${bucketName}' erfolgreich erstellt.`);
-      
-      // Set up public access policies for the bucket
-      try {
-        const { error: policyError } = await supabaseClient.storage.updateBucket(bucketName, {
-          public: true,
-          allowedMimeTypes: ['*/*']
-        });
-        
-        if (policyError) {
-          console.error(`Fehler beim Setzen der Bucket-Policies:`, policyError);
-        } else {
-          console.log(`Bucket '${bucketName}' auf public gesetzt.`);
-        }
-      } catch (policyError) {
-        console.error(`Exception bei Bucket-Policy-Update:`, policyError);
+      if (updateError) {
+        console.error(`Error updating bucket '${bucketName}':`, updateError);
+      } else {
+        console.log(`Bucket '${bucketName}' updated to be public`);
       }
       
       return true;
     }
     
-    // Ensure bucket is public
-    try {
-      const { error: updateError } = await supabaseClient.storage.updateBucket(bucketName, {
-        public: true,
-        allowedMimeTypes: ['*/*']
-      });
+    console.log(`Bucket '${bucketName}' does not exist. Attempting to create it...`);
+    
+    // Create the bucket with public access
+    const { data, error: createError } = await supabaseClient.storage.createBucket(bucketName, {
+      public: true,  // Make bucket public
+      fileSizeLimit: 50 * 1024 * 1024  // 50MB limit
+    });
+    
+    if (createError) {
+      console.error(`Error creating bucket '${bucketName}':`, createError);
       
-      if (updateError) {
-        console.error(`Fehler beim Aktualisieren des Buckets '${bucketName}':`, updateError);
-      } else {
-        console.log(`Bucket '${bucketName}' auf public gesetzt.`);
+      // If the error is related to RLS, try a different approach
+      if (createError.message && createError.message.includes('violates row-level security policy')) {
+        console.log('RLS policy violation detected. The bucket might already exist but not be accessible.');
+        
+        // Try to use a different approach through RPC
+        const { data: rpcData, error: rpcError } = await supabaseClient.rpc('create_public_bucket', {
+          bucket_name: bucketName
+        });
+        
+        if (rpcError) {
+          console.error('RPC approach also failed:', rpcError);
+          return false;
+        }
+        
+        console.log('Successfully created bucket via RPC function');
+        return true;
       }
-    } catch (updateError) {
-      console.error(`Exception bei Bucket-Update:`, updateError);
+      
+      return false;
     }
     
-    console.log(`Bucket '${bucketName}' existiert bereits.`);
+    console.log(`Bucket '${bucketName}' successfully created.`);
     return true;
   } catch (error) {
-    console.error("Unerwarteter Fehler beim Überprüfen/Erstellen des Buckets:", error);
+    console.error("Unexpected error checking/creating the bucket:", error);
     return false;
   }
 };
