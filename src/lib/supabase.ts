@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { supabase as supabaseClient } from '@/integrations/supabase/client';
 
@@ -139,7 +140,7 @@ export const checkStorageBucket = async (bucketName: string = 'script'): Promise
         console.log('RLS policy violation detected. The bucket might already exist but not be accessible.');
         
         // Try to use a different approach through RPC
-        const { data: rpcData, error: rpcError } = await supabaseClient.rpc('create_public_bucket', {
+        const { data: rpcData, error: rpcError } = await supabaseClient.rpc('create_public_bucket' as any, {
           bucket_name: bucketName
         });
         
