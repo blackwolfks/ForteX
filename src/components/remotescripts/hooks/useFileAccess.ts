@@ -9,6 +9,7 @@ export interface FileItem {
   id?: string;
   size?: number;
   isPublic: boolean;
+  fullPath?: string;
 }
 
 export function useFileAccess(licenseId: string) {
@@ -73,7 +74,8 @@ export function useFileAccess(licenseId: string) {
           name: file.name,
           id: file.id,
           size: file.metadata?.size,
-          isPublic: accessEntry ? accessEntry.is_public : false
+          isPublic: accessEntry ? accessEntry.is_public : false,
+          fullPath: `${licenseId}/${file.name}` // Add the fullPath property here
         };
       });
       

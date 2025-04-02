@@ -597,6 +597,12 @@ export type Database = {
               server_key: string
             }[]
           }
+      create_public_bucket: {
+        Args: {
+          bucket_name: string
+        }
+        Returns: boolean
+      }
       create_website:
         | {
             Args: {
