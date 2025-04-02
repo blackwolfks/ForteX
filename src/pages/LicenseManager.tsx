@@ -89,8 +89,9 @@ const LicenseManager = () => {
 
   const regenerateServerKeyMutation = useMutation({
     mutationFn: async (licenseId: string) => {
-      const { data, error } = await callRPC('regenerate_server_key', {
-        p_license_id: licenseId
+      const { data, error } = await callRPC('update_license', {
+        p_license_id: licenseId,
+        p_regenerate_server_key: true
       });
       
       if (error) throw error;

@@ -113,7 +113,7 @@ export function useScriptManagement() {
           toast.success(`${selectedFiles.length} Dateien erfolgreich hochgeladen`);
         }
         
-        // Mark this license as having file uploads
+        // Mark this license as having file uploads - ensure parameter order matches the updated function
         console.log("Updating license to set has_file_upload = true");
         const updateResult = await callRPC('update_license', {
           p_license_id: licenseId,
@@ -146,7 +146,7 @@ export function useScriptManagement() {
         p_aktiv: isActive,
       });
       
-      // Use the exact parameter names expected by the RPC function
+      // Using the exact parameter names expected by the updated RPC function
       const { error } = await callRPC('update_license', {
         p_license_id: licenseId,
         p_script_name: scriptName,
@@ -175,10 +175,13 @@ export function useScriptManagement() {
     try {
       console.log("Regenerating server key with parameter:", {
         p_license_id: licenseId,
+        p_regenerate_server_key: true
       });
       
-      const { error } = await callRPC('regenerate_server_key', {
+      // Use the updated regenerate_server_key parameter
+      const { error } = await callRPC('update_license', {
         p_license_id: licenseId,
+        p_regenerate_server_key: true
       });
       
       if (error) {
