@@ -9,7 +9,7 @@ SET public = true,
 
 -- Create storage policy to allow users to upload their own files
 BEGIN;
--- Drop existing policies to recreate them
+-- Only drop existing policies if they exist
 DROP POLICY IF EXISTS "Allow users to upload their license files" ON storage.objects;
 DROP POLICY IF EXISTS "Allow public to download any script file" ON storage.objects;
 DROP POLICY IF EXISTS "Allow users to manage their license files" ON storage.objects;

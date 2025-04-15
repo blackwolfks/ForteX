@@ -28,15 +28,16 @@ BEGIN
     WHERE id = bucket_name;
   END IF;
   
-  -- Create policies for the bucket if they don't exist
+  -- Create policies for the bucket with permanent naming
+  -- This way they won't conflict with other policies and will persist
   IF NOT EXISTS (
     SELECT 1 FROM pg_policies 
     WHERE schemaname = 'storage' 
     AND tablename = 'objects' 
-    AND policyname = 'Public ' || bucket_name || ' Access'
+    AND policyname = 'Public ' || bucket_name || ' Access (Permanent)'
   ) THEN
     EXECUTE format('
-      CREATE POLICY "Public %I Access" 
+      CREATE POLICY "Public %I Access (Permanent)" 
       ON storage.objects FOR ALL 
       USING (bucket_id = %L) 
       WITH CHECK (bucket_id = %L)', 
@@ -55,7 +56,7 @@ $$;
 -- Ensure script bucket exists and is public
 SELECT public.create_public_bucket('script');
 
--- Create policies for the script bucket
+-- Create policies for the script bucket with permanent naming
 DO $$
 BEGIN
   -- Read policy
@@ -63,9 +64,9 @@ BEGIN
     SELECT 1 FROM pg_policies 
     WHERE schemaname = 'storage' 
     AND tablename = 'objects' 
-    AND policyname = 'Public Read script Bucket'
+    AND policyname = 'Public Read script Bucket (Permanent)'
   ) THEN
-    CREATE POLICY "Public Read script Bucket"
+    CREATE POLICY "Public Read script Bucket (Permanent)"
       ON storage.objects FOR SELECT
       USING (bucket_id = 'script');
   END IF;
@@ -75,9 +76,9 @@ BEGIN
     SELECT 1 FROM pg_policies 
     WHERE schemaname = 'storage' 
     AND tablename = 'objects' 
-    AND policyname = 'Authenticated Users can Upload to script Bucket'
+    AND policyname = 'Authenticated Users can Upload to script Bucket (Permanent)'
   ) THEN
-    CREATE POLICY "Authenticated Users can Upload to script Bucket"
+    CREATE POLICY "Authenticated Users can Upload to script Bucket (Permanent)"
       ON storage.objects FOR INSERT
       TO authenticated
       WITH CHECK (bucket_id = 'script');
@@ -88,9 +89,9 @@ BEGIN
     SELECT 1 FROM pg_policies 
     WHERE schemaname = 'storage' 
     AND tablename = 'objects' 
-    AND policyname = 'Authenticated Users can Update script Bucket'
+    AND policyname = 'Authenticated Users can Update script Bucket (Permanent)'
   ) THEN
-    CREATE POLICY "Authenticated Users can Update script Bucket"
+    CREATE POLICY "Authenticated Users can Update script Bucket (Permanent)"
       ON storage.objects FOR UPDATE
       TO authenticated
       USING (bucket_id = 'script');
@@ -101,9 +102,9 @@ BEGIN
     SELECT 1 FROM pg_policies 
     WHERE schemaname = 'storage' 
     AND tablename = 'objects' 
-    AND policyname = 'Authenticated Users can Delete from script Bucket'
+    AND policyname = 'Authenticated Users can Delete from script Bucket (Permanent)'
   ) THEN
-    CREATE POLICY "Authenticated Users can Delete from script Bucket"
+    CREATE POLICY "Authenticated Users can Delete from script Bucket (Permanent)"
       ON storage.objects FOR DELETE
       TO authenticated
       USING (bucket_id = 'script');
