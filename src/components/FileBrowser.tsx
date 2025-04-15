@@ -8,6 +8,7 @@ import { FileIcon, Trash2, Eye, Download, RefreshCw, Upload } from 'lucide-react
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { uploadFile } from '@/services/file-uploader';
+import type { FileObject } from '@supabase/storage-js';
 
 type FileItem = {
   id: string;
@@ -51,8 +52,22 @@ export default function FileBrowser({ bucketId, folderPath = '', onSelect }: Fil
         return;
       }
 
-      const filteredFiles = data.filter(item => !item.id.endsWith('/')) as FileItem[];
-      setFiles(filteredFiles);
+      // Transform FileObjects to FileItems with the required structure
+      const transformedFiles: FileItem[] = (data || [])
+        .filter((item: FileObject) => !item.id.endsWith('/'))
+        .map((item: FileObject) => ({
+          id: item.id,
+          name: item.name,
+          created_at: item.created_at || '',
+          updated_at: item.updated_at || '',
+          last_accessed_at: item.last_accessed_at || '',
+          metadata: {
+            size: (item.metadata as any)?.size || 0,
+            mimetype: (item.metadata as any)?.mimetype || 'application/octet-stream'
+          }
+        }));
+
+      setFiles(transformedFiles);
     } catch (error) {
       console.error('Fehler beim Laden der Dateien:', error);
       toast.error('Fehler beim Laden der Dateien');

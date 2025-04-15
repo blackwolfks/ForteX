@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import FileBrowser from './FileBrowser';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { callRPC, supabase } from '@/lib/supabase';
+import { callRPC } from '@/lib/supabase';
 
 interface LicenseFileBrowserProps {
   licenseId: string;

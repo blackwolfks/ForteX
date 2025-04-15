@@ -1,6 +1,6 @@
 
 // Import from the correct location
-import type { Product } from '@/lib/supabase';
+import type { Product } from '@/lib/types';
 
 export type { Product };
 

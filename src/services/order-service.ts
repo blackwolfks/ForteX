@@ -1,5 +1,6 @@
+
 import { supabase } from '@/lib/supabase';
-import type { Order, Invoice } from '@/lib/supabase';
+import type { Order, Invoice } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { ProductCartItem } from '@/services/product/types';
 
