@@ -1,7 +1,8 @@
+
 import { createErrorResponse } from "./response.ts";
 import { corsHeaders } from "./cors.ts";
 
-// Ändern Sie alle Referenzen von 'script' zu 'websites'
+// Alle Referenzen von 'script' zu 'websites' ändern
 export async function listScriptFiles(supabase: any, licenseId: string) {
   try {
     console.log(`Listing files for license: ${licenseId}`);
@@ -40,7 +41,6 @@ export async function listScriptFiles(supabase: any, licenseId: string) {
   }
 }
 
-// Ähnliche Änderungen für andere Funktionen in dieser Datei
 export async function getScriptFile(supabase: any, licenseId: string, filePath: string) {
   try {
     console.log(`Getting file: ${licenseId}/${filePath}`);
@@ -153,7 +153,7 @@ RegisterNetEvent("fortex:initialize")
 AddEventHandler("fortex:initialize", Initialize)
 
 -- Initialisiere beim Ressourcenstart
-AddEventHandler("onResourceStart", function(resourceName) {
+AddEventHandler("onResourceStart", function(resourceName) 
     if GetCurrentResourceName() ~= resourceName then return end
     Initialize()
 end)
