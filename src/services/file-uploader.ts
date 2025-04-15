@@ -116,7 +116,8 @@ export const uploadFile = async (
     const maxAttempts = 3;
     let lastError = null;
     
-    while (!uploadAttempt < maxAttempts) {
+    // Fixed the condition: changed !uploadAttempt < maxAttempts to uploadAttempt < maxAttempts
+    while (uploadAttempt < maxAttempts) {
       uploadAttempt++;
       console.log(`Upload attempt ${uploadAttempt}/${maxAttempts}`);
       
