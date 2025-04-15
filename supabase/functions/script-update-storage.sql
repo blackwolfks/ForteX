@@ -12,7 +12,8 @@ BEGIN;
 -- Only drop existing policies if they exist
 DROP POLICY IF EXISTS "Allow users to upload their license files" ON storage.objects;
 DROP POLICY IF EXISTS "Allow public to download any script file" ON storage.objects;
-DROP POLICY IF EXISTS "Allow users to manage their license files" ON storage.objects;
+DROP POLICY IF EXISTS "Allow users to manage their license files for update" ON storage.objects;
+DROP POLICY IF EXISTS "Allow users to manage their license files for delete" ON storage.objects;
 
 -- Create policy for uploading files - authenticated users can upload to their folders
 CREATE POLICY "Allow users to upload their license files"
@@ -32,10 +33,19 @@ USING (
   bucket_id = 'script'
 );
 
--- Create policy for managing files - authenticated users can update/delete their own files
-CREATE POLICY "Allow users to manage their license files"
+-- Create policy for updating files - authenticated users can update their own files
+CREATE POLICY "Allow users to manage their license files for update"
 ON storage.objects
-FOR UPDATE, DELETE
+FOR UPDATE
+TO authenticated
+USING (
+  bucket_id = 'script'
+);
+
+-- Create policy for deleting files - authenticated users can delete their own files
+CREATE POLICY "Allow users to manage their license files for delete"
+ON storage.objects
+FOR DELETE
 TO authenticated
 USING (
   bucket_id = 'script'

@@ -1,12 +1,12 @@
 
 -- Ensure the remot-script bucket exists with public access and all MIME types allowed
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES ('remot-script', 'Remote Script Files', true, 52428800, ARRAY['*/*']::text[])
+VALUES ('remot-script', 'Remote Script Files', true, 52428800, ARRAY['text/x-lua', 'text/plain']::text[])
 ON CONFLICT (id) DO UPDATE
 SET 
   public = true,
   file_size_limit = 52428800,
-  allowed_mime_types = ARRAY['*/*']::text[];
+  allowed_mime_types = ARRAY['text/x-lua', 'text/plain']::text[];
 
 -- Drop existing policies to avoid conflicts
 DROP POLICY IF EXISTS "Remote Script Files - Public Access" ON storage.objects;
