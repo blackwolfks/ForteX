@@ -14,7 +14,7 @@ export const getMimeType = (filename: string): string => {
   const extension = filename.split('.').pop()?.toLowerCase() || '';
   
   const mimeTypes: Record<string, string> = {
-    'lua': 'text/x-lua',
+    'lua': 'text/plain', // Changed from text/x-lua to text/plain
     'js': 'application/javascript',
     'json': 'application/json',
     'txt': 'text/plain',
@@ -136,20 +136,26 @@ export const uploadFile = async (
         
         // Different strategies for each attempt
         if (uploadAttempt === 1) {
-          // First attempt: Use explicit content type based on file extension
-          uploadOptions.contentType = getMimeType(file.name);
-          console.log(`Attempt 1: Using content type: ${uploadOptions.contentType}`);
+          // First attempt: Try without specifying content type at all
+          console.log(`Attempt 1: Using default content type`);
         } 
         else if (uploadAttempt === 2) {
           // Second attempt: Use binary content type
           uploadOptions.contentType = 'application/octet-stream';
           console.log("Attempt 2: Using generic binary content type");
         }
-        // Third attempt: Let Supabase determine content type
+        else {
+          // Third attempt: Use plain text for all files
+          uploadOptions.contentType = 'text/plain';
+          console.log("Attempt 3: Using text/plain content type for all files");
+        }
+        
+        // Convert file to arrayBuffer to avoid MIME type issues
+        const arrayBuffer = await file.arrayBuffer();
         
         const { data, error } = await supabase.storage
           .from(bucketName)
-          .upload(filePath, file, uploadOptions);
+          .upload(filePath, arrayBuffer, uploadOptions);
           
         if (error) {
           console.error(`Attempt ${uploadAttempt} failed:`, error);

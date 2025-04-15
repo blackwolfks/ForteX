@@ -55,11 +55,16 @@ export default function FileUploadDialog({
       const filePath = `${licenseId}/${selectedFile.name}`;
       console.log("Uploading to path:", filePath);
       
+      // Convert to array buffer first to ensure consistent handling
+      const fileArrayBuffer = await selectedFile.arrayBuffer();
+      const fileBlob = new Blob([fileArrayBuffer], { type: 'text/plain' });
+      const modifiedFile = new File([fileBlob], selectedFile.name, { type: 'text/plain' });
+      
       // Upload the file
       const success = await uploadFileWithProgress(
         'script', 
         filePath, 
-        selectedFile, 
+        modifiedFile, 
         setUploadProgress
       );
       
@@ -112,7 +117,7 @@ export default function FileUploadDialog({
                 {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
               </p>
               <p className="text-xs text-muted-foreground">
-                Typ: {selectedFile.type || "Unbekannt"}
+                Typ: {selectedFile.type || "Unbekannt"} (wird als text/plain hochgeladen)
               </p>
             </div>
           )}
