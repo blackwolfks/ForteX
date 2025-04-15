@@ -1,28 +1,27 @@
-
 import { createErrorResponse } from "./response.ts";
 import { corsHeaders } from "./cors.ts";
 
-// Function to list available script files
+// Ändern Sie alle Referenzen von 'script' zu 'websites'
 export async function listScriptFiles(supabase: any, licenseId: string) {
   try {
     console.log(`Listing files for license: ${licenseId}`);
     
-    // Check if bucket exists first
+    // Prüfen, ob Bucket existiert
     try {
-      const { data: bucketData, error: bucketError } = await supabase.storage.getBucket('script');
+      const { data: bucketData, error: bucketError } = await supabase.storage.getBucket('websites');
       if (bucketError) {
-        console.error(`Error getting bucket 'script': ${bucketError.message}`);
-        return { files: null, error: `Storage bucket 'script' does not exist` };
+        console.error(`Error getting bucket 'websites': ${bucketError.message}`);
+        return { files: null, error: `Storage bucket 'websites' does not exist` };
       }
     } catch (bucketError) {
       console.error(`Exception checking bucket: ${bucketError}`);
       return { files: null, error: `Error checking storage bucket` };
     }
     
-    // List files in the bucket under the license folder
+    // Liste Dateien im Bucket unter dem Lizenz-Ordner
     const { data, error } = await supabase.storage
-      .from('script')
-      .list(licenseId, {
+      .from('websites')
+      .list(`scripts/${licenseId}`, {
         limit: 100,
         offset: 0,
         sortBy: { column: 'name', order: 'asc' }
@@ -41,21 +40,21 @@ export async function listScriptFiles(supabase: any, licenseId: string) {
   }
 }
 
-// Get a specific script file
+// Ähnliche Änderungen für andere Funktionen in dieser Datei
 export async function getScriptFile(supabase: any, licenseId: string, filePath: string) {
   try {
     console.log(`Getting file: ${licenseId}/${filePath}`);
     
-    // Normalize file path (remove leading slashes that might cause issues)
+    // Normalisieren des Dateipfads
     const normalizedFilePath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
-    const fullPath = `${licenseId}/${normalizedFilePath}`;
+    const fullPath = `scripts/${licenseId}/${normalizedFilePath}`;
     
-    // Check if the file exists first
+    // Prüfen, ob die Datei existiert
     try {
       const { data: fileExists } = await supabase.storage
-        .from('script')
-        .list(licenseId, {
-          search: normalizedFilePath.split('/').pop() // Get the filename part
+        .from('websites')
+        .list(`scripts/${licenseId}`, {
+          search: normalizedFilePath.split('/').pop()
         });
       
       if (!fileExists || fileExists.length === 0) {
@@ -66,9 +65,9 @@ export async function getScriptFile(supabase: any, licenseId: string, filePath: 
       console.error(`Error checking file existence: ${checkError}`);
     }
     
-    // Download the file
+    // Datei herunterladen
     const { data, error } = await supabase.storage
-      .from('script')
+      .from('websites')
       .download(fullPath);
     
     if (error) {
@@ -76,7 +75,7 @@ export async function getScriptFile(supabase: any, licenseId: string, filePath: 
       return { content: null, error: `Failed to download file: ${error.message}` };
     }
     
-    // Convert blob to text
+    // Blob in Text umwandeln
     const content = await data.text();
     console.log(`Successfully downloaded file: ${fullPath}`);
     return { content, error: null };
@@ -86,7 +85,7 @@ export async function getScriptFile(supabase: any, licenseId: string, filePath: 
   }
 }
 
-// Get the main script file (index.lua, fxmanifest.lua, or first .lua file)
+// Gleiche Anpassungen für getMainScriptFile
 export async function getMainScriptFile(supabase: any, licenseId: string, files: any[]) {
   console.log(`Finding main script file for license: ${licenseId}`);
   
@@ -154,7 +153,7 @@ RegisterNetEvent("fortex:initialize")
 AddEventHandler("fortex:initialize", Initialize)
 
 -- Initialisiere beim Ressourcenstart
-AddEventHandler("onResourceStart", function(resourceName)
+AddEventHandler("onResourceStart", function(resourceName) {
     if GetCurrentResourceName() ~= resourceName then return end
     Initialize()
 end)
