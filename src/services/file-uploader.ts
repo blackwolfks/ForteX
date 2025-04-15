@@ -16,7 +16,7 @@ export const getMimeType = (filename: string): string => {
     return 'text/plain';
   }
   
-  return 'text/plain';
+  return 'application/octet-stream';
 };
 
 /**
@@ -108,7 +108,7 @@ export const uploadFile = async (
     // Try multiple upload strategies
     let uploadSuccess = false;
     let uploadAttempt = 0;
-    const maxAttempts = 3;
+    const maxAttempts = 4; // Increased from 3 to 4 attempts
     let lastError = null;
     
     while (uploadAttempt < maxAttempts) {
@@ -120,22 +120,44 @@ export const uploadFile = async (
       try {
         // Create fresh ArrayBuffer from file for each attempt
         const fileArrayBuffer = await file.arrayBuffer();
-        
-        // Important: Create a new blob with explicit plain text MIME type
-        const fileBlob = new Blob([fileArrayBuffer], { type: 'text/plain' });
-        
-        // For repeated attempts, create a new File object to ensure clean metadata
-        const uploadFile = new File([fileBlob], file.name, { type: 'text/plain' });
-        
-        console.log(`Attempt ${uploadAttempt}: Using explicit content type 'text/plain'`);
-        
-        const uploadOptions = {
+        let uploadOptions: any = {
           cacheControl: '3600',
-          upsert: true,
-          contentType: 'text/plain' // Always use text/plain for Lua files
+          upsert: true
         };
         
-        // Upload with explicit content type
+        let fileBlob: Blob;
+        
+        // Different strategies for each attempt
+        if (uploadAttempt === 1) {
+          // First attempt: Use explicit text/plain MIME type
+          uploadOptions.contentType = 'text/plain';
+          fileBlob = new Blob([fileArrayBuffer], { type: 'text/plain' });
+          console.log(`Attempt ${uploadAttempt}: Using text/plain content type`);
+        } 
+        else if (uploadAttempt === 2) {
+          // Second attempt: Use application/octet-stream MIME type
+          uploadOptions.contentType = 'application/octet-stream';
+          fileBlob = new Blob([fileArrayBuffer], { type: 'application/octet-stream' });
+          console.log(`Attempt ${uploadAttempt}: Using application/octet-stream content type`);
+        }
+        else if (uploadAttempt === 3) {
+          // Third attempt: Try with no content type, just use raw file
+          delete uploadOptions.contentType;
+          fileBlob = file;
+          console.log(`Attempt ${uploadAttempt}: Using raw file without content type`);
+        }
+        else {
+          // Fourth attempt: Try with base64 data and no special content type
+          delete uploadOptions.contentType;
+          fileBlob = new Blob([fileArrayBuffer]);
+          console.log(`Attempt ${uploadAttempt}: Using raw blob without type`);
+        }
+        
+        // Create new File object with the strategy
+        const uploadFile = new File([fileBlob], file.name, uploadOptions.contentType ? 
+          { type: uploadOptions.contentType } : undefined);
+        
+        // Upload with the current strategy
         const { data, error } = await supabase.storage
           .from(bucketName)
           .upload(filePath, uploadFile, uploadOptions);
@@ -147,16 +169,6 @@ export const uploadFile = async (
           // Wait a moment before retrying with a different strategy
           if (uploadAttempt < maxAttempts) {
             await new Promise(resolve => setTimeout(resolve, 500));
-            
-            // Change strategy for next attempt
-            if (uploadAttempt === 1) {
-              // For second attempt, try with application/octet-stream
-              console.log("Changing strategy for next attempt: using application/octet-stream");
-            } else {
-              // For third attempt, try without specifying content type
-              console.log("Final attempt will use direct array buffer without content type");
-            }
-            
             continue;
           }
           throw error;
@@ -176,15 +188,6 @@ export const uploadFile = async (
       } catch (attemptError) {
         console.error(`Error in attempt ${uploadAttempt}:`, attemptError);
         lastError = attemptError as Error;
-        
-        // If this is not the last attempt, try a different approach
-        if (uploadAttempt === 1) {
-          // Second attempt: use application/octet-stream content type
-          console.log("Next attempt will use application/octet-stream content type");
-        } else if (uploadAttempt === 2) {
-          // Third attempt: try with no content type, just raw data
-          console.log("Final attempt will use direct array buffer without content type");
-        }
       }
     }
     
