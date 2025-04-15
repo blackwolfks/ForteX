@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
@@ -44,50 +43,23 @@ export const ensureBucketExists = async (bucketName: string): Promise<boolean> =
   try {
     console.log(`Ensuring bucket '${bucketName}' exists...`);
     
-    // First try with our RPC function (most reliable method)
-    const { data: rpcData, error: rpcError } = await supabase.rpc('create_public_bucket', {
-      bucket_name: bucketName
+    // Try creating the bucket (will do nothing if it already exists)
+    const { data, error } = await supabase.storage.createBucket(bucketName, {
+      public: true,
+      fileSizeLimit: 52428800, // 50MB
+      allowedMimeTypes: ['*/*']
     });
     
-    if (!rpcError) {
-      console.log(`Bucket '${bucketName}' successfully created/verified via RPC`);
-      return true;
-    }
-    
-    console.warn("RPC bucket creation failed:", rpcError);
-    
-    // Fallback: Check if bucket exists
-    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
-    
-    if (listError) {
-      console.error("Error listing buckets:", listError);
+    if (error && !error.message.includes('already exists')) {
+      console.error(`Error creating bucket '${bucketName}':`, error);
+      toast.error(`Fehler beim Erstellen des Buckets: ${error.message}`);
       return false;
-    }
-    
-    const bucketExists = buckets.some(bucket => bucket.name === bucketName);
-    
-    if (!bucketExists) {
-      // Try to create bucket directly as fallback
-      console.log(`Creating bucket '${bucketName}'...`);
-      const { error: createError } = await supabase.storage.createBucket(bucketName, {
-        public: true,
-        fileSizeLimit: 52428800,
-        allowedMimeTypes: ['*/*']
-      });
-      
-      if (createError) {
-        console.error(`Error creating bucket '${bucketName}':`, createError);
-        return false;
-      }
-      
-      console.log(`Successfully created bucket '${bucketName}'`);
-    } else {
-      console.log(`Bucket '${bucketName}' already exists`);
     }
     
     return true;
   } catch (error) {
     console.error(`Unexpected error ensuring bucket exists:`, error);
+    toast.error('Unerwarteter Fehler beim Bucket-Check');
     return false;
   }
 };
