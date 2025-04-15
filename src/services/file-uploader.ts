@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
@@ -43,20 +44,54 @@ export const ensureBucketExists = async (bucketName: string): Promise<boolean> =
   try {
     console.log(`Ensuring bucket '${bucketName}' exists...`);
     
-    // Try creating the bucket (will do nothing if it already exists)
-    const { data, error } = await supabase.storage.createBucket(bucketName, {
-      public: true,
-      fileSizeLimit: 52428800, // 50MB
-      allowedMimeTypes: ['*/*']
-    });
-    
-    if (error && !error.message.includes('already exists')) {
-      console.error(`Error creating bucket '${bucketName}':`, error);
-      toast.error(`Fehler beim Erstellen des Buckets: ${error.message}`);
-      return false;
+    // First try with our RPC function (most reliable method)
+    try {
+      const { data: rpcData, error: rpcError } = await supabase.rpc('create_public_bucket', {
+        bucket_name: bucketName
+      });
+      
+      if (!rpcError) {
+        console.log(`Bucket '${bucketName}' successfully created/verified via RPC`);
+        return true;
+      }
+      
+      console.warn("RPC bucket creation failed:", rpcError);
+    } catch (e) {
+      console.warn("Error calling create_public_bucket RPC:", e);
     }
     
-    return true;
+    // Direct method as fallback
+    try {
+      // Try creating the bucket (will do nothing if it already exists)
+      const { data, error } = await supabase.storage.createBucket(bucketName, {
+        public: true,
+        fileSizeLimit: 52428800, // 50MB
+        allowedMimeTypes: ['*/*']
+      });
+      
+      // Most errors here will be because the bucket already exists
+      if (error && !error.message.includes('already exists')) {
+        console.error(`Error creating bucket '${bucketName}':`, error);
+        toast.error(`Fehler beim Erstellen des Buckets: ${error.message}`);
+        
+        // Even with an error, the bucket might exist but we don't have access
+        // Let's continue anyway and see if upload works
+      }
+    } catch (createError) {
+      console.warn("Error creating bucket directly:", createError);
+    }
+    
+    // As final attempt, try to use the storage API to check bucket existence
+    try {
+      await supabase.storage.from(bucketName).list();
+      console.log(`Successfully accessed bucket '${bucketName}'`);
+      return true;
+    } catch (listError) {
+      console.error(`Could not access bucket '${bucketName}':`, listError);
+      
+      // Failed to create or access the bucket
+      return false;
+    }
   } catch (error) {
     console.error(`Unexpected error ensuring bucket exists:`, error);
     toast.error('Unerwarteter Fehler beim Bucket-Check');
