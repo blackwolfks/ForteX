@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,9 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import FileAccessManagement from "./FileAccessManagement";
 import { License } from "./types";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTitle } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
-import { callRPC } from "@/integrations/supabase/client";
+import FileUploadDialog from "./FileUploadDialog";
 
 interface ScriptCardProps {
   license: License;
@@ -21,200 +20,20 @@ interface ScriptCardProps {
   onDeleteScript: (licenseId: string) => Promise<boolean>;
 }
 
-const ScriptCard = ({ license, onUpdateScript, onRegenerateServerKey, onDeleteScript }: ScriptCardProps) => {
+export default function ScriptCard({ 
+  license, 
+  onUpdateScript, 
+  onRegenerateServerKey, 
+  onDeleteScript 
+}: ScriptCardProps) {
   const [copiedKey, setCopiedKey] = useState<{id: string, type: string} | null>(null);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const copyToClipboard = (text: string, id: string, type: string) => {
     navigator.clipboard.writeText(text);
     setCopiedKey({ id, type });
     setTimeout(() => setCopiedKey(null), 2000);
     toast.success("In die Zwischenablage kopiert");
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      console.log("Selected file:", e.target.files[0].name);
-      setSelectedFile(e.target.files[0]);
-      setUploadError(null);
-    }
-  };
-
-  const getContentTypeFromExtension = (filename: string): string => {
-    const extension = filename.split('.').pop()?.toLowerCase() || '';
-    
-    const mimeTypes: Record<string, string> = {
-      'lua': 'text/x-lua',
-      'js': 'application/javascript',
-      'json': 'application/json',
-      'txt': 'text/plain',
-      'html': 'text/html',
-      'css': 'text/css',
-      'png': 'image/png',
-      'jpg': 'image/jpeg',
-      'jpeg': 'image/jpeg',
-      'gif': 'image/gif',
-      'svg': 'image/svg+xml',
-      'pdf': 'application/pdf'
-    };
-    
-    return mimeTypes[extension] || 'application/octet-stream';
-  };
-
-  const ensureBucketExists = async (bucketName: string): Promise<boolean> => {
-    try {
-      console.log(`Ensuring bucket '${bucketName}' exists...`);
-      
-      // Try to use the RPC function first
-      const { data: rpcData, error: rpcError } = await callRPC('create_public_bucket', {
-        bucket_name: bucketName
-      });
-      
-      if (rpcError) {
-        console.warn("RPC bucket creation failed:", rpcError);
-        
-        // Fallback: Try to directly check if the bucket exists
-        const { data: buckets, error: listError } = await supabase.storage.listBuckets();
-        
-        if (listError) {
-          console.error("Error checking buckets:", listError);
-          return false;
-        }
-        
-        const bucketExists = buckets.some(bucket => bucket.name === bucketName);
-        
-        if (!bucketExists) {
-          // Try to create the bucket directly
-          const { error: createError } = await supabase.storage.createBucket(bucketName, {
-            public: true,
-            fileSizeLimit: 52428800, // 50MB
-            allowedMimeTypes: ['*/*']
-          });
-          
-          if (createError) {
-            console.error("Error creating bucket:", createError);
-            return false;
-          }
-        }
-      }
-      
-      return true;
-    } catch (error) {
-      console.error("Error ensuring bucket exists:", error);
-      return false;
-    }
-  };
-
-  const handleUploadFile = async () => {
-    if (!selectedFile) return;
-    
-    try {
-      setUploading(true);
-      setUploadError(null);
-      setUploadProgress(5);
-      
-      // First ensure bucket exists
-      const bucketReady = await ensureBucketExists('script');
-      if (!bucketReady) {
-        throw new Error("Storage-Bucket konnte nicht erstellt oder gefunden werden");
-      }
-      
-      setUploadProgress(20);
-      
-      // Prepare file upload
-      const filePath = `${license.id}/${selectedFile.name}`;
-      console.log(`Uploading ${selectedFile.name} to ${filePath} (size: ${selectedFile.size} bytes)`);
-      
-      // Try multiple upload strategies
-      let uploadSuccess = false;
-      let uploadAttempt = 0;
-      const maxAttempts = 3;
-      
-      while (!uploadSuccess && uploadAttempt < maxAttempts) {
-        uploadAttempt++;
-        console.log(`Upload attempt ${uploadAttempt}/${maxAttempts}`);
-        
-        try {
-          let uploadOptions: any = {
-            cacheControl: '3600',
-            upsert: true
-          };
-          
-          // Different strategies for each attempt
-          if (uploadAttempt === 1) {
-            // First attempt: Use explicit content type derived from file extension
-            const contentType = getContentTypeFromExtension(selectedFile.name);
-            uploadOptions.contentType = contentType;
-            console.log(`Attempt 1: Using content type: ${contentType}`);
-          } 
-          else if (uploadAttempt === 2) {
-            // Second attempt: Use generic binary content type
-            uploadOptions.contentType = 'application/octet-stream';
-            console.log("Attempt 2: Using generic binary content type");
-          }
-          else {
-            // Third attempt: No content type specified, let Supabase determine it
-            console.log("Attempt 3: No explicit content type");
-          }
-          
-          setUploadProgress(30 + (uploadAttempt * 15));
-          
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('script')
-            .upload(filePath, selectedFile, uploadOptions);
-            
-          if (uploadError) {
-            console.error(`Attempt ${uploadAttempt} failed:`, uploadError);
-            if (uploadAttempt < maxAttempts) {
-              // Wait a moment before trying again
-              await new Promise(resolve => setTimeout(resolve, 500));
-              continue;
-            } else {
-              throw uploadError;
-            }
-          }
-          
-          // If we get here, upload was successful
-          uploadSuccess = true;
-          console.log(`Upload succeeded on attempt ${uploadAttempt}:`, uploadData);
-        } catch (attemptError) {
-          console.error(`Error in attempt ${uploadAttempt}:`, attemptError);
-          if (uploadAttempt >= maxAttempts) {
-            throw attemptError;
-          }
-        }
-      }
-      
-      if (!uploadSuccess) {
-        throw new Error("Alle Upload-Versuche sind fehlgeschlagen");
-      }
-      
-      setUploadProgress(80);
-      
-      // Update the license to set has_file_upload = true if not already set
-      if (!license.has_file_upload) {
-        console.log("Setting has_file_upload = true for license");
-        await callRPC('update_license', {
-          p_license_id: license.id,
-          p_has_file_upload: true
-        });
-      }
-      
-      setUploadProgress(100);
-      toast.success("Datei erfolgreich hochgeladen");
-      setIsUploadModalOpen(false);
-      setSelectedFile(null);
-    } catch (error) {
-      console.error("Error uploading file:", error);
-      setUploadError(error instanceof Error ? error.message : "Unbekannter Fehler beim Upload");
-      toast.error("Fehler beim Hochladen der Datei");
-    } finally {
-      setUploading(false);
-    }
   };
 
   return (
@@ -229,6 +48,7 @@ const ScriptCard = ({ license, onUpdateScript, onRegenerateServerKey, onDeleteSc
           </CardTitle>
           <CardDescription>Erstellt am: {new Date(license.created_at).toLocaleDateString()}</CardDescription>
         </CardHeader>
+        
         <CardContent>
           <Tabs defaultValue="details" className="w-full">
             <TabsList className="w-full">
@@ -245,6 +65,7 @@ const ScriptCard = ({ license, onUpdateScript, onRegenerateServerKey, onDeleteSc
             </TabsList>
             
             <TabsContent value="details" className="pt-4 space-y-4">
+              {/* License Key */}
               <div>
                 <Label className="text-xs">Lizenzschlüssel</Label>
                 <div className="mt-1 p-2 bg-muted rounded break-all text-xs font-mono flex justify-between items-center">
@@ -263,6 +84,8 @@ const ScriptCard = ({ license, onUpdateScript, onRegenerateServerKey, onDeleteSc
                   </Button>
                 </div>
               </div>
+              
+              {/* Server Key */}
               <div>
                 <Label className="text-xs">Server-Key</Label>
                 <div className="mt-1 p-2 bg-muted rounded break-all text-xs font-mono flex justify-between items-center">
@@ -292,6 +115,7 @@ const ScriptCard = ({ license, onUpdateScript, onRegenerateServerKey, onDeleteSc
                 </div>
               </div>
               
+              {/* Server IP */}
               {license.server_ip && (
                 <div>
                   <Label className="text-xs">Server IP-Adresse</Label>
@@ -313,6 +137,7 @@ const ScriptCard = ({ license, onUpdateScript, onRegenerateServerKey, onDeleteSc
                 </div>
               )}
               
+              {/* Actions */}
               <div className="flex justify-end pt-4 space-x-2">
                 <Button 
                   variant={license.aktiv ? "destructive" : "outline"} 
@@ -412,72 +237,11 @@ const ScriptCard = ({ license, onUpdateScript, onRegenerateServerKey, onDeleteSc
         </CardContent>
       </Card>
 
-      <Dialog open={isUploadModalOpen} onOpenChange={setIsUploadModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Datei hochladen</DialogTitle>
-            <DialogDescription>
-              Wählen Sie eine Datei aus, die Sie für das Script "{license.script_name}" hochladen möchten.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <Label htmlFor="file-upload">Datei auswählen</Label>
-            <Input 
-              id="file-upload" 
-              type="file" 
-              onChange={handleFileChange}
-            />
-            {selectedFile && (
-              <div className="bg-muted p-2 rounded-md">
-                <p className="text-sm font-medium">Ausgewählte Datei:</p>
-                <p className="text-xs text-muted-foreground">
-                  {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
-                </p>
-              </div>
-            )}
-            
-            {uploadError && (
-              <div className="bg-red-50 border border-red-300 rounded-md p-2 text-red-800 text-sm">
-                <p className="font-medium">Fehler:</p>
-                <p>{uploadError}</p>
-              </div>
-            )}
-            
-            {uploading && (
-              <div className="space-y-1">
-                <div className="w-full bg-muted rounded-full h-2.5">
-                  <div 
-                    className="bg-primary h-2.5 rounded-full" 
-                    style={{ width: `${uploadProgress}%` }}
-                  ></div>
-                </div>
-                <p className="text-xs text-center mt-1">{uploadProgress}%</p>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setIsUploadModalOpen(false);
-                setSelectedFile(null);
-                setUploadError(null);
-              }}
-              disabled={uploading}
-            >
-              Abbrechen
-            </Button>
-            <Button 
-              onClick={handleUploadFile}
-              disabled={!selectedFile || uploading}
-            >
-              {uploading ? "Wird hochgeladen..." : "Hochladen"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <FileUploadDialog 
+        licenseId={license.id} 
+        isOpen={isUploadModalOpen} 
+        onOpenChange={setIsUploadModalOpen} 
+      />
     </>
   );
-};
-
-export default ScriptCard;
+}

@@ -1,13 +1,15 @@
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useCallback } from "react";
 import { License, NewScriptFormData } from "./types";
-import { callRPC, supabase, checkStorageBucket } from "@/lib/supabase";
+import { callRPC, supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { ensureBucketExists, uploadFile } from "@/services/file-uploader";
 
 export function useScriptManagement() {
   const [licenses, setLicenses] = useState<License[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchLicenses = async () => {
+  const fetchLicenses = useCallback(async () => {
     setLoading(true);
     try {
       console.log("Fetching licenses from RPC function: get_user_licenses");
@@ -27,11 +29,11 @@ export function useScriptManagement() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchLicenses();
-  }, []);
+  }, [fetchLicenses]);
 
   const handleCreateScript = async (newScript: NewScriptFormData, selectedFiles: File[]) => {
     if (!newScript.name) {
@@ -46,19 +48,16 @@ export function useScriptManagement() {
 
     try {
       // First ensure bucket exists
-      const bucketReady = await checkStorageBucket('script');
-      if (!bucketReady) return false;
-      
-      console.log("Creating license with the following parameters:", {
-        p_script_name: newScript.name,
-        p_script_file: null, // No direct code input anymore
-        p_server_ip: newScript.serverIp || null,
-      });
+      const bucketReady = await ensureBucketExists('script');
+      if (!bucketReady) {
+        toast.error("Fehler: Storage-Bucket konnte nicht erstellt werden");
+        return false;
+      }
       
       // Create the license first
       const { data, error } = await callRPC('create_license', {
         p_script_name: newScript.name,
-        p_script_file: null, // No direct code input anymore
+        p_script_file: null,
         p_server_ip: newScript.serverIp || null,
       });
       
@@ -68,17 +67,14 @@ export function useScriptManagement() {
         return false;
       }
       
-      console.log("License created successfully:", data);
-      
       const licenseId = data.id;
-      
       console.log(`Uploading ${selectedFiles.length} files to bucket 'script/${licenseId}'`);
       
       let uploadErrors = 0;
       let uploadSuccesses = 0;
       
-      // Use Promise.all to upload files in parallel, with a limit
-      const batchSize = 5; // Upload 5 files at a time to avoid overwhelming the API
+      // Process files in smaller batches to avoid overwhelming the API
+      const batchSize = 3;
       const fileBatches = [];
       
       // Split files into batches
@@ -91,35 +87,12 @@ export function useScriptManagement() {
         await Promise.all(batch.map(async (file) => {
           let filePath = file.webkitRelativePath || file.name;
           
-          console.log(`Uploading file ${filePath} to script/${licenseId}`);
-          
           try {
-            // First try with binary content type for all files
-            const { error: uploadError } = await supabase.storage
-              .from('script')
-              .upload(`${licenseId}/${filePath}`, file, {
-                contentType: 'application/octet-stream',
-                cacheControl: '3600',
-                upsert: true
-              });
-              
+            const { error: uploadError } = await uploadFile('script', `${licenseId}/${filePath}`, file);
+            
             if (uploadError) {
               console.error("Error uploading file:", uploadError);
-              
-              // Second attempt without explicit content type
-              const { error: retryError } = await supabase.storage
-                .from('script')
-                .upload(`${licenseId}/${filePath}`, file, {
-                  cacheControl: '3600',
-                  upsert: true
-                });
-                
-              if (retryError) {
-                console.error("Second attempt failed:", retryError);
-                uploadErrors++;
-              } else {
-                uploadSuccesses++;
-              }
+              uploadErrors++;
             } else {
               uploadSuccesses++;
             }
@@ -138,19 +111,13 @@ export function useScriptManagement() {
         toast.success(`${uploadSuccesses} Dateien erfolgreich hochgeladen`);
       }
       
-      // Mark this license as having file uploads - ensure parameter order matches the updated function
-      console.log("Updating license to set has_file_upload = true");
-      const updateResult = await callRPC('update_license', {
+      // Mark this license as having file uploads
+      await callRPC('update_license', {
         p_license_id: licenseId,
         p_has_file_upload: true
       });
       
-      if (updateResult.error) {
-        console.error("Error updating license has_file_upload:", updateResult.error);
-      }
-      
       toast.success("Script erfolgreich erstellt");
-      // Reload licenses to show the new one
       await fetchLicenses();
       return true;
     } catch (error) {
@@ -162,15 +129,6 @@ export function useScriptManagement() {
 
   const handleUpdateScript = async (licenseId: string, scriptName: string, scriptCode: string | null, serverIp: string | null, isActive: boolean) => {
     try {
-      console.log("Updating script with parameters:", {
-        p_license_id: licenseId,
-        p_script_name: scriptName,
-        p_script_file: scriptCode,
-        p_server_ip: serverIp,
-        p_aktiv: isActive,
-      });
-      
-      // Using the exact parameter names expected by the updated RPC function
       const { error } = await callRPC('update_license', {
         p_license_id: licenseId,
         p_script_name: scriptName,
@@ -197,12 +155,6 @@ export function useScriptManagement() {
 
   const handleRegenerateServerKey = async (licenseId: string) => {
     try {
-      console.log("Regenerating server key with parameter:", {
-        p_license_id: licenseId,
-        p_regenerate_server_key: true
-      });
-      
-      // Use the updated regenerate_server_key parameter
       const { error } = await callRPC('update_license', {
         p_license_id: licenseId,
         p_regenerate_server_key: true
@@ -226,10 +178,6 @@ export function useScriptManagement() {
 
   const handleDeleteScript = async (licenseId: string) => {
     try {
-      console.log("Deleting script with parameter:", {
-        p_license_id: licenseId,
-      });
-      
       const { error } = await callRPC('delete_license', {
         p_license_id: licenseId,
       });
@@ -242,7 +190,6 @@ export function useScriptManagement() {
 
       // Also clean up storage
       try {
-        console.log(`Removing storage files for license ${licenseId}`);
         const { data, error: listError } = await supabase.storage
           .from('script')
           .list(licenseId);

@@ -1,0 +1,144 @@
+
+import { useState } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { callRPC } from "@/lib/supabase";
+import { uploadFileWithProgress } from "@/services/file-uploader";
+
+interface FileUploadDialogProps {
+  licenseId: string;
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
+}
+
+export default function FileUploadDialog({ 
+  licenseId, 
+  isOpen, 
+  onOpenChange,
+  onSuccess
+}: FileUploadDialogProps) {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      console.log("Selected file:", e.target.files[0].name);
+      setSelectedFile(e.target.files[0]);
+      setUploadError(null);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile) return;
+    
+    try {
+      setUploading(true);
+      setUploadError(null);
+      setUploadProgress(0);
+      
+      // Prepare file path including license ID
+      const filePath = `${licenseId}/${selectedFile.name}`;
+      
+      // Upload the file
+      const success = await uploadFileWithProgress(
+        'script', 
+        filePath, 
+        selectedFile, 
+        setUploadProgress
+      );
+      
+      if (success) {
+        // Update the license to indicate it has file uploads
+        await callRPC('update_license', {
+          p_license_id: licenseId,
+          p_has_file_upload: true
+        });
+        
+        onOpenChange(false);
+        setSelectedFile(null);
+        if (onSuccess) onSuccess();
+      }
+    } catch (error) {
+      console.error("Error in upload process:", error);
+      setUploadError(error instanceof Error ? error.message : "Unbekannter Fehler");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Datei hochladen</DialogTitle>
+          <DialogDescription>
+            Wählen Sie eine Datei aus, die Sie für dieses Script hochladen möchten.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="grid gap-4 py-4">
+          <Label htmlFor="file-upload">Datei auswählen</Label>
+          <Input 
+            id="file-upload" 
+            type="file" 
+            onChange={handleFileChange}
+            disabled={uploading}
+          />
+          
+          {selectedFile && (
+            <div className="bg-muted p-2 rounded-md">
+              <p className="text-sm font-medium">Ausgewählte Datei:</p>
+              <p className="text-xs text-muted-foreground">
+                {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+              </p>
+            </div>
+          )}
+          
+          {uploadError && (
+            <div className="bg-red-50 border border-red-300 rounded-md p-2 text-red-800 text-sm">
+              <p className="font-medium">Fehler:</p>
+              <p>{uploadError}</p>
+            </div>
+          )}
+          
+          {uploading && (
+            <div className="space-y-1">
+              <div className="w-full bg-muted rounded-full h-2.5">
+                <div 
+                  className="bg-primary h-2.5 rounded-full" 
+                  style={{ width: `${uploadProgress}%` }}
+                ></div>
+              </div>
+              <p className="text-xs text-center mt-1">{uploadProgress}%</p>
+            </div>
+          )}
+        </div>
+        
+        <DialogFooter>
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              onOpenChange(false);
+              setSelectedFile(null);
+              setUploadError(null);
+            }}
+            disabled={uploading}
+          >
+            Abbrechen
+          </Button>
+          <Button 
+            onClick={handleUpload}
+            disabled={!selectedFile || uploading}
+          >
+            {uploading ? "Wird hochgeladen..." : "Hochladen"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

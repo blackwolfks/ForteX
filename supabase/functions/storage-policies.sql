@@ -17,22 +17,33 @@ BEGIN;
   DROP POLICY IF EXISTS "Allow public access to script files" ON storage.objects;
   DROP POLICY IF EXISTS "Allow authenticated users to upload script files" ON storage.objects;
   DROP POLICY IF EXISTS "Allow authenticated users to manage their script files" ON storage.objects;
+  DROP POLICY IF EXISTS "Public Read script Bucket" ON storage.objects;
+  DROP POLICY IF EXISTS "Authenticated Users can Upload to script Bucket" ON storage.objects;
+  DROP POLICY IF EXISTS "Authenticated Users can Update script Bucket" ON storage.objects;
+  DROP POLICY IF EXISTS "Authenticated Users can Delete from script Bucket" ON storage.objects;
   
-  -- Create a policy that allows public read access to all objects in the script bucket
-  CREATE POLICY "Allow public access to script files"
+  -- Create simpler, more permissive policies
+  
+  -- Public read access to all objects in the script bucket
+  CREATE POLICY "Public script Bucket Access"
   ON storage.objects FOR SELECT
-  TO public
   USING (bucket_id = 'script');
   
-  -- Create a policy that allows authenticated users to upload files to the script bucket
-  CREATE POLICY "Allow authenticated users to upload script files"
+  -- Authenticated users can upload to the script bucket
+  CREATE POLICY "Upload to script Bucket"
   ON storage.objects FOR INSERT
   TO authenticated
   WITH CHECK (bucket_id = 'script');
   
-  -- Create a policy that allows authenticated users to update and delete their own files
-  CREATE POLICY "Allow authenticated users to manage their script files"
-  ON storage.objects FOR UPDATE, DELETE
+  -- Authenticated users can update their own files
+  CREATE POLICY "Update script Bucket Files"
+  ON storage.objects FOR UPDATE
+  TO authenticated
+  USING (bucket_id = 'script');
+  
+  -- Authenticated users can delete their own files
+  CREATE POLICY "Delete from script Bucket"
+  ON storage.objects FOR DELETE
   TO authenticated
   USING (bucket_id = 'script');
   
