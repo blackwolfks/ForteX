@@ -24,28 +24,32 @@ BEGIN;
   DROP POLICY IF EXISTS "Allow users to upload their license files" ON storage.objects;
   DROP POLICY IF EXISTS "Allow public to download any script file" ON storage.objects;
   DROP POLICY IF EXISTS "Allow users to manage their license files" ON storage.objects;
+  DROP POLICY IF EXISTS "Public script Access (Permanent)" ON storage.objects;
+  DROP POLICY IF EXISTS "Upload to script Bucket (Permanent)" ON storage.objects;
+  DROP POLICY IF EXISTS "Update script Files (Permanent)" ON storage.objects;
+  DROP POLICY IF EXISTS "Delete from script Bucket (Permanent)" ON storage.objects;
   
   -- Create simple, permissive policies with unique names
   
   -- Public read access to all objects in the script bucket
-  CREATE POLICY "Public script Access (Permanent)"
+  CREATE POLICY "Public script Access (NEW)"
   ON storage.objects FOR SELECT
   USING (bucket_id = 'script');
   
   -- Authenticated users can upload to the script bucket
-  CREATE POLICY "Upload to script Bucket (Permanent)"
+  CREATE POLICY "Upload to script Bucket (NEW)"
   ON storage.objects FOR INSERT
   TO authenticated
   WITH CHECK (bucket_id = 'script');
   
   -- Authenticated users can update files in the script bucket
-  CREATE POLICY "Update script Files (Permanent)"
+  CREATE POLICY "Update script Files (NEW)"
   ON storage.objects FOR UPDATE
   TO authenticated
   USING (bucket_id = 'script');
   
   -- Authenticated users can delete files in the script bucket
-  CREATE POLICY "Delete from script Bucket (Permanent)"
+  CREATE POLICY "Delete from script Bucket (NEW)"
   ON storage.objects FOR DELETE
   TO authenticated
   USING (bucket_id = 'script');
@@ -81,17 +85,17 @@ BEGIN;
     
     -- Create permissive policies for this bucket that won't be dropped
     EXECUTE format('
-      DROP POLICY IF EXISTS "Public %I Access (Permanent)" ON storage.objects;
-      CREATE POLICY "Public %I Access (Permanent)" ON storage.objects FOR SELECT USING (bucket_id = %L);
+      DROP POLICY IF EXISTS "Public %I Access (NEW)" ON storage.objects;
+      CREATE POLICY "Public %I Access (NEW)" ON storage.objects FOR SELECT USING (bucket_id = %L);
       
-      DROP POLICY IF EXISTS "Upload to %I (Permanent)" ON storage.objects;
-      CREATE POLICY "Upload to %I (Permanent)" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = %L);
+      DROP POLICY IF EXISTS "Upload to %I (NEW)" ON storage.objects;
+      CREATE POLICY "Upload to %I (NEW)" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = %L);
       
-      DROP POLICY IF EXISTS "Update %I (Permanent)" ON storage.objects;
-      CREATE POLICY "Update %I (Permanent)" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = %L);
+      DROP POLICY IF EXISTS "Update %I (NEW)" ON storage.objects;
+      CREATE POLICY "Update %I (NEW)" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = %L);
       
-      DROP POLICY IF EXISTS "Delete from %I (Permanent)" ON storage.objects;
-      CREATE POLICY "Delete from %I (Permanent)" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = %L);
+      DROP POLICY IF EXISTS "Delete from %I (NEW)" ON storage.objects;
+      CREATE POLICY "Delete from %I (NEW)" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = %L);
     ', 
       bucket_name, bucket_name, bucket_name,
       bucket_name, bucket_name, bucket_name,
