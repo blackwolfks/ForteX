@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Upload, File } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { NewScriptFormData } from "./types";
+import { toast } from "sonner";
 
 interface CreateScriptDialogProps {
   open: boolean;
@@ -26,15 +27,21 @@ const CreateScriptDialog = ({ open, onOpenChange, onCreateScript }: CreateScript
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const filesArray = Array.from(e.target.files);
+      console.log(`Selected ${filesArray.length} files:`, filesArray.map(f => f.name));
       setSelectedFiles(prev => [...prev, ...filesArray]);
     }
   };
 
   const handleDirSelect = () => {
     if (fileInputRef.current) {
-      fileInputRef.current.setAttribute("webkitdirectory", "");
-      fileInputRef.current.setAttribute("directory", "");
-      fileInputRef.current.click();
+      try {
+        fileInputRef.current.setAttribute("webkitdirectory", "");
+        fileInputRef.current.setAttribute("directory", "");
+        fileInputRef.current.click();
+      } catch (error) {
+        console.error("Error setting directory attribute:", error);
+        toast.error("Browser unterstützt keine Ordnerauswahl. Bitte wählen Sie einzelne Dateien aus.");
+      }
     }
   };
 
@@ -49,12 +56,26 @@ const CreateScriptDialog = ({ open, onOpenChange, onCreateScript }: CreateScript
   };
 
   const handleSubmit = async () => {
+    if (!newScript.name) {
+      toast.error("Bitte geben Sie einen Namen für das Script ein");
+      return;
+    }
+    
+    if (selectedFiles.length === 0) {
+      toast.error("Bitte wählen Sie mindestens eine Datei aus");
+      return;
+    }
+    
     try {
       setUploading(true);
       await onCreateScript(newScript, selectedFiles);
       // Reset form
       setNewScript({ name: "", serverIp: "" });
       setSelectedFiles([]);
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Error in form submission:", error);
+      toast.error("Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.");
     } finally {
       setUploading(false);
     }

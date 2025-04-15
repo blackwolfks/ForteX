@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,6 +25,7 @@ const ScriptCard = ({ license, onUpdateScript, onRegenerateServerKey, onDeleteSc
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const copyToClipboard = (text: string, id: string, type: string) => {
     navigator.clipboard.writeText(text);
@@ -36,6 +36,7 @@ const ScriptCard = ({ license, onUpdateScript, onRegenerateServerKey, onDeleteSc
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
+      console.log("Selected file:", e.target.files[0].name);
       setSelectedFile(e.target.files[0]);
     }
   };
@@ -45,19 +46,66 @@ const ScriptCard = ({ license, onUpdateScript, onRegenerateServerKey, onDeleteSc
     
     try {
       setUploading(true);
+      setUploadProgress(10);
       
+      // First ensure bucket exists
+      try {
+        const { data: rpcData, error: rpcError } = await supabase.rpc('create_public_bucket', {
+          bucket_name: 'script'
+        });
+        
+        if (rpcError) {
+          console.warn("RPC bucket creation failed:", rpcError);
+        } else {
+          console.log("Bucket verified via RPC");
+        }
+      } catch (e) {
+        console.warn("RPC bucket check failed:", e);
+      }
+      
+      setUploadProgress(30);
+      
+      // Attempt upload with binary content type first
       const filePath = `${license.id}/${selectedFile.name}`;
-      const { error } = await supabase.storage
+      console.log(`Uploading ${selectedFile.name} as binary to ${filePath}`);
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from('script')
         .upload(filePath, selectedFile, {
+          contentType: 'application/octet-stream',
           cacheControl: '3600',
           upsert: true
         });
         
-      if (error) {
-        console.error("Error uploading file:", error);
-        toast.error("Fehler beim Hochladen der Datei");
-        return;
+      setUploadProgress(70);
+      
+      if (uploadError) {
+        console.error("Binary upload failed:", uploadError);
+        
+        // Retry without content type specification
+        console.log("Retrying upload without content type...");
+        const { error: retryError } = await supabase.storage
+          .from('script')
+          .upload(filePath, selectedFile, {
+            cacheControl: '3600',
+            upsert: true
+          });
+          
+        if (retryError) {
+          console.error("Retry upload also failed:", retryError);
+          throw new Error(`Fehler beim Hochladen: ${retryError.message}`);
+        }
+      }
+      
+      setUploadProgress(100);
+      
+      // Update the license to set has_file_upload = true if not already set
+      if (!license.has_file_upload) {
+        console.log("Setting has_file_upload = true for license");
+        await callRPC('update_license', {
+          p_license_id: license.id,
+          p_has_file_upload: true
+        });
       }
       
       toast.success("Datei erfolgreich hochgeladen");
@@ -68,6 +116,7 @@ const ScriptCard = ({ license, onUpdateScript, onRegenerateServerKey, onDeleteSc
       toast.error("Fehler beim Hochladen der Datei");
     } finally {
       setUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -289,6 +338,16 @@ const ScriptCard = ({ license, onUpdateScript, onRegenerateServerKey, onDeleteSc
                 </p>
               </div>
             )}
+            
+            {uploading && (
+              <div className="w-full bg-muted rounded-full h-2.5">
+                <div 
+                  className="bg-primary h-2.5 rounded-full" 
+                  style={{ width: `${uploadProgress}%` }}
+                ></div>
+                <p className="text-xs text-center mt-1">{uploadProgress}%</p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button 
@@ -297,6 +356,7 @@ const ScriptCard = ({ license, onUpdateScript, onRegenerateServerKey, onDeleteSc
                 setIsUploadModalOpen(false);
                 setSelectedFile(null);
               }}
+              disabled={uploading}
             >
               Abbrechen
             </Button>

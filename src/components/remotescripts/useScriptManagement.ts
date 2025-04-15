@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import { License, NewScriptFormData } from "./types";
 import { callRPC, supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { mediaService } from "@/services/media-service";
 import { checkStorageBucket } from "@/lib/supabase";
 
 export function useScriptManagement() {
@@ -39,12 +38,31 @@ export function useScriptManagement() {
   // Function to pre-create the storage bucket before we need it
   const ensureScriptBucketExists = async () => {
     console.log("Ensuring 'script' bucket exists before creating license");
+    
+    // First, try to create the bucket using the RPC function
+    try {
+      const { data, error } = await supabase.rpc('create_public_bucket', {
+        bucket_name: 'script'
+      });
+      
+      if (!error) {
+        console.log("Successfully created/verified 'script' bucket via RPC");
+        return true;
+      }
+      
+      console.warn("RPC call failed, trying alternative approach:", error);
+    } catch (e) {
+      console.warn("RPC call exception:", e);
+    }
+    
+    // Fallback to local function
     const bucketExists = await checkStorageBucket('script');
     if (!bucketExists) {
       console.error("Failed to create or find 'script' bucket");
       toast.error("Fehler beim Erstellen des Storage-Buckets");
       return false;
     }
+    
     return true;
   };
 
@@ -90,29 +108,67 @@ export function useScriptManagement() {
       console.log(`Uploading ${selectedFiles.length} files to bucket 'script/${licenseId}'`);
       
       let uploadErrors = 0;
+      let uploadSuccesses = 0;
       
-      for (const file of selectedFiles) {
-        let filePath = file.webkitRelativePath || file.name;
-        
-        console.log(`Uploading file ${filePath} to script/${licenseId}`);
-        
-        const { error: uploadError } = await supabase.storage
-          .from('script')
-          .upload(`${licenseId}/${filePath}`, file, {
-            cacheControl: '3600',
-            upsert: true
-          });
+      // Use Promise.all to upload files in parallel, with a limit
+      const batchSize = 5; // Upload 5 files at a time to avoid overwhelming the API
+      const fileBatches = [];
+      
+      // Split files into batches
+      for (let i = 0; i < selectedFiles.length; i += batchSize) {
+        fileBatches.push(selectedFiles.slice(i, i + batchSize));
+      }
+      
+      // Process each batch sequentially
+      for (const batch of fileBatches) {
+        await Promise.all(batch.map(async (file) => {
+          let filePath = file.webkitRelativePath || file.name;
           
-        if (uploadError) {
-          console.error("Error uploading file:", uploadError);
-          uploadErrors++;
-        }
+          console.log(`Uploading file ${filePath} to script/${licenseId}`);
+          
+          try {
+            // First try with binary content type for all files
+            const { error: uploadError } = await supabase.storage
+              .from('script')
+              .upload(`${licenseId}/${filePath}`, file, {
+                contentType: 'application/octet-stream',
+                cacheControl: '3600',
+                upsert: true
+              });
+              
+            if (uploadError) {
+              console.error("Error uploading file:", uploadError);
+              
+              // Second attempt without explicit content type
+              const { error: retryError } = await supabase.storage
+                .from('script')
+                .upload(`${licenseId}/${filePath}`, file, {
+                  cacheControl: '3600',
+                  upsert: true
+                });
+                
+              if (retryError) {
+                console.error("Second attempt failed:", retryError);
+                uploadErrors++;
+              } else {
+                uploadSuccesses++;
+              }
+            } else {
+              uploadSuccesses++;
+            }
+          } catch (error) {
+            console.error("Exception during upload:", error);
+            uploadErrors++;
+          }
+        }));
       }
       
       if (uploadErrors > 0) {
         toast.error(`${uploadErrors} Dateien konnten nicht hochgeladen werden`);
-      } else {
-        toast.success(`${selectedFiles.length} Dateien erfolgreich hochgeladen`);
+      }
+      
+      if (uploadSuccesses > 0) {
+        toast.success(`${uploadSuccesses} Dateien erfolgreich hochgeladen`);
       }
       
       // Mark this license as having file uploads - ensure parameter order matches the updated function
@@ -249,8 +305,111 @@ export function useScriptManagement() {
     licenses,
     loading,
     handleCreateScript,
-    handleUpdateScript,
-    handleRegenerateServerKey,
-    handleDeleteScript,
+    handleUpdateScript: async (licenseId: string, scriptName: string, scriptCode: string | null, serverIp: string | null, isActive: boolean) => {
+      // Just call the existing function
+      try {
+        console.log("Updating script with parameters:", {
+          p_license_id: licenseId,
+          p_script_name: scriptName,
+          p_script_file: scriptCode,
+          p_server_ip: serverIp,
+          p_aktiv: isActive,
+        });
+        
+        // Using the exact parameter names expected by the updated RPC function
+        const { error } = await callRPC('update_license', {
+          p_license_id: licenseId,
+          p_script_name: scriptName,
+          p_script_file: scriptCode,
+          p_server_ip: serverIp,
+          p_aktiv: isActive
+        });
+        
+        if (error) {
+          console.error("Error updating script:", error);
+          toast.error("Fehler beim Aktualisieren des Scripts: " + error.message);
+          return false;
+        }
+        
+        toast.success("Script erfolgreich aktualisiert");
+        await fetchLicenses();
+        return true;
+      } catch (error) {
+        console.error("Error updating script:", error);
+        toast.error("Fehler beim Aktualisieren des Scripts");
+        return false;
+      }
+    },
+    handleRegenerateServerKey: async (licenseId: string) => {
+      try {
+        console.log("Regenerating server key with parameter:", {
+          p_license_id: licenseId,
+          p_regenerate_server_key: true
+        });
+        
+        // Use the updated regenerate_server_key parameter
+        const { error } = await callRPC('update_license', {
+          p_license_id: licenseId,
+          p_regenerate_server_key: true
+        });
+        
+        if (error) {
+          console.error("Error regenerating server key:", error);
+          toast.error("Fehler beim Regenerieren des Server-Keys: " + error.message);
+          return false;
+        }
+        
+        toast.success("Server-Key erfolgreich regeneriert");
+        await fetchLicenses();
+        return true;
+      } catch (error) {
+        console.error("Error regenerating server key:", error);
+        toast.error("Fehler beim Regenerieren des Server-Keys");
+        return false;
+      }
+    },
+    handleDeleteScript: async (licenseId: string) => {
+      try {
+        console.log("Deleting script with parameter:", {
+          p_license_id: licenseId,
+        });
+        
+        const { error } = await callRPC('delete_license', {
+          p_license_id: licenseId,
+        });
+        
+        if (error) {
+          console.error("Error deleting script:", error);
+          toast.error("Fehler beim Löschen des Scripts: " + error.message);
+          return false;
+        }
+
+        // Also clean up storage
+        try {
+          console.log(`Removing storage files for license ${licenseId}`);
+          const { data, error: listError } = await supabase.storage
+            .from('script')
+            .list(licenseId);
+            
+          if (!listError && data && data.length > 0) {
+            const filePaths = data.map(file => `${licenseId}/${file.name}`);
+            await supabase.storage
+              .from('script')
+              .remove(filePaths);
+          }
+        } catch (storageError) {
+          console.error("Error removing storage files:", storageError);
+          // Continue with success even if storage cleanup fails
+        }
+        
+        toast.success("Script erfolgreich gelöscht");
+        await fetchLicenses();
+        return true;
+      } catch (error) {
+        console.error("Error deleting script:", error);
+        toast.error("Fehler beim Löschen des Scripts");
+        return false;
+      }
+    },
   };
 }

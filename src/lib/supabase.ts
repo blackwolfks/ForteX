@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { supabase as supabaseClient } from '@/integrations/supabase/client';
 
@@ -109,55 +108,62 @@ export const checkStorageBucket = async (bucketName: string = 'script'): Promise
       console.log(`Bucket '${bucketName}' exists, ensuring it's public...`);
       
       // Update the bucket to be public
-      const { error: updateError } = await supabaseClient.storage.updateBucket(bucketName, {
-        public: true,
-        allowedMimeTypes: ['*/*'],
-        fileSizeLimit: 50 * 1024 * 1024  // 50MB limit
-      });
-      
-      if (updateError) {
-        console.error(`Error updating bucket '${bucketName}':`, updateError);
-      } else {
-        console.log(`Bucket '${bucketName}' updated to be public`);
+      try {
+        const { error: updateError } = await supabaseClient.storage.updateBucket(bucketName, {
+          public: true,
+          allowedMimeTypes: ['*/*'],
+          fileSizeLimit: 50 * 1024 * 1024  // 50MB limit
+        });
+        
+        if (updateError) {
+          console.error(`Error updating bucket '${bucketName}':`, updateError);
+        } else {
+          console.log(`Bucket '${bucketName}' updated to be public`);
+        }
+      } catch (e) {
+        console.error("Error updating bucket:", e);
       }
       
       return true;
     }
     
-    console.log(`Bucket '${bucketName}' does not exist. Attempting to create it...`);
+    console.log(`Bucket '${bucketName}' does not exist. Attempting to create it via RPC...`);
     
-    // Create the bucket with public access
-    const { data, error: createError } = await supabaseClient.storage.createBucket(bucketName, {
-      public: true,  // Make bucket public
-      fileSizeLimit: 50 * 1024 * 1024  // 50MB limit
-    });
-    
-    if (createError) {
-      console.error(`Error creating bucket '${bucketName}':`, createError);
+    // Try to create bucket via RPC function first (to bypass RLS issues)
+    try {
+      const { data: rpcData, error: rpcError } = await supabaseClient.rpc('create_public_bucket', {
+        bucket_name: bucketName
+      });
       
-      // If the error is related to RLS, try a different approach
-      if (createError.message && createError.message.includes('violates row-level security policy')) {
-        console.log('RLS policy violation detected. The bucket might already exist but not be accessible.');
-        
-        // Try to use a different approach through RPC
-        const { data: rpcData, error: rpcError } = await supabaseClient.rpc('create_public_bucket' as any, {
-          bucket_name: bucketName
-        });
-        
-        if (rpcError) {
-          console.error('RPC approach also failed:', rpcError);
-          return false;
-        }
-        
+      if (rpcError) {
+        console.error('RPC approach failed:', rpcError);
+      } else {
         console.log('Successfully created bucket via RPC function');
         return true;
       }
-      
-      return false;
+    } catch (rpcErr) {
+      console.error("RPC error:", rpcErr);
     }
     
-    console.log(`Bucket '${bucketName}' successfully created.`);
-    return true;
+    // Fallback: Try direct bucket creation
+    try {
+      console.log("Trying direct bucket creation...");
+      const { data, error: createError } = await supabaseClient.storage.createBucket(bucketName, {
+        public: true,  // Make bucket public
+        fileSizeLimit: 50 * 1024 * 1024  // 50MB limit
+      });
+      
+      if (createError) {
+        console.error(`Error creating bucket '${bucketName}':`, createError);
+        return false;
+      }
+      
+      console.log(`Bucket '${bucketName}' successfully created.`);
+      return true;
+    } catch (directErr) {
+      console.error("Direct bucket creation error:", directErr);
+      return false;
+    }
   } catch (error) {
     console.error("Unexpected error checking/creating the bucket:", error);
     return false;
