@@ -11,7 +11,7 @@ import FileAccessManagement from "./FileAccessManagement";
 import { License } from "./types";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTitle } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, callRPC } from "@/integrations/supabase/client";
 
 interface ScriptCardProps {
   license: License;
