@@ -1,19 +1,26 @@
 
 export interface License {
   id: string;
-  script_name: string;
-  script_file: string | null;
   license_key: string;
   server_key: string;
+  script_name: string;
+  script_file: string | null;
   server_ip: string | null;
   aktiv: boolean;
+  has_file_upload: boolean;
   created_at: string;
-  updated_at: string;
-  has_file_upload?: boolean;
 }
 
 export interface NewScriptFormData {
   name: string;
-  code: string;
   serverIp: string;
+  code?: string; // Keeping for backward compatibility, but will be unused
+}
+
+export interface FileItem {
+  name: string;
+  id?: string;
+  size?: number;
+  isPublic: boolean;
+  fullPath: string;
 }

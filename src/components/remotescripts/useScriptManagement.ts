@@ -54,23 +54,26 @@ export function useScriptManagement() {
       return false;
     }
 
+    if (selectedFiles.length === 0) {
+      toast.error("Bitte wählen Sie mindestens eine Datei aus");
+      return false;
+    }
+
     try {
       // First ensure bucket exists
-      if (selectedFiles.length > 0) {
-        const bucketReady = await ensureScriptBucketExists();
-        if (!bucketReady) return false;
-      }
+      const bucketReady = await ensureScriptBucketExists();
+      if (!bucketReady) return false;
       
       console.log("Creating license with the following parameters:", {
         p_script_name: newScript.name,
-        p_script_file: newScript.code || null,
+        p_script_file: null, // No direct code input anymore
         p_server_ip: newScript.serverIp || null,
       });
       
       // Create the license first
       const { data, error } = await callRPC('create_license', {
         p_script_name: newScript.name,
-        p_script_file: newScript.code || null,
+        p_script_file: null, // No direct code input anymore
         p_server_ip: newScript.serverIp || null,
       });
       
@@ -82,47 +85,45 @@ export function useScriptManagement() {
       
       console.log("License created successfully:", data);
       
-      if (selectedFiles.length > 0) {
-        const licenseId = data.id;
+      const licenseId = data.id;
+      
+      console.log(`Uploading ${selectedFiles.length} files to bucket 'script/${licenseId}'`);
+      
+      let uploadErrors = 0;
+      
+      for (const file of selectedFiles) {
+        let filePath = file.webkitRelativePath || file.name;
         
-        console.log(`Uploading ${selectedFiles.length} files to bucket 'script/${licenseId}'`);
+        console.log(`Uploading file ${filePath} to script/${licenseId}`);
         
-        let uploadErrors = 0;
-        
-        for (const file of selectedFiles) {
-          let filePath = file.webkitRelativePath || file.name;
+        const { error: uploadError } = await supabase.storage
+          .from('script')
+          .upload(`${licenseId}/${filePath}`, file, {
+            cacheControl: '3600',
+            upsert: true
+          });
           
-          console.log(`Uploading file ${filePath} to script/${licenseId}`);
-          
-          const { error: uploadError } = await supabase.storage
-            .from('script')
-            .upload(`${licenseId}/${filePath}`, file, {
-              cacheControl: '3600',
-              upsert: true
-            });
-            
-          if (uploadError) {
-            console.error("Error uploading file:", uploadError);
-            uploadErrors++;
-          }
+        if (uploadError) {
+          console.error("Error uploading file:", uploadError);
+          uploadErrors++;
         }
-        
-        if (uploadErrors > 0) {
-          toast.error(`${uploadErrors} Dateien konnten nicht hochgeladen werden`);
-        } else {
-          toast.success(`${selectedFiles.length} Dateien erfolgreich hochgeladen`);
-        }
-        
-        // Mark this license as having file uploads - ensure parameter order matches the updated function
-        console.log("Updating license to set has_file_upload = true");
-        const updateResult = await callRPC('update_license', {
-          p_license_id: licenseId,
-          p_has_file_upload: true
-        });
-        
-        if (updateResult.error) {
-          console.error("Error updating license has_file_upload:", updateResult.error);
-        }
+      }
+      
+      if (uploadErrors > 0) {
+        toast.error(`${uploadErrors} Dateien konnten nicht hochgeladen werden`);
+      } else {
+        toast.success(`${selectedFiles.length} Dateien erfolgreich hochgeladen`);
+      }
+      
+      // Mark this license as having file uploads - ensure parameter order matches the updated function
+      console.log("Updating license to set has_file_upload = true");
+      const updateResult = await callRPC('update_license', {
+        p_license_id: licenseId,
+        p_has_file_upload: true
+      });
+      
+      if (updateResult.error) {
+        console.error("Error updating license has_file_upload:", updateResult.error);
       }
       
       toast.success("Script erfolgreich erstellt");

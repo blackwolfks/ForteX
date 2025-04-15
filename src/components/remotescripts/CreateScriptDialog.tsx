@@ -3,8 +3,7 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Upload } from "lucide-react";
+import { Upload, File } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { NewScriptFormData } from "./types";
 
@@ -17,17 +16,17 @@ interface CreateScriptDialogProps {
 const CreateScriptDialog = ({ open, onOpenChange, onCreateScript }: CreateScriptDialogProps) => {
   const [newScript, setNewScript] = useState<NewScriptFormData>({
     name: "",
-    code: "",
     serverIp: "",
   });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const singleFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const filesArray = Array.from(e.target.files);
-      setSelectedFiles(filesArray);
+      setSelectedFiles(prev => [...prev, ...filesArray]);
     }
   };
 
@@ -39,12 +38,22 @@ const CreateScriptDialog = ({ open, onOpenChange, onCreateScript }: CreateScript
     }
   };
 
+  const handleSingleFileSelect = () => {
+    if (singleFileInputRef.current) {
+      singleFileInputRef.current.click();
+    }
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async () => {
     try {
       setUploading(true);
       await onCreateScript(newScript, selectedFiles);
       // Reset form
-      setNewScript({ name: "", code: "", serverIp: "" });
+      setNewScript({ name: "", serverIp: "" });
       setSelectedFiles([]);
     } finally {
       setUploading(false);
@@ -85,59 +94,89 @@ const CreateScriptDialog = ({ open, onOpenChange, onCreateScript }: CreateScript
           </div>
 
           <div className="grid gap-2">
-            <Label>Wählen Sie zwischen Code-Upload oder Datei-Upload</Label>
+            <Label>Dateien hochladen</Label>
             
             <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  className="w-full" 
-                  onClick={handleDirSelect}
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Ordner hochladen
-                </Button>
-                <input 
-                  type="file" 
-                  ref={fileInputRef}
-                  onChange={handleFileChange} 
-                  className="hidden" 
-                />
-              </div>
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full" 
+                onClick={handleDirSelect}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Ordner hochladen
+              </Button>
               
-              <div className="flex items-center">
-                <p className="text-sm">oder</p>
-              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={handleSingleFileSelect}
+              >
+                <File className="h-4 w-4 mr-2" />
+                Datei hochladen
+              </Button>
+              
+              <input 
+                type="file" 
+                ref={fileInputRef}
+                onChange={handleFileChange} 
+                className="hidden" 
+                multiple
+              />
+              
+              <input 
+                type="file" 
+                ref={singleFileInputRef}
+                onChange={handleFileChange} 
+                className="hidden" 
+                multiple
+              />
             </div>
             
             {selectedFiles.length > 0 && (
-              <div className="bg-muted p-2 rounded-md">
-                <p className="text-sm font-medium">Ausgewählte Dateien: {selectedFiles.length}</p>
-                <ul className="text-xs text-muted-foreground mt-1">
-                  {selectedFiles.slice(0, 3).map((file, index) => (
-                    <li key={index}>{file.webkitRelativePath || file.name}</li>
+              <div className="bg-muted p-2 rounded-md mt-2">
+                <div className="flex justify-between items-center">
+                  <p className="text-sm font-medium">Ausgewählte Dateien: {selectedFiles.length}</p>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setSelectedFiles([])}
+                    className="h-8 px-2 text-xs"
+                  >
+                    Alle entfernen
+                  </Button>
+                </div>
+                <ul className="text-xs text-muted-foreground mt-1 max-h-32 overflow-y-auto">
+                  {selectedFiles.map((file, index) => (
+                    <li key={index} className="flex justify-between items-center py-1">
+                      <span className="truncate">
+                        {file.webkitRelativePath || file.name} 
+                        <span className="text-muted-foreground ml-1">
+                          ({(file.size / 1024).toFixed(1)} KB)
+                        </span>
+                      </span>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleRemoveFile(index)}
+                        className="h-6 w-6 p-0"
+                      >
+                        ×
+                      </Button>
+                    </li>
                   ))}
-                  {selectedFiles.length > 3 && <li>...und {selectedFiles.length - 3} mehr</li>}
                 </ul>
               </div>
             )}
-            
-            <div className="grid gap-2 mt-2">
-              <Label htmlFor="script-code">Oder Code direkt eingeben:</Label>
-              <Textarea 
-                id="script-code" 
-                value={newScript.code} 
-                onChange={(e) => setNewScript({...newScript, code: e.target.value})} 
-                placeholder="// Ihr Script-Code hier..." 
-                className="h-40 font-mono"
-              />
-            </div>
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Abbrechen</Button>
-          <Button onClick={handleSubmit} disabled={uploading}>
+          <Button 
+            onClick={handleSubmit} 
+            disabled={uploading || !newScript.name || selectedFiles.length === 0}
+          >
             {uploading ? "Wird erstellt..." : "Erstellen"}
           </Button>
         </DialogFooter>

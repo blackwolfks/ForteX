@@ -543,10 +543,7 @@ export type Database = {
         Returns: string
       }
       check_license_by_keys: {
-        Args: {
-          p_license_key: string
-          p_server_key: string
-        }
+        Args: { p_license_key: string; p_server_key: string }
         Returns: {
           valid: boolean
           license_key: string
@@ -559,9 +556,7 @@ export type Database = {
         }[]
       }
       check_license_by_server_key: {
-        Args: {
-          p_server_key: string
-        }
+        Args: { p_server_key: string }
         Returns: {
           valid: boolean
           license_key: string
@@ -573,66 +568,47 @@ export type Database = {
           has_file_upload: boolean
         }[]
       }
-      create_license:
-        | {
-            Args: {
-              p_script_name: string
-              p_script_file?: string
-            }
-            Returns: {
-              id: string
-              license_key: string
-              server_key: string
-            }[]
-          }
-        | {
-            Args: {
+      create_license: {
+        Args:
+          | { p_script_name: string; p_script_file?: string }
+          | {
               p_script_name: string
               p_script_file?: string
               p_server_ip?: string
             }
-            Returns: {
-              id: string
-              license_key: string
-              server_key: string
-            }[]
-          }
+        Returns: {
+          id: string
+          license_key: string
+          server_key: string
+        }[]
+      }
       create_public_bucket: {
-        Args: {
-          bucket_name: string
-        }
+        Args: { bucket_name: string }
         Returns: boolean
       }
-      create_website:
-        | {
-            Args: {
-              website_name: string
-              website_url: string
-              website_template: string
-              website_shop_template: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
+      create_website: {
+        Args:
+          | {
               website_name: string
               website_url: string
               website_template: string
               website_shop_template: string
               website_status?: string
             }
-            Returns: string
-          }
+          | {
+              website_name: string
+              website_url: string
+              website_template: string
+              website_shop_template: string
+            }
+        Returns: string
+      }
       delete_license: {
-        Args: {
-          p_license_id: string
-        }
+        Args: { p_license_id: string }
         Returns: boolean
       }
       delete_website: {
-        Args: {
-          site_id: string
-        }
+        Args: { site_id: string }
         Returns: undefined
       }
       enable_pro_access: {
@@ -642,9 +618,7 @@ export type Database = {
         }[]
       }
       enable_subscription: {
-        Args: {
-          tier_name: string
-        }
+        Args: { tier_name: string }
         Returns: {
           success: boolean
         }[]
@@ -668,9 +642,7 @@ export type Database = {
         }[]
       }
       get_file_access_for_license: {
-        Args: {
-          p_license_id: string
-        }
+        Args: { p_license_id: string }
         Returns: {
           id: string
           license_id: string
@@ -681,9 +653,7 @@ export type Database = {
         }[]
       }
       get_template_by_id: {
-        Args: {
-          template_id: string
-        }
+        Args: { template_id: string }
         Returns: {
           id: string
           name: string
@@ -745,9 +715,7 @@ export type Database = {
         }[]
       }
       get_website_by_id: {
-        Args: {
-          site_id: string
-        }
+        Args: { site_id: string }
         Returns: {
           id: string
           name: string
@@ -761,9 +729,7 @@ export type Database = {
         }[]
       }
       get_website_change_history: {
-        Args: {
-          site_id: string
-        }
+        Args: { site_id: string }
         Returns: {
           id: string
           website_id: string
@@ -774,9 +740,7 @@ export type Database = {
         }[]
       }
       get_website_content: {
-        Args: {
-          site_id: string
-        }
+        Args: { site_id: string }
         Returns: {
           id: string
           website_id: string
@@ -786,9 +750,7 @@ export type Database = {
         }[]
       }
       regenerate_server_key: {
-        Args: {
-          p_license_id: string
-        }
+        Args: { p_license_id: string }
         Returns: string
       }
       save_website_builder_settings: {
@@ -800,10 +762,7 @@ export type Database = {
         Returns: boolean
       }
       save_website_content: {
-        Args: {
-          site_id: string
-          content_data: Json
-        }
+        Args: { site_id: string; content_data: Json }
         Returns: undefined
       }
       update_file_access: {
@@ -844,9 +803,9 @@ export type Database = {
           server_key: string
         }[]
       }
-      update_website:
-        | {
-            Args: {
+      update_website: {
+        Args:
+          | {
               site_id: string
               website_name: string
               website_url: string
@@ -854,23 +813,17 @@ export type Database = {
               website_shop_template: string
               website_status?: string
             }
-            Returns: undefined
-          }
-        | {
-            Args: {
+          | {
               website_id: string
               website_name: string
               website_url: string
               website_template: string
               website_shop_template: string
             }
-            Returns: undefined
-          }
+        Returns: undefined
+      }
       update_website_status: {
-        Args: {
-          site_id: string
-          website_status: string
-        }
+        Args: { site_id: string; website_status: string }
         Returns: undefined
       }
     }
@@ -883,27 +836,29 @@ export type Database = {
   }
 }
 
-type PublicSchema = Database[Extract<keyof Database, "public">]
+type DefaultSchema = Database[Extract<keyof Database, "public">]
 
 export type Tables<
-  PublicTableNameOrOptions extends
-    | keyof (PublicSchema["Tables"] & PublicSchema["Views"])
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-        Database[PublicTableNameOrOptions["schema"]]["Views"])
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-      Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
     : never
-  : PublicTableNameOrOptions extends keyof (PublicSchema["Tables"] &
-        PublicSchema["Views"])
-    ? (PublicSchema["Tables"] &
-        PublicSchema["Views"])[PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -911,20 +866,22 @@ export type Tables<
     : never
 
 export type TablesInsert<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema["Tables"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Insert: infer I
       }
       ? I
@@ -932,20 +889,22 @@ export type TablesInsert<
     : never
 
 export type TablesUpdate<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema["Tables"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Update: infer U
       }
       ? U
@@ -953,21 +912,23 @@ export type TablesUpdate<
     : never
 
 export type Enums<
-  PublicEnumNameOrOptions extends
-    | keyof PublicSchema["Enums"]
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
     | { schema: keyof Database },
-  EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicEnumNameOrOptions["schema"]]["Enums"]
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = PublicEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
-    ? PublicSchema["Enums"][PublicEnumNameOrOptions]
+> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof PublicSchema["CompositeTypes"]
+    | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof Database },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof Database
@@ -976,6 +937,12 @@ export type CompositeTypes<
     : never = never,
 > = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
   ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof PublicSchema["CompositeTypes"]
-    ? PublicSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const
