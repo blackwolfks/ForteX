@@ -607,6 +607,10 @@ export type Database = {
         Args: { p_license_id: string }
         Returns: boolean
       }
+      delete_script_bucket: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       delete_website: {
         Args: { site_id: string }
         Returns: undefined
@@ -752,6 +756,10 @@ export type Database = {
       regenerate_server_key: {
         Args: { p_license_id: string }
         Returns: string
+      }
+      rename_script_bucket: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
       }
       save_website_builder_settings: {
         Args: {

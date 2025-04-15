@@ -47,8 +47,8 @@ export function useScriptManagement() {
     }
 
     try {
-      // First ensure bucket exists
-      const bucketReady = await ensureBucketExists('script');
+      // First ensure bucket exists - Changed 'script' to 'remot-script'
+      const bucketReady = await ensureBucketExists('remot-script');
       if (!bucketReady) {
         toast.error("Fehler: Storage-Bucket konnte nicht erstellt werden");
         return false;
@@ -68,7 +68,7 @@ export function useScriptManagement() {
       }
       
       const licenseId = data.id;
-      console.log(`Uploading ${selectedFiles.length} files to bucket 'script/${licenseId}'`);
+      console.log(`Uploading ${selectedFiles.length} files to bucket 'remot-script/${licenseId}'`);
       
       let uploadErrors = 0;
       let uploadSuccesses = 0;
@@ -88,7 +88,8 @@ export function useScriptManagement() {
           let filePath = file.webkitRelativePath || file.name;
           
           try {
-            const { error: uploadError } = await uploadFile('script', `${licenseId}/${filePath}`, file);
+            // Changed 'script' to 'remot-script'
+            const { error: uploadError } = await uploadFile('remot-script', `${licenseId}/${filePath}`, file);
             
             if (uploadError) {
               console.error("Error uploading file:", uploadError);

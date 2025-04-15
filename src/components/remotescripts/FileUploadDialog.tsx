@@ -60,9 +60,9 @@ export default function FileUploadDialog({
       const fileBlob = new Blob([fileArrayBuffer], { type: 'text/plain' });
       const modifiedFile = new File([fileBlob], selectedFile.name, { type: 'text/plain' });
       
-      // Upload the file
+      // Upload the file - Changed 'script' to 'remot-script'
       const success = await uploadFileWithProgress(
-        'script', 
+        'remot-script', 
         filePath, 
         modifiedFile, 
         setUploadProgress
