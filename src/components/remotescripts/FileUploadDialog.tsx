@@ -30,8 +30,18 @@ export default function FileUploadDialog({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      console.log("Selected file:", e.target.files[0].name, "Type:", e.target.files[0].type);
-      setSelectedFile(e.target.files[0]);
+      const file = e.target.files[0];
+      console.log("Selected file:", file.name, "Type:", file.type);
+      
+      // Überprüfe, ob es sich um eine .lua-Datei handelt
+      const fileExtension = file.name.split('.').pop()?.toLowerCase();
+      if (fileExtension !== 'lua') {
+        setUploadError("Nur .lua-Dateien sind erlaubt.");
+        setSelectedFile(null);
+        return;
+      }
+      
+      setSelectedFile(file);
       setUploadError(null);
     }
   };
@@ -96,7 +106,7 @@ export default function FileUploadDialog({
         <DialogHeader>
           <DialogTitle>Datei hochladen</DialogTitle>
           <DialogDescription>
-            Wählen Sie eine Datei aus, die Sie für dieses Script hochladen möchten.
+            Wählen Sie eine Lua-Datei aus, die Sie für dieses Script hochladen möchten.
           </DialogDescription>
         </DialogHeader>
         
@@ -107,7 +117,7 @@ export default function FileUploadDialog({
             type="file" 
             onChange={handleFileChange}
             disabled={uploading}
-            accept="*/*"
+            accept=".lua"
           />
           
           {selectedFile && (
@@ -117,7 +127,7 @@ export default function FileUploadDialog({
                 {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
               </p>
               <p className="text-xs text-muted-foreground">
-                Typ: {selectedFile.type || "Unbekannt"} (wird als text/plain hochgeladen)
+                Typ: Lua-Datei
               </p>
             </div>
           )}
@@ -144,7 +154,7 @@ export default function FileUploadDialog({
           )}
           
           <div className="text-xs text-muted-foreground">
-            <p>Unterstützte Dateitypen: Alle Dateitypen</p>
+            <p>Unterstützte Dateitypen: nur .lua Dateien</p>
             <p>Maximale Dateigröße: 10MB</p>
           </div>
         </div>

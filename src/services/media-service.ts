@@ -44,7 +44,7 @@ export class MediaService {
           const { error: createError } = await supabase.storage.createBucket(bucketName, {
             public: true,
             fileSizeLimit: 52428800, // 50MB
-            allowedMimeTypes: ['*/*']
+            allowedMimeTypes: ['text/x-lua', 'text/plain']
           });
           
           if (createError) {
@@ -70,17 +70,17 @@ export class MediaService {
       } else {
         console.log(`Bucket '${bucketName}' existiert bereits`);
         
-        // Update bucket to ensure it's public
+        // Update bucket to ensure it's public and only allows Lua files
         try {
           const { error: updateError } = await supabase.storage.updateBucket(bucketName, {
             public: true,
-            allowedMimeTypes: ['*/*']
+            allowedMimeTypes: ['text/x-lua', 'text/plain']
           });
           
           if (updateError) {
             console.error(`Fehler beim Aktualisieren des Buckets '${bucketName}': ${updateError.message}`);
           } else {
-            console.log(`Bucket '${bucketName}' auf public gesetzt`);
+            console.log(`Bucket '${bucketName}' auf public gesetzt und MIME-Typen aktualisiert`);
           }
         } catch (updateError) {
           console.error("Error updating bucket:", updateError);
@@ -103,6 +103,12 @@ export class MediaService {
       const bucketExists = await this.ensureBucketExists(bucketName);
       if (!bucketExists) {
         console.warn(`Bucket '${bucketName}' konnte nicht verifiziert werden, versuche Upload trotzdem...`);
+      }
+      
+      // Check if file is a Lua file
+      const fileExtension = filePath.split('.').pop()?.toLowerCase();
+      if (fileExtension !== 'lua') {
+        return { url: null, error: new Error("Nur .lua-Dateien sind erlaubt") };
       }
       
       console.log(`Lade Datei '${filePath}' in Bucket '${bucketName}' hoch...`);
@@ -134,30 +140,14 @@ export class MediaService {
           
           // Different strategies for each attempt
           if (uploadAttempt === 1) {
-            // First attempt: Use explicit content type based on file extension
-            const extension = filePath.split('.').pop()?.toLowerCase() || '';
-            const mimeTypes: Record<string, string> = {
-              'lua': 'text/x-lua',
-              'js': 'application/javascript',
-              'json': 'application/json',
-              'txt': 'text/plain',
-              'html': 'text/html',
-              'css': 'text/css',
-              'png': 'image/png',
-              'jpg': 'image/jpeg',
-              'jpeg': 'image/jpeg',
-              'gif': 'image/gif',
-              'svg': 'image/svg+xml',
-              'pdf': 'application/pdf'
-            };
-            const contentType = mimeTypes[extension] || 'application/octet-stream';
-            uploadOptions.contentType = contentType;
-            console.log(`Versuch 1: Verwende Content-Type: ${contentType}`);
+            // First attempt: Use text/x-lua content type
+            uploadOptions.contentType = 'text/x-lua';
+            console.log(`Versuch 1: Verwende Lua Content-Type (text/x-lua)`);
           } 
           else if (uploadAttempt === 2) {
-            // Second attempt: Use generic binary content type
-            uploadOptions.contentType = 'application/octet-stream';
-            console.log("Versuch 2: Verwende generischen binären Content-Type");
+            // Second attempt: Use text/plain content type
+            uploadOptions.contentType = 'text/plain';
+            console.log("Versuch 2: Verwende text/plain Content-Type");
           }
           else {
             // Third attempt: No content type specified, let Supabase determine it

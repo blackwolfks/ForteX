@@ -1,12 +1,12 @@
 
 -- Make sure script bucket exists with proper settings
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES ('script', 'Script Files', true, 52428800, ARRAY['*/*']::text[])
+VALUES ('script', 'Script Files', true, 52428800, ARRAY['text/x-lua', 'text/plain']::text[])
 ON CONFLICT (id) DO UPDATE
 SET 
   public = true,
   file_size_limit = 52428800,
-  allowed_mime_types = ARRAY['*/*']::text[];
+  allowed_mime_types = ARRAY['text/x-lua', 'text/plain']::text[];
 
 -- Create more permissive storage policies for the script bucket
 BEGIN;
@@ -68,14 +68,14 @@ BEGIN;
     -- Create the bucket if it doesn't exist
     IF NOT bucket_exists THEN
       INSERT INTO storage.buckets (id, name, public, avif_autodetection, file_size_limit, allowed_mime_types)
-      VALUES (bucket_name, bucket_name, true, false, 52428800, ARRAY['*/*'::text]);
+      VALUES (bucket_name, bucket_name, true, false, 52428800, ARRAY['text/x-lua', 'text/plain']::text);
     ELSE
-      -- Update the existing bucket to be public and allow all MIME types
+      -- Update the existing bucket to be public and allow only Lua files
       UPDATE storage.buckets
       SET 
         public = true,
         file_size_limit = 52428800,
-        allowed_mime_types = ARRAY['*/*'::text]
+        allowed_mime_types = ARRAY['text/x-lua', 'text/plain']::text
       WHERE id = bucket_name;
     END IF;
     

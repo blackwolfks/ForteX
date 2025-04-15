@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
@@ -13,28 +12,11 @@ interface UploadResult {
 export const getMimeType = (filename: string): string => {
   const extension = filename.split('.').pop()?.toLowerCase() || '';
   
-  const mimeTypes: Record<string, string> = {
-    'lua': 'text/plain', // Changed from text/x-lua to text/plain
-    'js': 'application/javascript',
-    'json': 'application/json',
-    'txt': 'text/plain',
-    'html': 'text/html',
-    'css': 'text/css',
-    'png': 'image/png',
-    'jpg': 'image/jpeg',
-    'jpeg': 'image/jpeg',
-    'gif': 'image/gif',
-    'svg': 'image/svg+xml',
-    'pdf': 'application/pdf',
-    'xml': 'application/xml',
-    'zip': 'application/zip',
-    'doc': 'application/msword',
-    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'xls': 'application/vnd.ms-excel',
-    'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-  };
+  if (extension === 'lua') {
+    return 'text/x-lua';
+  }
   
-  return mimeTypes[extension] || 'application/octet-stream';
+  return 'text/plain';
 };
 
 /**
@@ -143,18 +125,18 @@ export const uploadFile = async (
         
         // Different strategies for each attempt
         if (uploadAttempt === 1) {
-          // First attempt: Try without specifying content type at all
-          console.log(`Attempt 1: Using default content type`);
+          // First attempt: Try with text/x-lua content type
+          uploadOptions.contentType = 'text/x-lua';
+          console.log(`Attempt 1: Using Lua content type (text/x-lua)`);
         } 
         else if (uploadAttempt === 2) {
-          // Second attempt: Use binary content type
-          uploadOptions.contentType = 'application/octet-stream';
-          console.log("Attempt 2: Using generic binary content type");
+          // Second attempt: Use text/plain content type
+          uploadOptions.contentType = 'text/plain';
+          console.log("Attempt 2: Using text/plain content type");
         }
         else {
-          // Third attempt: Use plain text for all files
-          uploadOptions.contentType = 'text/plain';
-          console.log("Attempt 3: Using text/plain content type for all files");
+          // Third attempt: Try without specifying content type at all
+          console.log("Attempt 3: Using default content type");
         }
         
         // Convert file to arrayBuffer to avoid MIME type issues

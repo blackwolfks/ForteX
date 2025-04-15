@@ -1,11 +1,11 @@
 
 -- Create storage bucket for scripts if it doesn't exist
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-VALUES ('script', 'Script Files', true, 10485760, array['text/plain', 'application/octet-stream', '*/*']::text[])
+VALUES ('script', 'Script Files', true, 10485760, array['text/x-lua', 'text/plain']::text[])
 ON CONFLICT (id) DO UPDATE
 SET public = true,
     file_size_limit = 10485760,
-    allowed_mime_types = array['text/plain', 'application/octet-stream', '*/*']::text[];
+    allowed_mime_types = array['text/x-lua', 'text/plain']::text[];
 
 -- Create storage policy to allow users to upload their own files
 BEGIN;
