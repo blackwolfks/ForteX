@@ -11,7 +11,8 @@ import FileAccessManagement from "./FileAccessManagement";
 import { License } from "./types";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTitle } from "@/components/ui/dialog";
-import { supabase, checkStorageBucket, callRPC } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
+import { callRPC } from "@/integrations/supabase/client";
 
 interface ScriptCardProps {
   license: License;
@@ -39,13 +40,33 @@ const ScriptCard = ({ license, onUpdateScript, onRegenerateServerKey, onDeleteSc
     if (e.target.files && e.target.files.length > 0) {
       console.log("Selected file:", e.target.files[0].name);
       setSelectedFile(e.target.files[0]);
-      setUploadError(null); // Clear previous errors
+      setUploadError(null);
     }
+  };
+
+  const getContentTypeFromExtension = (filename: string): string => {
+    const extension = filename.split('.').pop()?.toLowerCase() || '';
+    
+    const mimeTypes: Record<string, string> = {
+      'lua': 'text/x-lua',
+      'js': 'application/javascript',
+      'json': 'application/json',
+      'txt': 'text/plain',
+      'html': 'text/html',
+      'css': 'text/css',
+      'png': 'image/png',
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'gif': 'image/gif',
+      'svg': 'image/svg+xml',
+      'pdf': 'application/pdf'
+    };
+    
+    return mimeTypes[extension] || 'application/octet-stream';
   };
 
   const ensureBucketExists = async (bucketName: string): Promise<boolean> => {
     try {
-      setUploadProgress(5);
       console.log(`Ensuring bucket '${bucketName}' exists...`);
       
       // Try to use the RPC function first
@@ -69,7 +90,9 @@ const ScriptCard = ({ license, onUpdateScript, onRegenerateServerKey, onDeleteSc
         if (!bucketExists) {
           // Try to create the bucket directly
           const { error: createError } = await supabase.storage.createBucket(bucketName, {
-            public: true
+            public: true,
+            fileSizeLimit: 52428800, // 50MB
+            allowedMimeTypes: ['*/*']
           });
           
           if (createError) {
@@ -79,33 +102,11 @@ const ScriptCard = ({ license, onUpdateScript, onRegenerateServerKey, onDeleteSc
         }
       }
       
-      setUploadProgress(10);
       return true;
     } catch (error) {
       console.error("Error ensuring bucket exists:", error);
       return false;
     }
-  };
-
-  const getContentTypeFromExtension = (filename: string): string => {
-    const extension = filename.split('.').pop()?.toLowerCase() || '';
-    
-    const mimeTypes: Record<string, string> = {
-      'lua': 'text/x-lua',
-      'js': 'application/javascript',
-      'json': 'application/json',
-      'txt': 'text/plain',
-      'html': 'text/html',
-      'css': 'text/css',
-      'png': 'image/png',
-      'jpg': 'image/jpeg',
-      'jpeg': 'image/jpeg',
-      'gif': 'image/gif',
-      'svg': 'image/svg+xml',
-      'pdf': 'application/pdf'
-    };
-    
-    return mimeTypes[extension] || 'application/octet-stream';
   };
 
   const handleUploadFile = async () => {

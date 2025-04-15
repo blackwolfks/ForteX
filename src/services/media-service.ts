@@ -1,5 +1,5 @@
 
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, callRPC } from "@/lib/supabase";
 
 export class MediaService {
   /**
@@ -8,6 +8,22 @@ export class MediaService {
   async ensureBucketExists(bucketName: string): Promise<boolean> {
     try {
       console.log(`Prüfe Storage-Bucket '${bucketName}'...`);
+      
+      // Try to use the RPC function first
+      try {
+        const { data: rpcData, error: rpcError } = await callRPC('create_public_bucket', {
+          bucket_name: bucketName
+        });
+        
+        if (!rpcError) {
+          console.log(`Bucket '${bucketName}' erfolgreich über RPC erstellt/überprüft`);
+          return true;
+        }
+        
+        console.warn("RPC-Bucket-Erstellung fehlgeschlagen:", rpcError);
+      } catch (rpcError) {
+        console.warn("Fehler beim Aufrufen der RPC-Funktion:", rpcError);
+      }
       
       // Bucket-Liste abrufen
       const { data: buckets, error: listError } = await supabase.storage.listBuckets();
@@ -28,6 +44,7 @@ export class MediaService {
           const { error: createError } = await supabase.storage.createBucket(bucketName, {
             public: true,
             fileSizeLimit: 52428800, // 50MB
+            allowedMimeTypes: ['*/*']
           });
           
           if (createError) {
@@ -56,7 +73,8 @@ export class MediaService {
         // Update bucket to ensure it's public
         try {
           const { error: updateError } = await supabase.storage.updateBucket(bucketName, {
-            public: true
+            public: true,
+            allowedMimeTypes: ['*/*']
           });
           
           if (updateError) {
@@ -98,28 +116,94 @@ export class MediaService {
       // For debugging
       console.log(`User ID für Upload: ${userId}`);
       
-      // Datei hochladen mit expliziten Optionen
-      const { data, error } = await supabase.storage
-        .from(bucketName)
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: true
-        });
+      // Try multiple upload strategies
+      let uploadSuccess = false;
+      let uploadAttempt = 0;
+      const maxAttempts = 3;
+      let lastError = null;
+      
+      while (!uploadSuccess && uploadAttempt < maxAttempts) {
+        uploadAttempt++;
+        console.log(`Upload-Versuch ${uploadAttempt}/${maxAttempts}`);
         
-      if (error) {
-        console.error(`Fehler beim Hochladen der Datei '${filePath}': ${error.message}`);
-        console.error(`Fehler-Details: ${JSON.stringify(error)}`);
-        return { url: null, error };
+        try {
+          let uploadOptions: any = {
+            cacheControl: '3600',
+            upsert: true
+          };
+          
+          // Different strategies for each attempt
+          if (uploadAttempt === 1) {
+            // First attempt: Use explicit content type based on file extension
+            const extension = filePath.split('.').pop()?.toLowerCase() || '';
+            const mimeTypes: Record<string, string> = {
+              'lua': 'text/x-lua',
+              'js': 'application/javascript',
+              'json': 'application/json',
+              'txt': 'text/plain',
+              'html': 'text/html',
+              'css': 'text/css',
+              'png': 'image/png',
+              'jpg': 'image/jpeg',
+              'jpeg': 'image/jpeg',
+              'gif': 'image/gif',
+              'svg': 'image/svg+xml',
+              'pdf': 'application/pdf'
+            };
+            const contentType = mimeTypes[extension] || 'application/octet-stream';
+            uploadOptions.contentType = contentType;
+            console.log(`Versuch 1: Verwende Content-Type: ${contentType}`);
+          } 
+          else if (uploadAttempt === 2) {
+            // Second attempt: Use generic binary content type
+            uploadOptions.contentType = 'application/octet-stream';
+            console.log("Versuch 2: Verwende generischen binären Content-Type");
+          }
+          else {
+            // Third attempt: No content type specified, let Supabase determine it
+            console.log("Versuch 3: Kein expliziter Content-Type");
+          }
+          
+          // Datei hochladen mit expliziten Optionen
+          const { data, error } = await supabase.storage
+            .from(bucketName)
+            .upload(filePath, file, uploadOptions);
+            
+          if (error) {
+            console.error(`Fehler bei Upload-Versuch ${uploadAttempt}: ${error.message}`);
+            lastError = error;
+            
+            // Wait a moment before trying again
+            if (uploadAttempt < maxAttempts) {
+              await new Promise(resolve => setTimeout(resolve, 500));
+              continue;
+            } else {
+              throw error;
+            }
+          }
+          
+          // If we get here, upload was successful
+          uploadSuccess = true;
+          console.log(`Upload erfolgreich bei Versuch ${uploadAttempt}:`, data);
+          
+          // Öffentliche URL abrufen
+          const { data: urlData } = supabase.storage
+            .from(bucketName)
+            .getPublicUrl(data.path);
+            
+          console.log(`Datei '${filePath}' erfolgreich hochgeladen, URL: ${urlData.publicUrl}`);
+          
+          return { url: urlData.publicUrl, error: null };
+        } catch (attemptError) {
+          console.error(`Fehler bei Versuch ${uploadAttempt}:`, attemptError);
+          lastError = attemptError as Error;
+        }
       }
       
-      // Öffentliche URL abrufen
-      const { data: urlData } = supabase.storage
-        .from(bucketName)
-        .getPublicUrl(data.path);
-        
-      console.log(`Datei '${filePath}' erfolgreich hochgeladen, URL: ${urlData.publicUrl}`);
-      
-      return { url: urlData.publicUrl, error: null };
+      return { 
+        url: null, 
+        error: lastError || new Error(`Alle ${maxAttempts} Upload-Versuche sind fehlgeschlagen`) 
+      };
     } catch (error) {
       console.error(`Unerwarteter Fehler beim Hochladen der Datei: ${error}`);
       return { url: null, error: error instanceof Error ? error : new Error(String(error)) };

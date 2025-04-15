@@ -1,9 +1,7 @@
-
 import { useState, useEffect } from "react";
 import { License, NewScriptFormData } from "./types";
-import { callRPC, supabase } from "@/integrations/supabase/client";
+import { callRPC, supabase, checkStorageBucket } from "@/lib/supabase";
 import { toast } from "sonner";
-import { checkStorageBucket } from "@/lib/supabase";
 
 export function useScriptManagement() {
   const [licenses, setLicenses] = useState<License[]>([]);
@@ -35,37 +33,6 @@ export function useScriptManagement() {
     fetchLicenses();
   }, []);
 
-  // Function to pre-create the storage bucket before we need it
-  const ensureScriptBucketExists = async () => {
-    console.log("Ensuring 'script' bucket exists before creating license");
-    
-    // First, try to create the bucket using the RPC function
-    try {
-      const { data, error } = await supabase.rpc('create_public_bucket', {
-        bucket_name: 'script'
-      });
-      
-      if (!error) {
-        console.log("Successfully created/verified 'script' bucket via RPC");
-        return true;
-      }
-      
-      console.warn("RPC call failed, trying alternative approach:", error);
-    } catch (e) {
-      console.warn("RPC call exception:", e);
-    }
-    
-    // Fallback to local function
-    const bucketExists = await checkStorageBucket('script');
-    if (!bucketExists) {
-      console.error("Failed to create or find 'script' bucket");
-      toast.error("Fehler beim Erstellen des Storage-Buckets");
-      return false;
-    }
-    
-    return true;
-  };
-
   const handleCreateScript = async (newScript: NewScriptFormData, selectedFiles: File[]) => {
     if (!newScript.name) {
       toast.error("Bitte geben Sie einen Namen für das Script ein");
@@ -79,7 +46,7 @@ export function useScriptManagement() {
 
     try {
       // First ensure bucket exists
-      const bucketReady = await ensureScriptBucketExists();
+      const bucketReady = await checkStorageBucket('script');
       if (!bucketReady) return false;
       
       console.log("Creating license with the following parameters:", {
@@ -305,111 +272,8 @@ export function useScriptManagement() {
     licenses,
     loading,
     handleCreateScript,
-    handleUpdateScript: async (licenseId: string, scriptName: string, scriptCode: string | null, serverIp: string | null, isActive: boolean) => {
-      // Just call the existing function
-      try {
-        console.log("Updating script with parameters:", {
-          p_license_id: licenseId,
-          p_script_name: scriptName,
-          p_script_file: scriptCode,
-          p_server_ip: serverIp,
-          p_aktiv: isActive,
-        });
-        
-        // Using the exact parameter names expected by the updated RPC function
-        const { error } = await callRPC('update_license', {
-          p_license_id: licenseId,
-          p_script_name: scriptName,
-          p_script_file: scriptCode,
-          p_server_ip: serverIp,
-          p_aktiv: isActive
-        });
-        
-        if (error) {
-          console.error("Error updating script:", error);
-          toast.error("Fehler beim Aktualisieren des Scripts: " + error.message);
-          return false;
-        }
-        
-        toast.success("Script erfolgreich aktualisiert");
-        await fetchLicenses();
-        return true;
-      } catch (error) {
-        console.error("Error updating script:", error);
-        toast.error("Fehler beim Aktualisieren des Scripts");
-        return false;
-      }
-    },
-    handleRegenerateServerKey: async (licenseId: string) => {
-      try {
-        console.log("Regenerating server key with parameter:", {
-          p_license_id: licenseId,
-          p_regenerate_server_key: true
-        });
-        
-        // Use the updated regenerate_server_key parameter
-        const { error } = await callRPC('update_license', {
-          p_license_id: licenseId,
-          p_regenerate_server_key: true
-        });
-        
-        if (error) {
-          console.error("Error regenerating server key:", error);
-          toast.error("Fehler beim Regenerieren des Server-Keys: " + error.message);
-          return false;
-        }
-        
-        toast.success("Server-Key erfolgreich regeneriert");
-        await fetchLicenses();
-        return true;
-      } catch (error) {
-        console.error("Error regenerating server key:", error);
-        toast.error("Fehler beim Regenerieren des Server-Keys");
-        return false;
-      }
-    },
-    handleDeleteScript: async (licenseId: string) => {
-      try {
-        console.log("Deleting script with parameter:", {
-          p_license_id: licenseId,
-        });
-        
-        const { error } = await callRPC('delete_license', {
-          p_license_id: licenseId,
-        });
-        
-        if (error) {
-          console.error("Error deleting script:", error);
-          toast.error("Fehler beim Löschen des Scripts: " + error.message);
-          return false;
-        }
-
-        // Also clean up storage
-        try {
-          console.log(`Removing storage files for license ${licenseId}`);
-          const { data, error: listError } = await supabase.storage
-            .from('script')
-            .list(licenseId);
-            
-          if (!listError && data && data.length > 0) {
-            const filePaths = data.map(file => `${licenseId}/${file.name}`);
-            await supabase.storage
-              .from('script')
-              .remove(filePaths);
-          }
-        } catch (storageError) {
-          console.error("Error removing storage files:", storageError);
-          // Continue with success even if storage cleanup fails
-        }
-        
-        toast.success("Script erfolgreich gelöscht");
-        await fetchLicenses();
-        return true;
-      } catch (error) {
-        console.error("Error deleting script:", error);
-        toast.error("Fehler beim Löschen des Scripts");
-        return false;
-      }
-    },
+    handleUpdateScript,
+    handleRegenerateServerKey,
+    handleDeleteScript,
   };
 }

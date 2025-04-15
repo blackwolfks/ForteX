@@ -229,7 +229,7 @@ export async function checkStorageBucket(bucketName: string): Promise<boolean> {
     
     // First try to create using RPC function if available
     try {
-      const { data: rpcData, error: rpcError } = await supabase.rpc('create_public_bucket', {
+      const { data: rpcData, error: rpcError } = await callRPC('create_public_bucket', {
         bucket_name: bucketName
       });
       
@@ -259,7 +259,7 @@ export async function checkStorageBucket(bucketName: string): Promise<boolean> {
       
       const { data, error: createError } = await supabase.storage.createBucket(bucketName, {
         public: true,
-        fileSizeLimit: 10485760, // 10MB
+        fileSizeLimit: 52428800, // 50MB
         allowedMimeTypes: ['*/*']
       });
       
@@ -272,7 +272,7 @@ export async function checkStorageBucket(bucketName: string): Promise<boolean> {
       
       // Try to create a policy to allow public access if needed
       try {
-        await supabase.rpc('create_public_bucket', {
+        await callRPC('create_public_bucket', {
           bucket_name: bucketName
         });
       } catch (policyError) {

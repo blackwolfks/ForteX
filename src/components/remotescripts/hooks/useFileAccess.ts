@@ -1,15 +1,13 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
-import { callRPC, supabase } from "@/integrations/supabase/client";
-import { checkStorageBucket } from "@/lib/supabase";
+import { callRPC, supabase, checkStorageBucket } from "@/lib/supabase";
 
 export interface FileItem {
   name: string;
   id?: string;
   size?: number;
   isPublic: boolean;
-  fullPath: string;  // This is now explicitly defined
+  fullPath: string;
 }
 
 export function useFileAccess(licenseId: string) {
@@ -75,7 +73,7 @@ export function useFileAccess(licenseId: string) {
           id: file.id,
           size: file.metadata?.size,
           isPublic: accessEntry ? accessEntry.is_public : false,
-          fullPath: `${licenseId}/${file.name}`  // Always set the fullPath property
+          fullPath: `${licenseId}/${file.name}`
         };
       });
       
