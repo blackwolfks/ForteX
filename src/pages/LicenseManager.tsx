@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Key, Plus, Copy, RefreshCw, Check, AlertTriangle, Upload } from "lucide-react";
+import { Key, Plus, Copy, RefreshCw, Check, AlertTriangle, Upload, FileIcon, ArrowLeft } from "lucide-react";
 import { callRPC, supabase } from "@/lib/supabase";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { mediaService } from "@/services/media-service";
@@ -35,6 +34,8 @@ const LicenseManager = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [copiedServerKey, setCopiedServerKey] = useState<string | null>(null);
+  const [selectedLicense, setSelectedLicense] = useState<string | null>(null);
+  const [showFileBrowser, setShowFileBrowser] = useState<boolean>(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -259,6 +260,11 @@ const LicenseManager = () => {
     });
   };
 
+  const handleViewFiles = (licenseId: string) => {
+    setSelectedLicense(licenseId);
+    setShowFileBrowser(true);
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto py-10">
@@ -289,250 +295,279 @@ const LicenseManager = () => {
 
   return (
     <div className="container mx-auto py-10">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Lizenzmanager</CardTitle>
-            <CardDescription>Verwalten Sie Ihre Lizenzen und Server-Keys</CardDescription>
-          </div>
-          <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-            <DialogTrigger asChild>
-              <Button className="flex items-center gap-2">
-                <Plus size={16} />
-                <span>Neue Lizenz</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Neue Lizenz erstellen</DialogTitle>
-                <DialogDescription>
-                  Geben Sie einen Namen für Ihr Skript ein und optional den Dateipfad und Server-IP.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="scriptName">Skriptname</Label>
-                  <Input
-                    id="scriptName"
-                    value={scriptName}
-                    onChange={(e) => setScriptName(e.target.value)}
-                    placeholder="z.B. Mein Fahrzeug Skript"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="scriptFile">Skriptdatei (optional)</Label>
-                  <Input
-                    id="scriptFile"
-                    value={scriptFile}
-                    onChange={(e) => setScriptFile(e.target.value)}
-                    placeholder="z.B. vehicle_script.lua"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="serverIp">Server-IP (optional)</Label>
-                  <Input
-                    id="serverIp"
-                    value={serverIp}
-                    onChange={(e) => setServerIp(e.target.value)}
-                    placeholder="z.B. 127.0.0.1"
-                  />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="hasFileUpload"
-                    checked={hasFileUpload}
-                    onChange={(e) => setHasFileUpload(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                  />
-                  <Label htmlFor="hasFileUpload">Datei-Upload erlauben</Label>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsCreateModalOpen(false)}
-                >
-                  Abbrechen
-                </Button>
-                <Button 
-                  onClick={handleCreateLicense}
-                  disabled={createLicenseMutation.isPending}
-                >
-                  {createLicenseMutation.isPending ? "Wird erstellt..." : "Lizenz erstellen"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          
-          <Dialog open={isFileUploadModalOpen} onOpenChange={setIsFileUploadModalOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Skriptdatei hochladen</DialogTitle>
-                <DialogDescription>
-                  Wählen Sie eine Datei aus, die Sie hochladen möchten.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="fileUpload">Datei auswählen</Label>
-                  <Input
-                    id="fileUpload"
-                    type="file"
-                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsFileUploadModalOpen(false)}
-                >
-                  Abbrechen
-                </Button>
-                <Button 
-                  onClick={handleFileUpload}
-                  disabled={uploadFileMutation.isPending || !selectedFile}
-                >
-                  {uploadFileMutation.isPending ? "Wird hochgeladen..." : "Hochladen"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </CardHeader>
-        <CardContent>
-          {licenses.length === 0 ? (
-            <div className="text-center py-10">
-              <Key className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-medium">Keine Lizenzen gefunden</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Sie haben noch keine Lizenzen erstellt. Klicken Sie auf "Neue Lizenz", um zu beginnen.
-              </p>
+      {!showFileBrowser ? (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Lizenzmanager</CardTitle>
+              <CardDescription>Verwalten Sie Ihre Lizenzen und Server-Keys</CardDescription>
             </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Skriptname</TableHead>
-                  <TableHead>Lizenzschlüssel</TableHead>
-                  <TableHead>Server-Key</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Erstellt am</TableHead>
-                  <TableHead>Aktionen</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {licenses.map((license) => (
-                  <TableRow key={license.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{license.script_name}</div>
-                        {license.script_file && (
-                          <div className="text-xs text-muted-foreground">{license.script_file}</div>
-                        )}
-                        {license.server_ip && (
-                          <div className="text-xs text-muted-foreground">IP: {license.server_ip}</div>
-                        )}
-                        <div className="text-xs text-muted-foreground">
-                          {license.has_file_upload ? "Datei-Upload: Erlaubt" : "Datei-Upload: Nicht erlaubt"}
+            <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+              <DialogTrigger asChild>
+                <Button className="flex items-center gap-2">
+                  <Plus size={16} />
+                  <span>Neue Lizenz</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Neue Lizenz erstellen</DialogTitle>
+                  <DialogDescription>
+                    Geben Sie einen Namen für Ihr Skript ein und optional den Dateipfad und Server-IP.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="scriptName">Skriptname</Label>
+                    <Input
+                      id="scriptName"
+                      value={scriptName}
+                      onChange={(e) => setScriptName(e.target.value)}
+                      placeholder="z.B. Mein Fahrzeug Skript"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="scriptFile">Skriptdatei (optional)</Label>
+                    <Input
+                      id="scriptFile"
+                      value={scriptFile}
+                      onChange={(e) => setScriptFile(e.target.value)}
+                      placeholder="z.B. vehicle_script.lua"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="serverIp">Server-IP (optional)</Label>
+                    <Input
+                      id="serverIp"
+                      value={serverIp}
+                      onChange={(e) => setServerIp(e.target.value)}
+                      placeholder="z.B. 127.0.0.1"
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="hasFileUpload"
+                      checked={hasFileUpload}
+                      onChange={(e) => setHasFileUpload(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <Label htmlFor="hasFileUpload">Datei-Upload erlauben</Label>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsCreateModalOpen(false)}
+                  >
+                    Abbrechen
+                  </Button>
+                  <Button 
+                    onClick={handleCreateLicense}
+                    disabled={createLicenseMutation.isPending}
+                  >
+                    {createLicenseMutation.isPending ? "Wird erstellt..." : "Lizenz erstellen"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            
+            <Dialog open={isFileUploadModalOpen} onOpenChange={setIsFileUploadModalOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Skriptdatei hochladen</DialogTitle>
+                  <DialogDescription>
+                    Wählen Sie eine Datei aus, die Sie hochladen möchten.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="fileUpload">Datei auswählen</Label>
+                    <Input
+                      id="fileUpload"
+                      type="file"
+                      onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsFileUploadModalOpen(false)}
+                  >
+                    Abbrechen
+                  </Button>
+                  <Button 
+                    onClick={handleFileUpload}
+                    disabled={uploadFileMutation.isPending || !selectedFile}
+                  >
+                    {uploadFileMutation.isPending ? "Wird hochgeladen..." : "Hochladen"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </CardHeader>
+          <CardContent>
+            {licenses.length === 0 ? (
+              <div className="text-center py-10">
+                <Key className="mx-auto h-12 w-12 text-muted-foreground" />
+                <h3 className="mt-4 text-lg font-medium">Keine Lizenzen gefunden</h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Sie haben noch keine Lizenzen erstellt. Klicken Sie auf "Neue Lizenz", um zu beginnen.
+                </p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Skriptname</TableHead>
+                    <TableHead>Lizenzschlüssel</TableHead>
+                    <TableHead>Server-Key</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Erstellt am</TableHead>
+                    <TableHead>Aktionen</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {licenses.map((license) => (
+                    <TableRow key={license.id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{license.script_name}</div>
+                          {license.script_file && (
+                            <div className="text-xs text-muted-foreground">{license.script_file}</div>
+                          )}
+                          {license.server_ip && (
+                            <div className="text-xs text-muted-foreground">IP: {license.server_ip}</div>
+                          )}
+                          <div className="text-xs text-muted-foreground">
+                            {license.has_file_upload ? "Datei-Upload: Erlaubt" : "Datei-Upload: Nicht erlaubt"}
+                          </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm">
-                          {license.license_key}
-                        </code>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => copyToClipboard(license.license_key, 'license', license.id)}
-                        >
-                          {copiedKey === license.id ? (
-                            <Check className="h-4 w-4 text-green-500" />
-                          ) : (
-                            <Copy className="h-4 w-4" />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm">
+                            {license.license_key}
+                          </code>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => copyToClipboard(license.license_key, 'license', license.id)}
+                          >
+                            {copiedKey === license.id ? (
+                              <Check className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm">
+                            {license.server_key}
+                          </code>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => copyToClipboard(license.server_key, 'server', license.id)}
+                          >
+                            {copiedServerKey === license.id ? (
+                              <Check className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <div
+                            className={`h-2.5 w-2.5 rounded-full ${
+                              license.aktiv ? "bg-green-500" : "bg-red-500"
+                            }`}
+                          />
+                          <span>{license.aktiv ? "Aktiv" : "Inaktiv"}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{formatDate(license.created_at)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          {license.has_file_upload && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openFileUploadModal(license.id)}
+                            >
+                              <Upload className="mr-2 h-3 w-3" />
+                              Datei
+                            </Button>
                           )}
-                        </Button>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm">
-                          {license.server_key}
-                        </code>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => copyToClipboard(license.server_key, 'server', license.id)}
-                        >
-                          {copiedServerKey === license.id ? (
-                            <Check className="h-4 w-4 text-green-500" />
-                          ) : (
-                            <Copy className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <div
-                          className={`h-2.5 w-2.5 rounded-full ${
-                            license.aktiv ? "bg-green-500" : "bg-red-500"
-                          }`}
-                        />
-                        <span>{license.aktiv ? "Aktiv" : "Inaktiv"}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>{formatDate(license.created_at)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        {license.has_file_upload && (
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => openFileUploadModal(license.id)}
+                            onClick={() => regenerateServerKeyMutation.mutate(license.id)}
+                            disabled={regenerateServerKeyMutation.isPending}
                           >
-                            <Upload className="mr-2 h-3 w-3" />
-                            Datei
+                            <RefreshCw className="mr-2 h-3 w-3" />
+                            Server-Key
                           </Button>
-                        )}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => regenerateServerKeyMutation.mutate(license.id)}
-                          disabled={regenerateServerKeyMutation.isPending}
-                        >
-                          <RefreshCw className="mr-2 h-3 w-3" />
-                          Server-Key
-                        </Button>
-                        <Button
-                          variant={license.aktiv ? "destructive" : "outline"}
-                          size="sm"
-                          onClick={() => updateLicenseMutation.mutate({ id: license.id, aktiv: !license.aktiv })}
-                          disabled={updateLicenseMutation.isPending}
-                        >
-                          {license.aktiv ? (
-                            <>
-                              <AlertTriangle className="mr-2 h-3 w-3" />
-                              Deaktivieren
-                            </>
-                          ) : (
-                            <>
-                              <Check className="mr-2 h-3 w-3" />
-                              Aktivieren
-                            </>
+                          <Button
+                            variant={license.aktiv ? "destructive" : "outline"}
+                            size="sm"
+                            onClick={() => updateLicenseMutation.mutate({ id: license.id, aktiv: !license.aktiv })}
+                            disabled={updateLicenseMutation.isPending}
+                          >
+                            {license.aktiv ? (
+                              <>
+                                <AlertTriangle className="mr-2 h-3 w-3" />
+                                Deaktivieren
+                              </>
+                            ) : (
+                              <>
+                                <Check className="mr-2 h-3 w-3" />
+                                Aktivieren
+                              </>
+                            )}
+                          </Button>
+                          {license.has_file_upload && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewFiles(license.id)}
+                            >
+                              <FileIcon className="mr-2 h-3 w-3" />
+                              Dateien
+                            </Button>
                           )}
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <div>
+          <div className="mb-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowFileBrowser(false)}
+              className="mb-4"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Zurück zur Lizenzübersicht
+            </Button>
+          </div>
+          
+          {selectedLicense && (
+            <LicenseFileBrowser licenseId={selectedLicense} />
           )}
-        </CardContent>
-      </Card>
+        </div>
+      )}
     </div>
   );
 };
