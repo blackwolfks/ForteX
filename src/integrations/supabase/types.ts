@@ -834,6 +834,10 @@ export type Database = {
         Args: { site_id: string; website_status: string }
         Returns: undefined
       }
+      upload_to_remot_script: {
+        Args: { file_name: string; file_content: string }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

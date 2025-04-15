@@ -52,7 +52,7 @@ export default function FileUploadDialog({
       }
       
       // Prepare file path including license ID
-      const filePath = `${licenseId}/${selectedFile.name}`;
+      const filePath = `scripts/${licenseId}/${selectedFile.name}`;
       console.log("Uploading to path:", filePath);
       
       // Convert to array buffer first to ensure consistent handling
@@ -60,9 +60,9 @@ export default function FileUploadDialog({
       const fileBlob = new Blob([fileArrayBuffer], { type: 'text/plain' });
       const modifiedFile = new File([fileBlob], selectedFile.name, { type: 'text/plain' });
       
-      // Upload the file - Changed 'script' to 'remot-script'
+      // Upload the file - Changed to 'websites' bucket
       const success = await uploadFileWithProgress(
-        'remot-script', 
+        'websites', 
         filePath, 
         modifiedFile, 
         setUploadProgress
