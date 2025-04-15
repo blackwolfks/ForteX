@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,7 @@ import FileAccessManagement from "./FileAccessManagement";
 import { License } from "./types";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTitle } from "@/components/ui/dialog";
-import { supabase, callRPC } from "@/integrations/supabase/client";
+import { supabase, checkStorageBucket, callRPC } from "@/lib/supabase";
 
 interface ScriptCardProps {
   license: License;

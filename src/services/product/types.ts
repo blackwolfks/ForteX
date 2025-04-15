@@ -1,8 +1,8 @@
 
-import { Product as SupabaseProduct } from '@/lib/supabase';
+// Import from the correct location
+import type { Product } from '@/lib/supabase';
 
-// Re-export the Product type from lib/supabase
-export type Product = SupabaseProduct;
+export type { Product };
 
 export interface CreateProductInput {
   name: string;
@@ -17,11 +17,12 @@ export interface CreateProductInput {
   image?: string;
 }
 
-// Add ProductCartItem interface for shopping cart
 export interface ProductCartItem {
   id: string;
   name: string;
   price: number;
   quantity: number;
   image?: string;
+  isSubscription?: boolean;
+  subscriptionInterval?: string;
 }
