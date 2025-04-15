@@ -2,6 +2,26 @@
 import { createErrorResponse } from "./response.ts";
 import { corsHeaders } from "./cors.ts";
 
+// Helper function to normalize MIME types for lua files
+function normalizeLuaMimeType(mimeType: string): string {
+  // Accept various MIME types that might be sent for Lua files
+  const validLuaMimeTypes = [
+    'text/x-lua',
+    'text/plain',
+    'text/plain;charset=UTF-8',
+    'application/octet-stream',
+    'application/json' // Some systems might incorrectly identify Lua as JSON
+  ];
+  
+  // If it's a known Lua-related MIME type, standardize to text/plain
+  if (validLuaMimeTypes.some(type => mimeType?.includes(type))) {
+    return 'text/plain';
+  }
+  
+  // Return the original MIME type if not recognized
+  return mimeType || 'text/plain';
+}
+
 export async function listScriptFiles(supabase: any, licenseId: string) {
   try {
     console.log(`Listing files for license: ${licenseId}`);

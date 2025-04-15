@@ -65,12 +65,12 @@ export default function FileUploadDialog({
       const filePath = `${licenseId}/${selectedFile.name}`;
       console.log("Uploading to path:", filePath);
       
-      // Convert to array buffer first to ensure consistent handling
+      // Convert to array buffer and create a text blob to ensure consistent handling
       const fileArrayBuffer = await selectedFile.arrayBuffer();
       const fileBlob = new Blob([fileArrayBuffer], { type: 'text/plain' });
       const modifiedFile = new File([fileBlob], selectedFile.name, { type: 'text/plain' });
       
-      // Upload the file - Changed to 'script' bucket
+      // Upload the file - Using 'script' bucket
       const success = await uploadFileWithProgress(
         'script', 
         filePath, 
