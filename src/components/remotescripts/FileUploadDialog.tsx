@@ -4,8 +4,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle } from "lucide-react";
 import { callRPC } from "@/lib/supabase";
 import { uploadFileWithProgress } from "@/services/file-uploader";
+import { toast } from "sonner";
 
 interface FileUploadDialogProps {
   licenseId: string;
@@ -27,7 +30,7 @@ export default function FileUploadDialog({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      console.log("Selected file:", e.target.files[0].name);
+      console.log("Selected file:", e.target.files[0].name, "Type:", e.target.files[0].type);
       setSelectedFile(e.target.files[0]);
       setUploadError(null);
     }
@@ -41,8 +44,16 @@ export default function FileUploadDialog({
       setUploadError(null);
       setUploadProgress(0);
       
+      // Validate file size (10MB limit)
+      if (selectedFile.size > 10 * 1024 * 1024) {
+        setUploadError("Die Datei ist zu groß. Die maximale Dateigröße beträgt 10MB.");
+        setUploading(false);
+        return;
+      }
+      
       // Prepare file path including license ID
       const filePath = `${licenseId}/${selectedFile.name}`;
+      console.log("Uploading to path:", filePath);
       
       // Upload the file
       const success = await uploadFileWithProgress(
@@ -59,20 +70,23 @@ export default function FileUploadDialog({
           p_has_file_upload: true
         });
         
+        toast.success("Datei erfolgreich hochgeladen");
         onOpenChange(false);
         setSelectedFile(null);
         if (onSuccess) onSuccess();
       }
     } catch (error) {
       console.error("Error in upload process:", error);
-      setUploadError(error instanceof Error ? error.message : "Unbekannter Fehler");
+      setUploadError(error instanceof Error ? error.message : "Unbekannter Fehler beim Hochladen");
     } finally {
       setUploading(false);
     }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!uploading) onOpenChange(open);
+    }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Datei hochladen</DialogTitle>
@@ -88,6 +102,7 @@ export default function FileUploadDialog({
             type="file" 
             onChange={handleFileChange}
             disabled={uploading}
+            accept="*/*"
           />
           
           {selectedFile && (
@@ -96,14 +111,19 @@ export default function FileUploadDialog({
               <p className="text-xs text-muted-foreground">
                 {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
               </p>
+              <p className="text-xs text-muted-foreground">
+                Typ: {selectedFile.type || "Unbekannt"}
+              </p>
             </div>
           )}
           
           {uploadError && (
-            <div className="bg-red-50 border border-red-300 rounded-md p-2 text-red-800 text-sm">
-              <p className="font-medium">Fehler:</p>
-              <p>{uploadError}</p>
-            </div>
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                {uploadError}
+              </AlertDescription>
+            </Alert>
           )}
           
           {uploading && (
@@ -117,15 +137,22 @@ export default function FileUploadDialog({
               <p className="text-xs text-center mt-1">{uploadProgress}%</p>
             </div>
           )}
+          
+          <div className="text-xs text-muted-foreground">
+            <p>Unterstützte Dateitypen: Alle Dateitypen</p>
+            <p>Maximale Dateigröße: 10MB</p>
+          </div>
         </div>
         
         <DialogFooter>
           <Button 
             variant="outline" 
             onClick={() => {
-              onOpenChange(false);
-              setSelectedFile(null);
-              setUploadError(null);
+              if (!uploading) {
+                onOpenChange(false);
+                setSelectedFile(null);
+                setUploadError(null);
+              }
             }}
             disabled={uploading}
           >
@@ -135,7 +162,7 @@ export default function FileUploadDialog({
             onClick={handleUpload}
             disabled={!selectedFile || uploading}
           >
-            {uploading ? "Wird hochgeladen..." : "Hochladen"}
+            {uploading ? `Wird hochgeladen (${uploadProgress}%)` : "Hochladen"}
           </Button>
         </DialogFooter>
       </DialogContent>

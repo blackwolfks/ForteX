@@ -25,7 +25,13 @@ export const getMimeType = (filename: string): string => {
     'jpeg': 'image/jpeg',
     'gif': 'image/gif',
     'svg': 'image/svg+xml',
-    'pdf': 'application/pdf'
+    'pdf': 'application/pdf',
+    'xml': 'application/xml',
+    'zip': 'application/zip',
+    'doc': 'application/msword',
+    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'xls': 'application/vnd.ms-excel',
+    'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   };
   
   return mimeTypes[extension] || 'application/octet-stream';
@@ -116,7 +122,6 @@ export const uploadFile = async (
     const maxAttempts = 3;
     let lastError = null;
     
-    // Fixed the condition: changed !uploadAttempt < maxAttempts to uploadAttempt < maxAttempts
     while (uploadAttempt < maxAttempts) {
       uploadAttempt++;
       console.log(`Upload attempt ${uploadAttempt}/${maxAttempts}`);
