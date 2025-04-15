@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ const ScriptCard = ({ license, onUpdateScript, onRegenerateServerKey, onDeleteSc
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const copyToClipboard = (text: string, id: string, type: string) => {
     navigator.clipboard.writeText(text);
@@ -38,7 +40,73 @@ const ScriptCard = ({ license, onUpdateScript, onRegenerateServerKey, onDeleteSc
     if (e.target.files && e.target.files.length > 0) {
       console.log("Selected file:", e.target.files[0].name);
       setSelectedFile(e.target.files[0]);
+      setUploadError(null); // Clear previous errors
     }
+  };
+
+  const ensureBucketExists = async (bucketName: string): Promise<boolean> => {
+    try {
+      setUploadProgress(5);
+      console.log(`Ensuring bucket '${bucketName}' exists...`);
+      
+      // Try to use the RPC function first
+      const { data: rpcData, error: rpcError } = await callRPC('create_public_bucket', {
+        bucket_name: bucketName
+      });
+      
+      if (rpcError) {
+        console.warn("RPC bucket creation failed:", rpcError);
+        
+        // Fallback: Try to directly check if the bucket exists
+        const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+        
+        if (listError) {
+          console.error("Error checking buckets:", listError);
+          return false;
+        }
+        
+        const bucketExists = buckets.some(bucket => bucket.name === bucketName);
+        
+        if (!bucketExists) {
+          // Try to create the bucket directly
+          const { error: createError } = await supabase.storage.createBucket(bucketName, {
+            public: true
+          });
+          
+          if (createError) {
+            console.error("Error creating bucket:", createError);
+            return false;
+          }
+        }
+      }
+      
+      setUploadProgress(10);
+      return true;
+    } catch (error) {
+      console.error("Error ensuring bucket exists:", error);
+      return false;
+    }
+  };
+
+  const getContentTypeFromExtension = (filename: string): string => {
+    const extension = filename.split('.').pop()?.toLowerCase() || '';
+    
+    const mimeTypes: Record<string, string> = {
+      'lua': 'text/x-lua',
+      'js': 'application/javascript',
+      'json': 'application/json',
+      'txt': 'text/plain',
+      'html': 'text/html',
+      'css': 'text/css',
+      'png': 'image/png',
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'gif': 'image/gif',
+      'svg': 'image/svg+xml',
+      'pdf': 'application/pdf'
+    };
+    
+    return mimeTypes[extension] || 'application/octet-stream';
   };
 
   const handleUploadFile = async () => {
@@ -46,58 +114,86 @@ const ScriptCard = ({ license, onUpdateScript, onRegenerateServerKey, onDeleteSc
     
     try {
       setUploading(true);
-      setUploadProgress(10);
+      setUploadError(null);
+      setUploadProgress(5);
       
       // First ensure bucket exists
-      try {
-        const { data: rpcData, error: rpcError } = await supabase.rpc('create_public_bucket', {
-          bucket_name: 'script'
-        });
-        
-        if (rpcError) {
-          console.warn("RPC bucket creation failed:", rpcError);
-        } else {
-          console.log("Bucket verified via RPC");
-        }
-      } catch (e) {
-        console.warn("RPC bucket check failed:", e);
+      const bucketReady = await ensureBucketExists('script');
+      if (!bucketReady) {
+        throw new Error("Storage-Bucket konnte nicht erstellt oder gefunden werden");
       }
       
-      setUploadProgress(30);
+      setUploadProgress(20);
       
-      // Attempt upload with binary content type first
+      // Prepare file upload
       const filePath = `${license.id}/${selectedFile.name}`;
-      console.log(`Uploading ${selectedFile.name} as binary to ${filePath}`);
+      console.log(`Uploading ${selectedFile.name} to ${filePath} (size: ${selectedFile.size} bytes)`);
       
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('script')
-        .upload(filePath, selectedFile, {
-          contentType: 'application/octet-stream',
-          cacheControl: '3600',
-          upsert: true
-        });
-        
-      setUploadProgress(70);
+      // Try multiple upload strategies
+      let uploadSuccess = false;
+      let uploadAttempt = 0;
+      const maxAttempts = 3;
       
-      if (uploadError) {
-        console.error("Binary upload failed:", uploadError);
+      while (!uploadSuccess && uploadAttempt < maxAttempts) {
+        uploadAttempt++;
+        console.log(`Upload attempt ${uploadAttempt}/${maxAttempts}`);
         
-        // Retry without content type specification
-        console.log("Retrying upload without content type...");
-        const { error: retryError } = await supabase.storage
-          .from('script')
-          .upload(filePath, selectedFile, {
+        try {
+          let uploadOptions: any = {
             cacheControl: '3600',
             upsert: true
-          });
+          };
           
-        if (retryError) {
-          console.error("Retry upload also failed:", retryError);
-          throw new Error(`Fehler beim Hochladen: ${retryError.message}`);
+          // Different strategies for each attempt
+          if (uploadAttempt === 1) {
+            // First attempt: Use explicit content type derived from file extension
+            const contentType = getContentTypeFromExtension(selectedFile.name);
+            uploadOptions.contentType = contentType;
+            console.log(`Attempt 1: Using content type: ${contentType}`);
+          } 
+          else if (uploadAttempt === 2) {
+            // Second attempt: Use generic binary content type
+            uploadOptions.contentType = 'application/octet-stream';
+            console.log("Attempt 2: Using generic binary content type");
+          }
+          else {
+            // Third attempt: No content type specified, let Supabase determine it
+            console.log("Attempt 3: No explicit content type");
+          }
+          
+          setUploadProgress(30 + (uploadAttempt * 15));
+          
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('script')
+            .upload(filePath, selectedFile, uploadOptions);
+            
+          if (uploadError) {
+            console.error(`Attempt ${uploadAttempt} failed:`, uploadError);
+            if (uploadAttempt < maxAttempts) {
+              // Wait a moment before trying again
+              await new Promise(resolve => setTimeout(resolve, 500));
+              continue;
+            } else {
+              throw uploadError;
+            }
+          }
+          
+          // If we get here, upload was successful
+          uploadSuccess = true;
+          console.log(`Upload succeeded on attempt ${uploadAttempt}:`, uploadData);
+        } catch (attemptError) {
+          console.error(`Error in attempt ${uploadAttempt}:`, attemptError);
+          if (uploadAttempt >= maxAttempts) {
+            throw attemptError;
+          }
         }
       }
       
-      setUploadProgress(100);
+      if (!uploadSuccess) {
+        throw new Error("Alle Upload-Versuche sind fehlgeschlagen");
+      }
+      
+      setUploadProgress(80);
       
       // Update the license to set has_file_upload = true if not already set
       if (!license.has_file_upload) {
@@ -108,15 +204,16 @@ const ScriptCard = ({ license, onUpdateScript, onRegenerateServerKey, onDeleteSc
         });
       }
       
+      setUploadProgress(100);
       toast.success("Datei erfolgreich hochgeladen");
       setIsUploadModalOpen(false);
       setSelectedFile(null);
     } catch (error) {
       console.error("Error uploading file:", error);
+      setUploadError(error instanceof Error ? error.message : "Unbekannter Fehler beim Upload");
       toast.error("Fehler beim Hochladen der Datei");
     } finally {
       setUploading(false);
-      setUploadProgress(0);
     }
   };
 
@@ -339,12 +436,21 @@ const ScriptCard = ({ license, onUpdateScript, onRegenerateServerKey, onDeleteSc
               </div>
             )}
             
+            {uploadError && (
+              <div className="bg-red-50 border border-red-300 rounded-md p-2 text-red-800 text-sm">
+                <p className="font-medium">Fehler:</p>
+                <p>{uploadError}</p>
+              </div>
+            )}
+            
             {uploading && (
-              <div className="w-full bg-muted rounded-full h-2.5">
-                <div 
-                  className="bg-primary h-2.5 rounded-full" 
-                  style={{ width: `${uploadProgress}%` }}
-                ></div>
+              <div className="space-y-1">
+                <div className="w-full bg-muted rounded-full h-2.5">
+                  <div 
+                    className="bg-primary h-2.5 rounded-full" 
+                    style={{ width: `${uploadProgress}%` }}
+                  ></div>
+                </div>
                 <p className="text-xs text-center mt-1">{uploadProgress}%</p>
               </div>
             )}
@@ -355,6 +461,7 @@ const ScriptCard = ({ license, onUpdateScript, onRegenerateServerKey, onDeleteSc
               onClick={() => {
                 setIsUploadModalOpen(false);
                 setSelectedFile(null);
+                setUploadError(null);
               }}
               disabled={uploading}
             >

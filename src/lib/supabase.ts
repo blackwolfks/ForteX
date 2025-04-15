@@ -1,171 +1,74 @@
-import { createClient } from '@supabase/supabase-js';
-import { supabase as supabaseClient } from '@/integrations/supabase/client';
 
-// For older code parts that still use the direct import
-export const supabase = supabaseClient;
+import { supabase } from "@/integrations/supabase/client";
 
-// Type definitions for database tables
-export type Product = {
-  id: string;
-  name: string;
-  description: string;
-  short_description: string;
-  price: number;
-  category: string;
-  is_subscription: boolean;
-  subscription_interval?: string;
-  cfx_resource_id?: string;
-  cfx_imported: boolean;
-  image?: string;
-  created_at: string;
-  user_id: string;
-};
-
-export type Order = {
-  id: string;
-  user_id: string;
-  plan_id: string;
-  plan_name: string;
-  amount: number;
-  currency: string;
-  payment_method: string;
-  payment_id?: string;
-  status: "pending" | "completed" | "cancelled" | "refunded";
-  created_at: string;
-  updated_at: string;
-  invoice?: Invoice;
-};
-
-export type User = {
-  id: string;
-  email: string;
-  name: string;
-  two_factor_enabled: boolean;
-  two_factor_method: "email" | "phone" | "authenticator" | null;
-  phone_number: string | null;
-};
-
-export type Invoice = {
-  id: string;
-  order_id: string;
-  customer_name: string;
-  customer_email: string;
-  billing_address: {
-    address: string;
-    city: string;
-    postal_code: string;
-    country: string;
-  };
-  plan_name: string;
-  amount: number;
-  currency: string;
-  payment_method: string;
-  invoice_number?: string;
-  invoice_date?: string;
-  invoice_url?: string;
-};
-
-// Type for server licenses with fully qualified fields
-export type ServerLicense = {
-  id: string;
-  license_key: string;
-  server_key: string;
-  script_name: string;
-  script_file?: string | null;
-  server_ip?: string | null;
-  aktiv: boolean;
-  has_file_upload: boolean;
-  created_at: string;
-  updated_at?: string;
-};
-
-// Type for file access permissions
-export type FileAccess = {
-  id: string;
-  license_id: string;
-  file_path: string;
-  is_public: boolean;
-  created_at: string;
-  updated_at: string;
-};
-
-// Improved function to check and create a storage bucket
-export const checkStorageBucket = async (bucketName: string = 'script'): Promise<boolean> => {
+/**
+ * Checks if a storage bucket exists and creates it if it doesn't
+ * @param bucketName The name of the bucket to check/create
+ * @returns A boolean indicating if the bucket exists or was created
+ */
+export async function checkStorageBucket(bucketName: string): Promise<boolean> {
   try {
-    console.log(`Checking storage bucket '${bucketName}'...`);
+    console.log(`[checkStorageBucket] Checking if bucket '${bucketName}' exists...`);
     
-    // Get authentication session to ensure we're properly authenticated
-    const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
-    if (sessionError || !sessionData.session) {
-      console.error("Authentication error:", sessionError);
-      return false;
-    }
-    
-    // First try to get the bucket directly to see if it exists
-    const { data: bucketData, error: bucketError } = await supabaseClient.storage.getBucket(bucketName);
-    
-    if (!bucketError && bucketData) {
-      console.log(`Bucket '${bucketName}' exists, ensuring it's public...`);
-      
-      // Update the bucket to be public
-      try {
-        const { error: updateError } = await supabaseClient.storage.updateBucket(bucketName, {
-          public: true,
-          allowedMimeTypes: ['*/*'],
-          fileSizeLimit: 50 * 1024 * 1024  // 50MB limit
-        });
-        
-        if (updateError) {
-          console.error(`Error updating bucket '${bucketName}':`, updateError);
-        } else {
-          console.log(`Bucket '${bucketName}' updated to be public`);
-        }
-      } catch (e) {
-        console.error("Error updating bucket:", e);
-      }
-      
-      return true;
-    }
-    
-    console.log(`Bucket '${bucketName}' does not exist. Attempting to create it via RPC...`);
-    
-    // Try to create bucket via RPC function first (to bypass RLS issues)
+    // First try to create using RPC function if available
     try {
-      const { data: rpcData, error: rpcError } = await supabaseClient.rpc('create_public_bucket', {
+      const { data: rpcData, error: rpcError } = await supabase.rpc('create_public_bucket', {
         bucket_name: bucketName
       });
       
-      if (rpcError) {
-        console.error('RPC approach failed:', rpcError);
-      } else {
-        console.log('Successfully created bucket via RPC function');
+      if (!rpcError) {
+        console.log(`[checkStorageBucket] Successfully created/checked bucket '${bucketName}' via RPC`);
         return true;
       }
-    } catch (rpcErr) {
-      console.error("RPC error:", rpcErr);
+      
+      console.warn("[checkStorageBucket] RPC method failed, will try direct method:", rpcError);
+    } catch (e) {
+      console.warn("[checkStorageBucket] Error calling RPC function:", e);
     }
     
-    // Fallback: Try direct bucket creation
-    try {
-      console.log("Trying direct bucket creation...");
-      const { data, error: createError } = await supabaseClient.storage.createBucket(bucketName, {
-        public: true,  // Make bucket public
-        fileSizeLimit: 50 * 1024 * 1024  // 50MB limit
+    // Check if the bucket exists
+    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+    
+    if (listError) {
+      console.error("[checkStorageBucket] Error listing buckets:", listError);
+      return false;
+    }
+    
+    const bucketExists = buckets.some(bucket => bucket.name === bucketName);
+    
+    // Create the bucket if it doesn't exist
+    if (!bucketExists) {
+      console.log(`[checkStorageBucket] Bucket '${bucketName}' does not exist, creating...`);
+      
+      const { data, error: createError } = await supabase.storage.createBucket(bucketName, {
+        public: true,
+        fileSizeLimit: 10485760, // 10MB
+        allowedMimeTypes: ['*/*']
       });
       
       if (createError) {
-        console.error(`Error creating bucket '${bucketName}':`, createError);
+        console.error(`[checkStorageBucket] Error creating bucket '${bucketName}':`, createError);
         return false;
       }
       
-      console.log(`Bucket '${bucketName}' successfully created.`);
+      console.log(`[checkStorageBucket] Successfully created bucket '${bucketName}'`, data);
+      
+      // Try to create a policy to allow public access if needed
+      try {
+        await supabase.rpc('create_public_bucket', {
+          bucket_name: bucketName
+        });
+      } catch (policyError) {
+        console.warn("[checkStorageBucket] Could not set policies via RPC, but bucket was created");
+      }
+      
       return true;
-    } catch (directErr) {
-      console.error("Direct bucket creation error:", directErr);
-      return false;
     }
+    
+    console.log(`[checkStorageBucket] Bucket '${bucketName}' already exists`);
+    return true;
   } catch (error) {
-    console.error("Unexpected error checking/creating the bucket:", error);
+    console.error("[checkStorageBucket] Unexpected error:", error);
     return false;
   }
-};
+}
