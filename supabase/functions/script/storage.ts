@@ -2,17 +2,16 @@
 import { createErrorResponse } from "./response.ts";
 import { corsHeaders } from "./cors.ts";
 
-// Alle Referenzen von 'script' zu 'websites' ändern
 export async function listScriptFiles(supabase: any, licenseId: string) {
   try {
     console.log(`Listing files for license: ${licenseId}`);
     
     // Prüfen, ob Bucket existiert
     try {
-      const { data: bucketData, error: bucketError } = await supabase.storage.getBucket('websites');
+      const { data: bucketData, error: bucketError } = await supabase.storage.getBucket('script');
       if (bucketError) {
-        console.error(`Error getting bucket 'websites': ${bucketError.message}`);
-        return { files: null, error: `Storage bucket 'websites' does not exist` };
+        console.error(`Error getting bucket 'script': ${bucketError.message}`);
+        return { files: null, error: `Storage bucket 'script' does not exist` };
       }
     } catch (bucketError) {
       console.error(`Exception checking bucket: ${bucketError}`);
@@ -21,8 +20,8 @@ export async function listScriptFiles(supabase: any, licenseId: string) {
     
     // Liste Dateien im Bucket unter dem Lizenz-Ordner
     const { data, error } = await supabase.storage
-      .from('websites')
-      .list(`scripts/${licenseId}`, {
+      .from('script')
+      .list(`${licenseId}`, {
         limit: 100,
         offset: 0,
         sortBy: { column: 'name', order: 'asc' }
@@ -47,13 +46,13 @@ export async function getScriptFile(supabase: any, licenseId: string, filePath: 
     
     // Normalisieren des Dateipfads
     const normalizedFilePath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
-    const fullPath = `scripts/${licenseId}/${normalizedFilePath}`;
+    const fullPath = `${licenseId}/${normalizedFilePath}`;
     
     // Prüfen, ob die Datei existiert
     try {
       const { data: fileExists } = await supabase.storage
-        .from('websites')
-        .list(`scripts/${licenseId}`, {
+        .from('script')
+        .list(`${licenseId}`, {
           search: normalizedFilePath.split('/').pop()
         });
       
@@ -67,7 +66,7 @@ export async function getScriptFile(supabase: any, licenseId: string, filePath: 
     
     // Datei herunterladen
     const { data, error } = await supabase.storage
-      .from('websites')
+      .from('script')
       .download(fullPath);
     
     if (error) {
@@ -85,7 +84,6 @@ export async function getScriptFile(supabase: any, licenseId: string, filePath: 
   }
 }
 
-// Gleiche Anpassungen für getMainScriptFile
 export async function getMainScriptFile(supabase: any, licenseId: string, files: any[]) {
   console.log(`Finding main script file for license: ${licenseId}`);
   

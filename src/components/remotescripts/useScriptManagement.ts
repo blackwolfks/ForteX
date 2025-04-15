@@ -47,8 +47,8 @@ export function useScriptManagement() {
     }
 
     try {
-      // First ensure bucket exists - Changed to 'websites'
-      const bucketReady = await ensureBucketExists('websites');
+      // First ensure bucket exists - Changed to 'script'
+      const bucketReady = await ensureBucketExists('script');
       if (!bucketReady) {
         toast.error("Fehler: Storage-Bucket konnte nicht erstellt werden");
         return false;
@@ -68,7 +68,7 @@ export function useScriptManagement() {
       }
       
       const licenseId = data.id;
-      console.log(`Uploading ${selectedFiles.length} files to bucket 'websites/scripts/${licenseId}'`);
+      console.log(`Uploading ${selectedFiles.length} files to bucket 'script/${licenseId}'`);
       
       let uploadErrors = 0;
       let uploadSuccesses = 0;
@@ -88,8 +88,8 @@ export function useScriptManagement() {
           let filePath = file.webkitRelativePath || file.name;
           
           try {
-            // Changed to 'websites' bucket with 'scripts/' prefix
-            const { error: uploadError } = await uploadFile('websites', `scripts/${licenseId}/${filePath}`, file);
+            // Changed to 'script' bucket with direct path
+            const { error: uploadError } = await uploadFile('script', `${licenseId}/${filePath}`, file);
             
             if (uploadError) {
               console.error("Error uploading file:", uploadError);
@@ -191,15 +191,15 @@ export function useScriptManagement() {
 
       // Also clean up storage
       try {
-        // Changed to 'websites' bucket with 'scripts/' prefix
+        // Changed to 'script' bucket with direct prefix
         const { data, error: listError } = await supabase.storage
-          .from('websites')
-          .list(`scripts/${licenseId}`);
+          .from('script')
+          .list(`${licenseId}`);
           
         if (!listError && data && data.length > 0) {
-          const filePaths = data.map(file => `scripts/${licenseId}/${file.name}`);
+          const filePaths = data.map(file => `${licenseId}/${file.name}`);
           await supabase.storage
-            .from('websites')
+            .from('script')
             .remove(filePaths);
         }
       } catch (storageError) {
