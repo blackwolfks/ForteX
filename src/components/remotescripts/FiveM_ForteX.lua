@@ -601,4 +601,3 @@ AddEventHandler('onResourceStart', function(resourceName)
 end)
 
 print(SUCCESS_PREFIX .. " Framework initialisiert^7")
-

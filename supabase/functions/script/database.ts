@@ -30,7 +30,7 @@ export async function verifyLicense(supabase: any, licenseKey: string, serverKey
     
     console.log(`Trimmed-Keys: License='${trimmedLicenseKey}', Server='${trimmedServerKey}'`);
     
-    // Zwei Versuche: Einmal mit der RPC-Funktion, einmal mit direkter Abfrage
+    // First attempt: Try using the RPC function which should be the primary method
     const { data: rpcData, error: rpcError } = await supabase.rpc("check_license_by_keys", {
       p_license_key: trimmedLicenseKey,
       p_server_key: trimmedServerKey
@@ -39,7 +39,7 @@ export async function verifyLicense(supabase: any, licenseKey: string, serverKey
     if (rpcError) {
       console.error("RPC error:", rpcError);
       
-      // Fallback: Direkte Datenbankabfrage
+      // Second attempt: Direct database query as fallback
       console.log("Fallback: Direkte Datenbankabfrage der server_licenses Tabelle");
       const { data: directData, error: directError } = await supabase
         .from('server_licenses')
@@ -51,6 +51,20 @@ export async function verifyLicense(supabase: any, licenseKey: string, serverKey
       
       if (directError) {
         console.error("Direct query error:", directError);
+        
+        // Third attempt: Check if license exists but server key doesn't match
+        console.log("Überprüfe, ob Lizenz existiert aber Server-Key nicht stimmt");
+        const { data: licenseCheck } = await supabase
+          .from('server_licenses')
+          .select('license_key, server_key')
+          .eq('license_key', trimmedLicenseKey)
+          .limit(1);
+          
+        if (licenseCheck && licenseCheck.length > 0) {
+          console.error(`Lizenz gefunden, aber Server-Key stimmt nicht überein. DB-Key: ${licenseCheck[0].server_key}, Erhalten: ${trimmedServerKey}`);
+          return { valid: false, error: "Server key does not match license key", license_found: true };
+        }
+        
         return { valid: false, error: `Database error: ${directError.message}` };
       }
       
@@ -71,34 +85,18 @@ export async function verifyLicense(supabase: any, licenseKey: string, serverKey
           }
         };
       }
+      
+      // If we got here, no license was found via direct query either
+      return { valid: false, error: "Invalid license or server key" };
     }
     
-    if (!rpcData || !rpcData.valid) {
-      console.error("Invalid license or server key");
-      
-      // Direktabfrage zur Fehlersuche
-      const { data: directQuery, error: directError } = await supabase
-        .from('server_licenses')
-        .select('license_key, server_key')
-        .eq('license_key', trimmedLicenseKey)
-        .limit(1);
-      
-      if (!directError && directQuery && directQuery.length > 0) {
-        console.log(`Lizenz gefunden, aber Server-Key stimmt nicht überein. DB-Key: ${directQuery[0].server_key}, Erhalten: ${trimmedServerKey}`);
-      } else {
-        console.log("Keine Lizenz mit diesem Schlüssel gefunden");
-        
-        // Alle Lizenzen zur Fehlersuche anzeigen (nur für Debug)
-        const { data: allLicenses } = await supabase
-          .from('server_licenses')
-          .select('license_key, server_key')
-          .limit(5);
-        
-        if (allLicenses && allLicenses.length > 0) {
-          console.log("Verfügbare Lizenzen (erste 5):", allLicenses);
-        }
-      }
-      
+    if (!rpcData) {
+      console.error("RPC returned no data");
+      return { valid: false, error: "Database returned no data" };
+    }
+    
+    if (!rpcData.valid) {
+      console.error("Invalid license or server key according to RPC");
       return { valid: false, error: "Invalid license or server key" };
     }
     
@@ -111,7 +109,7 @@ export async function verifyLicense(supabase: any, licenseKey: string, serverKey
     return { valid: true, data: rpcData };
   } catch (error) {
     console.error("License verification error:", error);
-    return { valid: false, error: "License verification failed" };
+    return { valid: false, error: "License verification failed: " + (error as Error).message };
   }
 }
 

@@ -24,6 +24,7 @@ export async function handleRequest(req: Request): Promise<Response> {
     }
     
     console.log(`Processing request with License Key: ${licenseKey.substring(0, 4)}**** and Server Key: ${serverKey.substring(0, 4)}****`);
+    console.log(`Full keys for debugging: License='${licenseKey}', Server='${serverKey}'`);
     
     // Extract client IP
     const clientIp = getClientIp(req);
@@ -36,11 +37,16 @@ export async function handleRequest(req: Request): Promise<Response> {
       return createErrorResponse("Server configuration error");
     }
     
-    // Verify license
+    // Verify license - with more detailed logging
     console.log("Verifying license...");
     const licenseVerification = await verifyLicense(supabase, licenseKey, serverKey);
+    console.log("License verification result:", JSON.stringify(licenseVerification));
+    
     if (!licenseVerification.valid) {
       console.error("License verification failed:", licenseVerification.error);
+      if (licenseVerification.license_found) {
+        return createErrorResponse("Server key does not match this license", "The provided server key is not valid for this license. Please check your configuration.");
+      }
       return createErrorResponse(licenseVerification.error);
     }
     

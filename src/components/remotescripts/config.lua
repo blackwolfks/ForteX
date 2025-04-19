@@ -11,6 +11,9 @@ CONFIG = {
     -- Die URL des API-Servers - WICHTIG: Verwenden Sie die korrekte Supabase-URL ohne Umleitungen
     ServerUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/verify-license",
     
+    -- Script URL für das eigentliche Script - direkt auf den edge function endpoint
+    ScriptUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/script",
+    
     -- Debug-Modus (auf true setzen für mehr Informationen)
     Debug = true,
     
