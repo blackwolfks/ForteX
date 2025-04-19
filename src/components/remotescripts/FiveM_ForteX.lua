@@ -231,11 +231,11 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
                     if callback then callback(false, "IP-Beschränkung: Nicht autorisierte IP-Adresse") end
                     return
                 end
-            }
+            end
             
             if callback then callback(false, "Datenbankfehler: " .. tostring(statusCode)) end
             return
-        }
+        end
         
         -- JSON-Antwort parsen
         local result, parseError = DecodeJSON(responseData)
@@ -243,13 +243,13 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
             print(ERROR_PREFIX .. " Fehler beim Dekodieren der Server-Antwort: " .. tostring(parseError or "Ungültiges Format") .. "^7")
             if callback then callback(false, "Ungültiges Antwortformat") end
             return
-        }
+        end
         
         if result.valid then
             print(SUCCESS_PREFIX .. " Lizenz erfolgreich in der Datenbank validiert!^7")
             if result.server_ip then
                 print(SUCCESS_PREFIX .. " Server-IP: " .. (result.server_ip == "*" and "Alle IPs erlaubt" or result.server_ip) .. "^7")
-            }
+            end
             
             -- Jetzt den Skript-Endpunkt aufrufen, um das Skript zu laden
             local scriptUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/script"
@@ -260,7 +260,7 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
                     print(ERROR_PREFIX .. " Fehler beim Laden des Scripts: " .. tostring(scriptStatusCode) .. "^7")
                     if callback then callback(false, "Script-Ladefehler: " .. tostring(scriptStatusCode)) end
                     return
-                }
+                end
                 
                 -- Überprüfen, ob die Antwort Lua-Code oder eine Fehlermeldung ist
                 local isLuaCode = scriptContent:match("^%s*--") or 
@@ -281,8 +281,8 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
                         local nameMatch = scriptContent:match("%-%-%s*@name%s*([^\r\n]+)")
                         if nameMatch then
                             scriptName = nameMatch
-                        }
-                    }
+                        end
+                    end
                     
                     print(SUCCESS_PREFIX .. " Führe Datei aus: ^3" .. scriptName .. "^7")
                     
@@ -292,27 +292,27 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
                     -- Zeilenweise ausgeben für bessere Formatierung
                     for line in scriptContent:gmatch("([^\r\n]+)") do
                         print("^3" .. line .. "^7")
-                    }
+                    end
                     
                     print("^2=== Ende der Datei ===^7")
                     
                     if CONFIG.Debug then
                         print(DEBUG_PREFIX .. " Skript-Inhalt (ersten 100 Zeichen): " .. scriptContent:sub(1, 100))
-                    }
+                    end
                     if callback then callback(true, result, scriptContent, scriptName) end
-                } else {
+                else
                     -- Versuche es als JSON zu parsen (könnte eine Fehlermeldung sein)
                     local errorData, _ = DecodeJSON(scriptContent)
                     if errorData and errorData.error then
                         print(ERROR_PREFIX .. " Server-Fehler: " .. errorData.error .. "^7")
                         if callback then callback(false, errorData.error) end
-                    } else {
+                    else
                         -- Wenn es kein JSON ist, geben wir den Inhalt als Fehler zurück
                         print(ERROR_PREFIX .. " Unerwartete Antwort vom Script-Server. Inhalt: " .. scriptContent:sub(1, 100) .. "^7")
                         if callback then callback(false, "Unerwartetes Antwortformat vom Script-Server") end
-                    }
-                }
-            }, "GET", "", {
+                    end
+                end
+            end, "GET", "", {
                 ["Authorization"] = authHeader,
                 ["X-License-Key"] = licenseKey,
                 ["X-Server-Key"] = serverKey,
@@ -320,14 +320,14 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
                 ["Accept"] = "application/json",
                 ["Content-Type"] = "application/json"
             })
-        } else {
+        else
             print(ERROR_PREFIX .. " Lizenz in der Datenbank nicht gültig oder nicht gefunden^7")
             if result.error then
                 print(ERROR_PREFIX .. " Server-Fehler: " .. tostring(result.error) .. "^7")
-            }
+            end
             if callback then callback(false, "Ungültige Lizenz") end
-        }
-    }, "POST", json.encode({
+        end
+    end, "POST", json.encode({
         license_key = licenseKey,
         server_key = serverKey
     }), {
@@ -338,7 +338,7 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
         ["Authorization"] = authHeader,
         ["Accept"] = "application/json"
     })
-}
+end
 
 -- Funktion zum Laden und Ausführen des Remote-Skripts
 function LoadRemoteScript()
@@ -351,7 +351,7 @@ function LoadRemoteScript()
         if not isValid then
             print(ERROR_PREFIX .. " Lizenzprüfung fehlgeschlagen^7")
             return
-        }
+        end
         
         -- Wenn ein Script zurückgegeben wurde, führe es aus
         if scriptContent then
@@ -360,7 +360,7 @@ function LoadRemoteScript()
             if not isValid then
                 print(ERROR_PREFIX .. " Skript-Validierung fehlgeschlagen: " .. scriptOrError .. "^7")
                 return
-            }
+            end
             
             -- Skript ausführen
             print(PREFIX .. " Führe Skript aus: ^3" .. (scriptFilename or "main.lua") .. "^7")
@@ -369,7 +369,7 @@ function LoadRemoteScript()
             print("^2=== Dateiinhalt von " .. (scriptFilename or "main.lua") .. " ===^7")
             for line in scriptContent:gmatch("([^\r\n]+)") do
                 print("^3" .. line .. "^7")
-            }
+            end
             print("^2=== Ende der Datei ===^7")
             
             local func, err = load(scriptContent)
@@ -377,17 +377,17 @@ function LoadRemoteScript()
                 local success, error = pcall(func)
                 if success then
                     print(SUCCESS_PREFIX .. " Skript ^3" .. (scriptFilename or "main.lua") .. "^0 erfolgreich geladen und ausgeführt^7")
-                } else {
+                else
                     print(ERROR_PREFIX .. " Fehler beim Ausführen des Skripts: " .. tostring(error) .. "^7")
-                }
-            } else {
+                end
+            else
                 print(ERROR_PREFIX .. " Fehler beim Kompilieren des Skripts: " .. tostring(err) .. "^7")
-            }
-        } else {
+            end
+        else
             print(SUCCESS_PREFIX .. " Lizenz validiert, aber kein Script zum Ausführen gefunden.^7")
-        }
-    })
-}
+        end
+    end)
+end
 
 -- ForteX API für andere Ressourcen
 ForteX = {}
@@ -400,7 +400,7 @@ ForteX.ListAvailableFiles = function(callback)
             print(ERROR_PREFIX .. " Lizenzprüfung fehlgeschlagen - Dateiliste wird nicht abgerufen^7")
             if callback then callback(false, "Ungültige Lizenz") end
             return
-        }
+        end
         
         -- Dateien auflisten
         local scriptUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/script/list"
@@ -411,20 +411,20 @@ ForteX.ListAvailableFiles = function(callback)
         PerformHttpRequest(scriptUrl, function(statusCode, responseData, responseHeaders)
             if CONFIG.Debug then
                 DebugResponse(statusCode, responseData, responseHeaders)
-            }
+            end
             
             if statusCode ~= 200 then
                 print(ERROR_PREFIX .. " Fehler beim Abrufen der Dateiliste: " .. tostring(statusCode) .. "^7")
                 if callback then callback(false, "Fehler: " .. tostring(statusCode)) end
                 return
-            }
+            end
             
             local fileList, parseError = DecodeJSON(responseData)
             if parseError or not fileList then
                 print(ERROR_PREFIX .. " Fehler beim Dekodieren der Dateiliste: " .. tostring(parseError) .. "^7")
                 if callback then callback(false, "Ungültiges Antwortformat") end
                 return
-            }
+            end
             
             -- Dateien in der Konsole anzeigen
             print("^2Verfügbare Lua-Dateien:^7")
@@ -436,19 +436,19 @@ ForteX.ListAvailableFiles = function(callback)
                     print("^2[" .. luaFileCount .. "]^7 ^3" .. file.name .. "^7")
                     if CONFIG.Debug and file.size then
                         print("    ^8Größe: " .. tostring(file.size) .. " bytes^7")
-                    }
-                }
-            }
+                    end
+                end
+            end
             
             if luaFileCount == 0 then
                 print("^1Keine Lua-Dateien gefunden.^7")
-            }
+            end
             
             print("^3================================^7")
             print("^2Gesamt Lua-Dateien:^7 ^3" .. luaFileCount .. "^7")
             
             if callback then callback(true, fileList) end
-        }, "GET", "", {
+        end, "GET", "", {
             ["Content-Type"] = "application/json",
             ["X-License-Key"] = CONFIG.LicenseKey,
             ["X-Server-Key"] = CONFIG.ServerKey,
@@ -456,16 +456,16 @@ ForteX.ListAvailableFiles = function(callback)
             ["User-Agent"] = "FiveM-ForteX/1.0",
             ["Accept"] = "application/json"
         })
-    })
-}
+    end)
+end
 
 -- Befehl zum Anzeigen der verfügbaren Dateien hinzufügen
 RegisterCommand('fortex_files', function(source, args, rawCommand)
     if source == 0 then -- Nur von der Konsole aus
         print(PREFIX .. " Rufe verfügbare Dateien ab...^7")
         ForteX.ListAvailableFiles()
-    }
-}, true)
+    end
+end, true)
 
 -- Funktion zum Laden einer bestimmten Datei
 ForteX.LoadFile = function(filePath, callback)
@@ -475,7 +475,7 @@ ForteX.LoadFile = function(filePath, callback)
             print(ERROR_PREFIX .. " Lizenzprüfung in der Datenbank fehlgeschlagen - Datei wird nicht geladen^7")
             if callback then callback(false, "Ungültige Lizenz") end
             return
-        }
+        end
         
         -- Jetzt die eigentliche Datei laden
         local scriptUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/script/" .. filePath
@@ -486,31 +486,31 @@ ForteX.LoadFile = function(filePath, callback)
         PerformHttpRequest(scriptUrl, function(statusCode, responseData, responseHeaders)
             if CONFIG.Debug then
                 DebugResponse(statusCode, responseData, responseHeaders)
-            }
+            end
             
             if statusCode ~= 200 then
                 print(ERROR_PREFIX .. " Fehler beim Abrufen der Datei: " .. tostring(statusCode) .. "^7")
                 if callback then callback(false, "Fehler: " .. tostring(statusCode)) end
                 return
-            }
+            end
             
             -- Den Dateinamen aus den Header-Informationen auslesen
             local actualFilename = filePath
             if responseHeaders and responseHeaders["X-Script-Filename"] then
                 actualFilename = responseHeaders["X-Script-Filename"]
                 print(SUCCESS_PREFIX .. " Tatsächlicher Dateiname: ^3" .. actualFilename .. "^7")
-            }
+            end
             
             -- Code im txAdmin anzeigen - Zeilenweise für bessere Formatierung
             print("^2=== Dateiinhalt von " .. actualFilename .. " ===^7")
             for line in responseData:gmatch("([^\r\n]+)") do
                 print("^3" .. line .. "^7")
-            }
+            end
             print("^2=== Ende der Datei ===^7")
             
             print(SUCCESS_PREFIX .. " Datei erfolgreich geladen: ^3" .. actualFilename .. "^7")
             if callback then callback(true, responseData, actualFilename) end
-        }, "GET", "", {
+        end, "GET", "", {
             ["Content-Type"] = "application/json",
             ["X-License-Key"] = CONFIG.LicenseKey,
             ["X-Server-Key"] = CONFIG.ServerKey,
@@ -519,8 +519,8 @@ ForteX.LoadFile = function(filePath, callback)
             ["X-Requested-Filename"] = filePath:match("[^/]+$") or filePath, -- Extrahiert den Dateinamen ohne Pfad
             ["Accept"] = "application/json"
         })
-    })
-}
+    end)
+end
 
 -- Beispielfunktion zum Ausführen einer bestimmten Datei
 ForteX.ExecuteFile = function(filePath, callback)
@@ -528,14 +528,14 @@ ForteX.ExecuteFile = function(filePath, callback)
         if not success then
             if callback then callback(false, data) end
             return
-        }
+        end
         
         local func, err = load(data)
         if not func then
             print(ERROR_PREFIX .. " Fehler beim Kompilieren der Datei: " .. tostring(err) .. "^7")
             if callback then callback(false, "Kompilierfehler: " .. tostring(err)) end
             return
-        }
+        end
         
         -- Den tatsächlichen Dateinamen verwenden oder aus dem Content extrahieren
         local scriptName = actualFilename or filePath
@@ -543,8 +543,8 @@ ForteX.ExecuteFile = function(filePath, callback)
             local nameMatch = data:match("%-%-%s*@name%s*([^\r\n]+)")
             if nameMatch then
                 scriptName = nameMatch
-            }
-        }
+            end
+        end
         
         print(SUCCESS_PREFIX .. " Führe Datei aus: ^3" .. scriptName .. "^7")
         
@@ -552,7 +552,7 @@ ForteX.ExecuteFile = function(filePath, callback)
         print("^2=== Ausführe Dateiinhalt von " .. scriptName .. " ===^7")
         for line in data:gmatch("([^\r\n]+)") do
             print("^3" .. line .. "^7")
-        }
+        end
         print("^2=== Ende der Datei ===^7")
         
         local success, error = pcall(func)
@@ -560,12 +560,12 @@ ForteX.ExecuteFile = function(filePath, callback)
             print(ERROR_PREFIX .. " Fehler beim Ausführen der Datei: " .. tostring(error) .. "^7")
             if callback then callback(false, "Ausführungsfehler: " .. tostring(error)) end
             return
-        }
+        end
         
         print(SUCCESS_PREFIX .. " Datei ^3" .. scriptName .. "^0 erfolgreich ausgeführt^7")
         if callback then callback(true, "Datei erfolgreich ausgeführt") end
-    })
-}
+    end)
+end
 
 -- Befehl zum manuellen Neuladen des Skripts
 RegisterCommand('fortex_reload', function(source, args, rawCommand)
@@ -574,8 +574,8 @@ RegisterCommand('fortex_reload', function(source, args, rawCommand)
         -- Logo beim Reload anzeigen
         ShowASCIILogo()
         LoadRemoteScript()
-    }
-}, true)
+    end
+end, true)
 
 -- Befehl zum Anzeigen der aktuellen Konfiguration
 RegisterCommand('fortex_config', function(source, args, rawCommand)
@@ -586,8 +586,8 @@ RegisterCommand('fortex_config', function(source, args, rawCommand)
         print("^3Server URL: ^0" .. CONFIG.ServerUrl)
         print("^3Debug Modus: ^0" .. tostring(CONFIG.Debug or false))
         print("^3Auto-Update: ^0" .. tostring(CONFIG.AutoUpdate or false))
-    }
-}, true)
+    end
+end, true)
 
 -- Skript bei Ressourcenstart laden
 AddEventHandler('onResourceStart', function(resourceName)
@@ -597,7 +597,8 @@ AddEventHandler('onResourceStart', function(resourceName)
         ShowASCIILogo()
         Wait(1000)
         LoadRemoteScript()
-    }
-})
+    end
+end)
 
 print(SUCCESS_PREFIX .. " Framework initialisiert^7")
+
