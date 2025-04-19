@@ -1,4 +1,3 @@
-
 --[[ 
   ForteX Framework - Remote Script Loader
   
@@ -317,7 +316,7 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
         license_key = licenseKey,
         server_key = serverKey
     }), {
-        ["Content-Type"] = "application/json",
+        ["Content-Type"] = "application/json",  -- Explicitly set to application/json
         ["User-Agent"] = "FiveM-ForteX/1.0",
         ["X-License-Key"] = licenseKey,
         ["X-Server-Key"] = serverKey,
