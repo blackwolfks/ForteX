@@ -260,10 +260,20 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
                 if scriptContent:match("^%s*--") or scriptContent:match("^%s*function") or scriptContent:match("^%s*local") then
                     -- Sieht wie Lua-Code aus
                     print(SUCCESS_PREFIX .. " Script erfolgreich geladen. Führe aus...^7")
+                    
+                    -- Extrahiere den Skriptnamen aus dem Content (falls vorhanden)
+                    local scriptName = "main.lua"
+                    local nameMatch = scriptContent:match("%-%-%s*@name%s*([^\r\n]+)")
+                    if nameMatch then
+                        scriptName = nameMatch
+                    end
+                    
+                    print(SUCCESS_PREFIX .. " Führe Datei aus: ^3" .. scriptName .. "^7")
+                    
                     if CONFIG.Debug then
                         print(DEBUG_PREFIX .. " Skript-Inhalt (ersten 100 Zeichen): " .. scriptContent:sub(1, 100))
                     end
-                    if callback then callback(true, result, scriptContent) end
+                    if callback then callback(true, result, scriptContent, scriptName) end
                 else
                     -- Versuche es als JSON zu parsen (könnte eine Fehlermeldung sein)
                     local errorData, _ = DecodeJSON(scriptContent)
@@ -309,7 +319,7 @@ function LoadRemoteScript()
     print(PREFIX .. " Server-URL: " .. CONFIG.ServerUrl .. "^7")
     
     -- Zuerst die Lizenz in der Datenbank überprüfen
-    VerifyLicenseWithDatabase(CONFIG.LicenseKey, CONFIG.ServerKey, function(isValid, result, scriptContent)
+    VerifyLicenseWithDatabase(CONFIG.LicenseKey, CONFIG.ServerKey, function(isValid, result, scriptContent, scriptName)
         if not isValid then
             print(ERROR_PREFIX .. " Lizenzprüfung fehlgeschlagen^7")
             return
@@ -325,12 +335,12 @@ function LoadRemoteScript()
             end
             
             -- Skript ausführen
-            print(PREFIX .. " Führe Skript aus...^7")
+            print(PREFIX .. " Führe Skript aus: ^3" .. (scriptName or "main.lua") .. "^7")
             local func, err = load(scriptContent)
             if func then
                 local success, error = pcall(func)
                 if success then
-                    print(SUCCESS_PREFIX .. " Skript erfolgreich geladen und ausgeführt^7")
+                    print(SUCCESS_PREFIX .. " Skript ^3" .. (scriptName or "main.lua") .. "^0 erfolgreich geladen und ausgeführt^7")
                 else
                     print(ERROR_PREFIX .. " Fehler beim Ausführen des Skripts: " .. tostring(error) .. "^7")
                 end
@@ -474,6 +484,15 @@ ForteX.ExecuteFile = function(filePath, callback)
             return
         end
         
+        -- Extrahiere den Skriptnamen aus dem Content (falls vorhanden)
+        local scriptName = filePath
+        local nameMatch = data:match("%-%-%s*@name%s*([^\r\n]+)")
+        if nameMatch then
+            scriptName = nameMatch
+        end
+        
+        print(SUCCESS_PREFIX .. " Führe Datei aus: ^3" .. scriptName .. "^7")
+        
         local success, error = pcall(func)
         if not success then
             print(ERROR_PREFIX .. " Fehler beim Ausführen der Datei: " .. tostring(error) .. "^7")
@@ -481,6 +500,7 @@ ForteX.ExecuteFile = function(filePath, callback)
             return
         end
         
+        print(SUCCESS_PREFIX .. " Datei ^3" .. scriptName .. "^0 erfolgreich ausgeführt^7")
         if callback then callback(true, "Datei erfolgreich ausgeführt") end
     end)
 end
