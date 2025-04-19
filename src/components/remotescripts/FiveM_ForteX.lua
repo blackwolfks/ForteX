@@ -425,6 +425,7 @@ ForteX.ListAvailableFiles = function(callback)
             
             if callback then callback(true, fileList) end
         end, "GET", "", {
+            ["Content-Type"] = "application/json",
             ["X-License-Key"] = CONFIG.LicenseKey,
             ["X-Server-Key"] = CONFIG.ServerKey,
             ["Authorization"] = authHeader,
@@ -479,11 +480,12 @@ ForteX.LoadFile = function(filePath, callback)
             print(SUCCESS_PREFIX .. " Datei erfolgreich geladen: ^3" .. actualFilename .. "^7")
             if callback then callback(true, responseData, actualFilename) end
         end, "GET", "", {
+            ["Content-Type"] = "application/json",
             ["X-License-Key"] = CONFIG.LicenseKey,
             ["X-Server-Key"] = CONFIG.ServerKey,
             ["Authorization"] = authHeader,
             ["User-Agent"] = "FiveM-ForteX/1.0",
-            ["Accept"] = "text/plain"
+            ["Accept"] = "application/json"
         })
     end)
 end
