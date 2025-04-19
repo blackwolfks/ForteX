@@ -1,4 +1,3 @@
-
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
@@ -108,7 +107,7 @@ export const uploadFile = async (
     // Try multiple upload strategies
     let uploadSuccess = false;
     let uploadAttempt = 0;
-    const maxAttempts = 4; // Increased from 3 to 4 attempts
+    const maxAttempts = 4;
     let lastError = null;
     
     while (uploadAttempt < maxAttempts) {
@@ -127,27 +126,27 @@ export const uploadFile = async (
         
         let fileBlob: Blob;
         
-        // Different strategies for each attempt
+        // Different strategies for each attempt, prioritizing text/x-lua
         if (uploadAttempt === 1) {
-          // First attempt: Use explicit text/plain MIME type
+          // First attempt: Use text/x-lua MIME type
+          uploadOptions.contentType = 'text/x-lua';
+          fileBlob = new Blob([fileArrayBuffer], { type: 'text/x-lua' });
+          console.log(`Attempt ${uploadAttempt}: Using text/x-lua content type`);
+        } 
+        else if (uploadAttempt === 2) {
+          // Second attempt: Use text/plain MIME type
           uploadOptions.contentType = 'text/plain';
           fileBlob = new Blob([fileArrayBuffer], { type: 'text/plain' });
           console.log(`Attempt ${uploadAttempt}: Using text/plain content type`);
-        } 
-        else if (uploadAttempt === 2) {
-          // Second attempt: Use application/octet-stream MIME type
+        }
+        else if (uploadAttempt === 3) {
+          // Third attempt: Use application/octet-stream MIME type
           uploadOptions.contentType = 'application/octet-stream';
           fileBlob = new Blob([fileArrayBuffer], { type: 'application/octet-stream' });
           console.log(`Attempt ${uploadAttempt}: Using application/octet-stream content type`);
         }
-        else if (uploadAttempt === 3) {
-          // Third attempt: Try with no content type, just use raw file
-          delete uploadOptions.contentType;
-          fileBlob = file;
-          console.log(`Attempt ${uploadAttempt}: Using raw file without content type`);
-        }
         else {
-          // Fourth attempt: Try with base64 data and no special content type
+          // Fourth attempt: Try with no content type
           delete uploadOptions.contentType;
           fileBlob = new Blob([fileArrayBuffer]);
           console.log(`Attempt ${uploadAttempt}: Using raw blob without type`);

@@ -65,10 +65,10 @@ export default function FileUploadDialog({
       const filePath = `${licenseId}/${selectedFile.name}`;
       console.log("Uploading to path:", filePath);
       
-      // Convert to array buffer and create a text blob to ensure consistent handling
+      // Convert to array buffer and create a text blob with explicit text/x-lua MIME type
       const fileArrayBuffer = await selectedFile.arrayBuffer();
-      const fileBlob = new Blob([fileArrayBuffer], { type: 'text/plain' });
-      const modifiedFile = new File([fileBlob], selectedFile.name, { type: 'text/plain' });
+      const fileBlob = new Blob([fileArrayBuffer], { type: 'text/x-lua' });
+      const modifiedFile = new File([fileBlob], selectedFile.name, { type: 'text/x-lua' });
       
       // Upload the file - Using 'script' bucket
       const success = await uploadFileWithProgress(
