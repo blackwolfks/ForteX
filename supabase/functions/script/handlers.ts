@@ -64,15 +64,23 @@ export async function handleRequest(req: Request): Promise<Response> {
     if (licenseData.has_file_upload) {
       if (specificFile) {
         console.log(`Attempting to retrieve specific file: ${specificFile}`);
-        const { content, error } = await getScriptFile(supabase, licenseData.id, specificFile);
+        const { content, error, fileName } = await getScriptFile(supabase, licenseData.id, specificFile);
         if (error) {
           console.error(`Error retrieving specific file: ${error}`);
           return createErrorResponse(error);
         }
         
-        console.log(`Successfully retrieved file: ${specificFile}`);
+        console.log(`Successfully retrieved file: ${fileName || specificFile}`);
+        
+        // Add the actual filename as a header so client knows which file was loaded
+        const headers = { 
+          ...corsHeaders, 
+          "Content-Type": "text/plain",
+          "X-Script-Filename": fileName || specificFile
+        };
+        
         return new Response(content, {
-          headers: { ...corsHeaders, "Content-Type": "text/plain" },
+          headers,
           status: 200
         });
       }
@@ -89,7 +97,11 @@ export async function handleRequest(req: Request): Promise<Response> {
           console.log("Generating sample script due to storage bucket issue");
           const sampleScript = generateSampleScript(licenseData);
           return new Response(sampleScript, {
-            headers: { ...corsHeaders, "Content-Type": "text/plain" },
+            headers: { 
+              ...corsHeaders, 
+              "Content-Type": "text/plain",
+              "X-Script-Filename": "sample.lua" 
+            },
             status: 200
           });
         }
@@ -101,23 +113,35 @@ export async function handleRequest(req: Request): Promise<Response> {
         console.log("No files found, generating sample script");
         const sampleScript = generateSampleScript(licenseData);
         return new Response(sampleScript, {
-          headers: { ...corsHeaders, "Content-Type": "text/plain" },
+          headers: { 
+            ...corsHeaders, 
+            "Content-Type": "text/plain",
+            "X-Script-Filename": "sample.lua" 
+          },
           status: 200
         });
       }
       
       // Get main script file
       console.log("Retrieving main script file");
-      const { content, error } = await getMainScriptFile(supabase, licenseData.id, files as any[]);
+      const { content, error, fileName } = await getMainScriptFile(supabase, licenseData.id, files as any[]);
       
       if (error) {
         console.error(`Error retrieving main script: ${error}`);
         return createErrorResponse(error);
       }
       
-      console.log("Successfully retrieved main script file");
+      console.log(`Successfully retrieved main script file: ${fileName || "unknown.lua"}`);
+      
+      // Add the actual filename as a header
+      const headers = { 
+        ...corsHeaders, 
+        "Content-Type": "text/plain",
+        "X-Script-Filename": fileName || "main.lua" 
+      };
+      
       return new Response(content, {
-        headers: { ...corsHeaders, "Content-Type": "text/plain" },
+        headers,
         status: 200
       });
     }
@@ -127,7 +151,11 @@ export async function handleRequest(req: Request): Promise<Response> {
       console.log("No script file found in database");
       const sampleScript = generateSampleScript(licenseData);
       return new Response(sampleScript, {
-        headers: { ...corsHeaders, "Content-Type": "text/plain" },
+        headers: { 
+          ...corsHeaders, 
+          "Content-Type": "text/plain",
+          "X-Script-Filename": "sample.lua" 
+        },
         status: 200
       });
     }
@@ -135,7 +163,11 @@ export async function handleRequest(req: Request): Promise<Response> {
     // Return the script with proper content type
     console.log("Returning script from database");
     return new Response(licenseData.script_file, {
-      headers: { ...corsHeaders, "Content-Type": "text/plain" },
+      headers: { 
+        ...corsHeaders, 
+        "Content-Type": "text/plain",
+        "X-Script-Filename": `${licenseData.script_name || "script"}.lua`
+      },
       status: 200
     });
     

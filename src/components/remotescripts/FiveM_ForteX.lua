@@ -319,7 +319,7 @@ function LoadRemoteScript()
     print(PREFIX .. " Server-URL: " .. CONFIG.ServerUrl .. "^7")
     
     -- Zuerst die Lizenz in der Datenbank überprüfen
-    VerifyLicenseWithDatabase(CONFIG.LicenseKey, CONFIG.ServerKey, function(isValid, result, scriptContent, scriptName)
+    VerifyLicenseWithDatabase(CONFIG.LicenseKey, CONFIG.ServerKey, function(isValid, result, scriptContent, scriptFilename)
         if not isValid then
             print(ERROR_PREFIX .. " Lizenzprüfung fehlgeschlagen^7")
             return
@@ -335,12 +335,12 @@ function LoadRemoteScript()
             end
             
             -- Skript ausführen
-            print(PREFIX .. " Führe Skript aus: ^3" .. (scriptName or "main.lua") .. "^7")
+            print(PREFIX .. " Führe Skript aus: ^3" .. (scriptFilename or "main.lua") .. "^7")
             local func, err = load(scriptContent)
             if func then
                 local success, error = pcall(func)
                 if success then
-                    print(SUCCESS_PREFIX .. " Skript ^3" .. (scriptName or "main.lua") .. "^0 erfolgreich geladen und ausgeführt^7")
+                    print(SUCCESS_PREFIX .. " Skript ^3" .. (scriptFilename or "main.lua") .. "^0 erfolgreich geladen und ausgeführt^7")
                 else
                     print(ERROR_PREFIX .. " Fehler beim Ausführen des Skripts: " .. tostring(error) .. "^7")
                 end
@@ -457,9 +457,16 @@ ForteX.LoadFile = function(filePath, callback)
                 return
             end
             
-            print(SUCCESS_PREFIX .. " Datei erfolgreich geladen: " .. filePath .. "^7")
-            if callback then callback(true, responseData) end
-        end, "GET", "", {
+            -- Den Dateinamen aus den Header-Informationen auslesen
+            local actualFilename = filePath
+            if responseHeaders and responseHeaders["X-Script-Filename"] then
+                actualFilename = responseHeaders["X-Script-Filename"]
+                print(SUCCESS_PREFIX .. " Tatsächlicher Dateiname: ^3" .. actualFilename .. "^7")
+            end
+            
+            print(SUCCESS_PREFIX .. " Datei erfolgreich geladen: ^3" .. actualFilename .. "^7")
+            if callback then callback(true, responseData, actualFilename) end
+        }, "GET", "", {
             ["X-License-Key"] = CONFIG.LicenseKey,
             ["X-Server-Key"] = CONFIG.ServerKey,
             ["Authorization"] = authHeader,
@@ -471,7 +478,7 @@ end
 
 -- Beispielfunktion zum Ausführen einer bestimmten Datei
 ForteX.ExecuteFile = function(filePath, callback)
-    ForteX.LoadFile(filePath, function(success, data)
+    ForteX.LoadFile(filePath, function(success, data, actualFilename)
         if not success then
             if callback then callback(false, data) end
             return
@@ -484,11 +491,13 @@ ForteX.ExecuteFile = function(filePath, callback)
             return
         end
         
-        -- Extrahiere den Skriptnamen aus dem Content (falls vorhanden)
-        local scriptName = filePath
-        local nameMatch = data:match("%-%-%s*@name%s*([^\r\n]+)")
-        if nameMatch then
-            scriptName = nameMatch
+        -- Den tatsächlichen Dateinamen verwenden oder aus dem Content extrahieren
+        local scriptName = actualFilename or filePath
+        if not actualFilename then
+            local nameMatch = data:match("%-%-%s*@name%s*([^\r\n]+)")
+            if nameMatch then
+                scriptName = nameMatch
+            end
         end
         
         print(SUCCESS_PREFIX .. " Führe Datei aus: ^3" .. scriptName .. "^7")

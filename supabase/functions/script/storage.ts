@@ -78,7 +78,7 @@ export async function getScriptFile(supabase: any, licenseId: string, filePath: 
       
       if (!fileExists || fileExists.length === 0) {
         console.error(`File not found: ${fullPath}`);
-        return { content: null, error: `File not found: ${normalizedFilePath}` };
+        return { content: null, error: `File not found: ${normalizedFilePath}`, fileName: normalizedFilePath };
       }
     } catch (checkError) {
       console.error(`Error checking file existence: ${checkError}`);
@@ -91,16 +91,16 @@ export async function getScriptFile(supabase: any, licenseId: string, filePath: 
     
     if (error) {
       console.error(`Error downloading file: ${error.message}`);
-      return { content: null, error: `Failed to download file: ${error.message}` };
+      return { content: null, error: `Failed to download file: ${error.message}`, fileName: normalizedFilePath };
     }
     
     // Blob in Text umwandeln
     const content = await data.text();
     console.log(`Successfully downloaded file: ${fullPath}`);
-    return { content, error: null };
+    return { content, error: null, fileName: normalizedFilePath };
   } catch (error) {
     console.error(`Exception in getScriptFile: ${error}`);
-    return { content: null, error: `Unexpected error getting file` };
+    return { content: null, error: `Unexpected error getting file`, fileName: filePath };
   }
 }
 
@@ -114,7 +114,9 @@ export async function getMainScriptFile(supabase: any, licenseId: string, files:
     const file = files.find(f => f.name.toLowerCase() === fileName.toLowerCase());
     if (file) {
       console.log(`Found main file by name: ${fileName}`);
-      return await getScriptFile(supabase, licenseId, file.name);
+      const result = await getScriptFile(supabase, licenseId, file.name);
+      // Include the actual file name in the response
+      return { ...result, fileName: file.name };
     }
   }
   
@@ -122,17 +124,21 @@ export async function getMainScriptFile(supabase: any, licenseId: string, files:
   const luaFile = files.find(f => f.name.toLowerCase().endsWith('.lua'));
   if (luaFile) {
     console.log(`Using first lua file as main: ${luaFile.name}`);
-    return await getScriptFile(supabase, licenseId, luaFile.name);
+    const result = await getScriptFile(supabase, licenseId, luaFile.name);
+    // Include the actual file name in the response
+    return { ...result, fileName: luaFile.name };
   }
   
   // If no lua file found, just get the first file
   if (files.length > 0) {
     console.log(`No lua file found, using first file: ${files[0].name}`);
-    return await getScriptFile(supabase, licenseId, files[0].name);
+    const result = await getScriptFile(supabase, licenseId, files[0].name);
+    // Include the actual file name in the response
+    return { ...result, fileName: files[0].name };
   }
   
   console.error(`No files found for license: ${licenseId}`);
-  return { content: null, error: 'No files found' };
+  return { content: null, error: 'No files found', fileName: null };
 }
 
 // Generate a sample script if no script files are found
@@ -184,3 +190,4 @@ end
 print("ForteX Script geladen. Verwenden Sie die 'fortex:initialize' Event, um es zu initialisieren.")
 `;
 }
+
