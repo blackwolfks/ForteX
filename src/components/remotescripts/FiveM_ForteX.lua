@@ -1,4 +1,3 @@
-
 --[[ 
   ForteX Framework - Remote Script Loader
   
@@ -346,6 +345,72 @@ end
 
 -- ForteX API für andere Ressourcen
 ForteX = {}
+
+-- Funktion zum Anzeigen einer Liste aller verfügbaren Lua-Dateien
+ForteX.ListAvailableFiles = function(callback)
+    -- Zuerst die Lizenz überprüfen
+    VerifyLicenseWithDatabase(CONFIG.LicenseKey, CONFIG.ServerKey, function(isValid, result)
+        if not isValid then
+            print(ERROR_PREFIX .. " Lizenzprüfung fehlgeschlagen - Dateiliste wird nicht abgerufen^7")
+            if callback then callback(false, "Ungültige Lizenz") end
+            return
+        end
+        
+        -- Dateien auflisten
+        local scriptUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/script/list"
+        local authHeader = "Basic " .. base64encode(CONFIG.LicenseKey .. ":" .. CONFIG.ServerKey)
+        
+        print(SUCCESS_PREFIX .. " Rufe verfügbare Dateien ab...^7")
+        
+        PerformHttpRequest(scriptUrl, function(statusCode, responseData, responseHeaders)
+            if CONFIG.Debug then
+                DebugResponse(statusCode, responseData, responseHeaders)
+            end
+            
+            if statusCode ~= 200 then
+                print(ERROR_PREFIX .. " Fehler beim Abrufen der Dateiliste: " .. tostring(statusCode) .. "^7")
+                if callback then callback(false, "Fehler: " .. tostring(statusCode)) end
+                return
+            end
+            
+            local fileList, parseError = DecodeJSON(responseData)
+            if parseError or not fileList then
+                print(ERROR_PREFIX .. " Fehler beim Dekodieren der Dateiliste: " .. tostring(parseError) .. "^7")
+                if callback then callback(false, "Ungültiges Antwortformat") end
+                return
+            end
+            
+            -- Dateien in der Konsole anzeigen
+            print("^2Verfügbare Lua-Dateien:^7")
+            print("^3================================^7")
+            for _, file in ipairs(fileList) do
+                if file.name:match("%.lua$") then
+                    print("^3" .. file.name .. "^7")
+                    if CONFIG.Debug and file.size then
+                        print("  ^8Größe: " .. tostring(file.size) .. " bytes^7")
+                    end
+                end
+            end
+            print("^3================================^7")
+            
+            if callback then callback(true, fileList) end
+        end, "GET", "", {
+            ["X-License-Key"] = CONFIG.LicenseKey,
+            ["X-Server-Key"] = CONFIG.ServerKey,
+            ["Authorization"] = authHeader,
+            ["User-Agent"] = "FiveM-ForteX/1.0",
+            ["Accept"] = "application/json"
+        })
+    end)
+end
+
+-- Befehl zum Anzeigen der verfügbaren Dateien hinzufügen
+RegisterCommand('fortex_files', function(source, args, rawCommand)
+    if source == 0 then -- Nur von der Konsole aus
+        print(PREFIX .. " Rufe verfügbare Dateien ab...^7")
+        ForteX.ListAvailableFiles()
+    end
+end, true)
 
 -- Funktion zum Laden einer bestimmten Datei
 ForteX.LoadFile = function(filePath, callback)
