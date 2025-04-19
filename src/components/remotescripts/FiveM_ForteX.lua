@@ -1,4 +1,3 @@
-
 --[[ 
   ForteX Framework - Remote Script Loader
   
@@ -314,8 +313,8 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
             if callback then callback(false, "Ungültige Lizenz") end
         end
     end, "POST", json.encode({
-        license_key: licenseKey,
-        server_key: serverKey
+        license_key = licenseKey,
+        server_key = serverKey
     }), {
         ["Content-Type"] = "application/json",
         ["User-Agent"] = "FiveM-ForteX/1.0",
