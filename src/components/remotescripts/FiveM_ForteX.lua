@@ -1,3 +1,4 @@
+
 --[[ 
   ForteX Framework - Remote Script Loader
   
@@ -478,7 +479,7 @@ ForteX.LoadFile = function(filePath, callback)
             
             print(SUCCESS_PREFIX .. " Datei erfolgreich geladen: ^3" .. actualFilename .. "^7")
             if callback then callback(true, responseData, actualFilename) end
-        }, "GET", "", {
+        end, "GET", "", {
             ["X-License-Key"] = CONFIG.LicenseKey,
             ["X-Server-Key"] = CONFIG.ServerKey,
             ["Authorization"] = authHeader,
