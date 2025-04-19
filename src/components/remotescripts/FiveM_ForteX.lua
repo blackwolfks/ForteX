@@ -15,7 +15,7 @@ local function ShowASCIILogo()
  #       #     # #     #    #    #         # #   
  ######  #     # #####      #    #####      #   
  #       #     # #   #      #    #         # #    
- #       #     # #    #     #    #        #   #    
+ #       #     # #    #     #    ####### #     #    
  #        #####  #     #    #    ####### #     #    
 ]])
     print("^0")  -- Zurück zur Standardfarbe
@@ -383,15 +383,23 @@ ForteX.ListAvailableFiles = function(callback)
             -- Dateien in der Konsole anzeigen
             print("^2Verfügbare Lua-Dateien:^7")
             print("^3================================^7")
+            local luaFileCount = 0
             for _, file in ipairs(fileList) do
                 if file.name:match("%.lua$") then
-                    print("^3" .. file.name .. "^7")
+                    luaFileCount = luaFileCount + 1
+                    print("^2[" .. luaFileCount .. "]^7 ^3" .. file.name .. "^7")
                     if CONFIG.Debug and file.size then
-                        print("  ^8Größe: " .. tostring(file.size) .. " bytes^7")
+                        print("    ^8Größe: " .. tostring(file.size) .. " bytes^7")
                     end
                 end
             end
+            
+            if luaFileCount == 0 then
+                print("^1Keine Lua-Dateien gefunden.^7")
+            end
+            
             print("^3================================^7")
+            print("^2Gesamt Lua-Dateien:^7 ^3" .. luaFileCount .. "^7")
             
             if callback then callback(true, fileList) end
         end, "GET", "", {
