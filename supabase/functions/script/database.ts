@@ -30,17 +30,50 @@ export async function verifyLicense(supabase: any, licenseKey: string, serverKey
     
     console.log(`Trimmed-Keys: License='${trimmedLicenseKey}', Server='${trimmedServerKey}'`);
     
-    const { data, error } = await supabase.rpc("check_license_by_keys", {
+    // Zwei Versuche: Einmal mit der RPC-Funktion, einmal mit direkter Abfrage
+    const { data: rpcData, error: rpcError } = await supabase.rpc("check_license_by_keys", {
       p_license_key: trimmedLicenseKey,
       p_server_key: trimmedServerKey
     });
     
-    if (error) {
-      console.error("Database error:", error);
-      return { valid: false, error: `Database error: ${error.message}` };
+    if (rpcError) {
+      console.error("RPC error:", rpcError);
+      
+      // Fallback: Direkte Datenbankabfrage
+      console.log("Fallback: Direkte Datenbankabfrage der server_licenses Tabelle");
+      const { data: directData, error: directError } = await supabase
+        .from('server_licenses')
+        .select('*')
+        .eq('license_key', trimmedLicenseKey)
+        .eq('server_key', trimmedServerKey)
+        .limit(1)
+        .single();
+      
+      if (directError) {
+        console.error("Direct query error:", directError);
+        return { valid: false, error: `Database error: ${directError.message}` };
+      }
+      
+      if (directData) {
+        console.log("Lizenz direkt in der Datenbank gefunden:", directData);
+        return { 
+          valid: true, 
+          data: {
+            ...directData,
+            id: directData.id,
+            license_key: directData.license_key,
+            server_key: directData.server_key,
+            script_name: directData.script_name,
+            script_file: directData.script_file,
+            server_ip: directData.server_ip,
+            aktiv: directData.aktiv,
+            has_file_upload: directData.has_file_upload
+          }
+        };
+      }
     }
     
-    if (!data || !data.valid) {
+    if (!rpcData || !rpcData.valid) {
       console.error("Invalid license or server key");
       
       // Direktabfrage zur Fehlersuche
@@ -52,18 +85,30 @@ export async function verifyLicense(supabase: any, licenseKey: string, serverKey
       
       if (!directError && directQuery && directQuery.length > 0) {
         console.log(`Lizenz gefunden, aber Server-Key stimmt nicht überein. DB-Key: ${directQuery[0].server_key}, Erhalten: ${trimmedServerKey}`);
+      } else {
+        console.log("Keine Lizenz mit diesem Schlüssel gefunden");
+        
+        // Alle Lizenzen zur Fehlersuche anzeigen (nur für Debug)
+        const { data: allLicenses } = await supabase
+          .from('server_licenses')
+          .select('license_key, server_key')
+          .limit(5);
+        
+        if (allLicenses && allLicenses.length > 0) {
+          console.log("Verfügbare Lizenzen (erste 5):", allLicenses);
+        }
       }
       
       return { valid: false, error: "Invalid license or server key" };
     }
     
-    if (!data.aktiv) {
+    if (!rpcData.aktiv) {
       console.error("License is not active");
       return { valid: false, error: "License is not active" };
     }
     
-    console.log("License verification successful:", data);
-    return { valid: true, data };
+    console.log("License verification successful:", rpcData);
+    return { valid: true, data: rpcData };
   } catch (error) {
     console.error("License verification error:", error);
     return { valid: false, error: "License verification failed" };
