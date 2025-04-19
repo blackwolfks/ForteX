@@ -282,6 +282,11 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
                     
                     print(SUCCESS_PREFIX .. " Führe Datei aus: ^3" .. scriptName .. "^7")
                     
+                    -- Code im txAdmin anzeigen
+                    print("^2=== Dateiinhalt von " .. scriptName .. " ===^7")
+                    print("^3" .. scriptContent .. "^7")
+                    print("^2=== Ende der Datei ===^7")
+                    
                     if CONFIG.Debug then
                         print(DEBUG_PREFIX .. " Skript-Inhalt (ersten 100 Zeichen): " .. scriptContent:sub(1, 100))
                     end
@@ -303,7 +308,8 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
                 ["X-License-Key"] = licenseKey,
                 ["X-Server-Key"] = serverKey,
                 ["User-Agent"] = "FiveM-ForteX/1.0",
-                ["Accept"] = "text/plain"
+                ["Accept"] = "application/json",
+                ["Content-Type"] = "application/json"
             })
         else
             print(ERROR_PREFIX .. " Lizenz in der Datenbank nicht gültig oder nicht gefunden^7")
@@ -320,7 +326,8 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
         ["User-Agent"] = "FiveM-ForteX/1.0",
         ["X-License-Key"] = licenseKey,
         ["X-Server-Key"] = serverKey,
-        ["Authorization"] = authHeader
+        ["Authorization"] = authHeader,
+        ["Accept"] = "application/json"
     })
 end
 
@@ -493,7 +500,6 @@ ForteX.LoadFile = function(filePath, callback)
             ["X-Requested-Filename"] = filePath:match("[^/]+$") or filePath, -- Extrahiert den Dateinamen ohne Pfad
             ["Accept"] = "application/json"
         })
-    end)
 end
 
 -- Beispielfunktion zum Ausführen einer bestimmten Datei
@@ -521,6 +527,11 @@ ForteX.ExecuteFile = function(filePath, callback)
         end
         
         print(SUCCESS_PREFIX .. " Führe Datei aus: ^3" .. scriptName .. "^7")
+        
+        -- Code im txAdmin anzeigen vor der Ausführung
+        print("^2=== Ausführe Dateiinhalt von " .. scriptName .. " ===^7")
+        print("^3" .. data .. "^7")
+        print("^2=== Ende der Datei ===^7")
         
         local success, error = pcall(func)
         if not success then

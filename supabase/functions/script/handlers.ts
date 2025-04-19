@@ -59,7 +59,15 @@ export async function handleRequest(req: Request): Promise<Response> {
     const pathParts = url.pathname.split('/');
     const specificFile = pathParts.length > 2 ? pathParts.slice(2).join('/') : null;
     
-    console.log(`Has file upload: ${licenseData.has_file_upload}, Specific file requested: ${specificFile || "None"}`);
+    // Extract requested filename from headers if present
+    let requestedFileName = null;
+    const reqHeaders = Object.fromEntries(req.headers.entries());
+    if (reqHeaders["x-requested-filename"]) {
+      requestedFileName = reqHeaders["x-requested-filename"];
+      console.log(`X-Requested-Filename header found: ${requestedFileName}`);
+    }
+    
+    console.log(`Has file upload: ${licenseData.has_file_upload}, Specific file requested: ${specificFile || requestedFileName || "None"}`);
     
     if (licenseData.has_file_upload) {
       if (specificFile) {
@@ -120,14 +128,6 @@ export async function handleRequest(req: Request): Promise<Response> {
           },
           status: 200
         });
-      }
-      
-      // Extract requested filename from headers if present
-      let requestedFileName = null;
-      const reqHeaders = Object.fromEntries(req.headers.entries());
-      if (reqHeaders["x-requested-filename"]) {
-        requestedFileName = reqHeaders["x-requested-filename"];
-        console.log(`X-Requested-Filename header found: ${requestedFileName}`);
       }
       
       // Get main script file with preference for requested file

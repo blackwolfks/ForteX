@@ -24,9 +24,15 @@ export async function verifyLicense(supabase: any, licenseKey: string, serverKey
   try {
     console.log("Überprüfe Lizenz mit check_license_by_keys Funktion");
     
+    // Explizit Lizenz- und Server-Key trimmen, um Leerzeichen zu entfernen
+    const trimmedLicenseKey = licenseKey.trim();
+    const trimmedServerKey = serverKey.trim();
+    
+    console.log(`Trimmed-Keys: License='${trimmedLicenseKey}', Server='${trimmedServerKey}'`);
+    
     const { data, error } = await supabase.rpc("check_license_by_keys", {
-      p_license_key: licenseKey,
-      p_server_key: serverKey
+      p_license_key: trimmedLicenseKey,
+      p_server_key: trimmedServerKey
     });
     
     if (error) {
@@ -36,6 +42,18 @@ export async function verifyLicense(supabase: any, licenseKey: string, serverKey
     
     if (!data || !data.valid) {
       console.error("Invalid license or server key");
+      
+      // Direktabfrage zur Fehlersuche
+      const { data: directQuery, error: directError } = await supabase
+        .from('server_licenses')
+        .select('license_key, server_key')
+        .eq('license_key', trimmedLicenseKey)
+        .limit(1);
+      
+      if (!directError && directQuery && directQuery.length > 0) {
+        console.log(`Lizenz gefunden, aber Server-Key stimmt nicht überein. DB-Key: ${directQuery[0].server_key}, Erhalten: ${trimmedServerKey}`);
+      }
+      
       return { valid: false, error: "Invalid license or server key" };
     }
     
