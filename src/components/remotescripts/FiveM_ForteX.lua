@@ -477,6 +477,11 @@ ForteX.LoadFile = function(filePath, callback)
                 print(SUCCESS_PREFIX .. " Tatsächlicher Dateiname: ^3" .. actualFilename .. "^7")
             end
             
+            -- Code im txAdmin anzeigen
+            print("^2=== Dateiinhalt von " .. actualFilename .. " ===^7")
+            print("^3" .. responseData .. "^7")
+            print("^2=== Ende der Datei ===^7")
+            
             print(SUCCESS_PREFIX .. " Datei erfolgreich geladen: ^3" .. actualFilename .. "^7")
             if callback then callback(true, responseData, actualFilename) end
         end, "GET", "", {
