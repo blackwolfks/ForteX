@@ -593,13 +593,13 @@ export type Database = {
               website_url: string
               website_template: string
               website_shop_template: string
-              website_status?: string
             }
           | {
               website_name: string
               website_url: string
               website_template: string
               website_shop_template: string
+              website_status?: string
             }
         Returns: string
       }

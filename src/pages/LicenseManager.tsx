@@ -10,6 +10,7 @@ import { Key, Plus, Copy, RefreshCw, Check, AlertTriangle, Upload, FileIcon, Arr
 import { callRPC, supabase } from "@/lib/supabase";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { mediaService } from "@/services/media-service";
+import LicenseFileBrowser from "@/components/LicenseFileBrowser";
 
 type License = {
   id: string;
