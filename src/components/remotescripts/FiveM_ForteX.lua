@@ -1,3 +1,4 @@
+
 --[[ 
   ForteX Framework - Remote Script Loader
   
@@ -191,6 +192,11 @@ function DebugResponse(statusCode, responseData, responseHeaders)
             for k, v in pairs(responseHeaders) do
                 print("  " .. k .. ": " .. v)
             end
+            
+            -- Prüfe auf Dateinamen-Header
+            if responseHeaders["X-Script-Filename"] then
+                print(DEBUG_PREFIX .. " Dateiname aus Header: " .. responseHeaders["X-Script-Filename"] .. "^7")
+            end
         end
     end
 end
@@ -261,11 +267,18 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
                     -- Sieht wie Lua-Code aus
                     print(SUCCESS_PREFIX .. " Script erfolgreich geladen. Führe aus...^7")
                     
-                    -- Extrahiere den Skriptnamen aus dem Content (falls vorhanden)
+                    -- Extrahiere den Skriptnamen aus dem Content (falls vorhanden) oder verwende den Dateinamen aus dem Header
                     local scriptName = "main.lua"
-                    local nameMatch = scriptContent:match("%-%-%s*@name%s*([^\r\n]+)")
-                    if nameMatch then
-                        scriptName = nameMatch
+                    
+                    -- Versuche zuerst, den Dateinamen aus dem Header zu extrahieren
+                    if scriptHeaders and scriptHeaders["X-Script-Filename"] then
+                        scriptName = scriptHeaders["X-Script-Filename"]
+                    else
+                        -- Fallback: Versuche den Namen aus dem Skript-Kommentar zu extrahieren
+                        local nameMatch = scriptContent:match("%-%-%s*@name%s*([^\r\n]+)")
+                        if nameMatch then
+                            scriptName = nameMatch
+                        end
                     end
                     
                     print(SUCCESS_PREFIX .. " Führe Datei aus: ^3" .. scriptName .. "^7")
@@ -301,8 +314,8 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
             if callback then callback(false, "Ungültige Lizenz") end
         end
     end, "POST", json.encode({
-        license_key = licenseKey,
-        server_key = serverKey
+        license_key: licenseKey,
+        server_key: serverKey
     }), {
         ["Content-Type"] = "application/json",
         ["User-Agent"] = "FiveM-ForteX/1.0",

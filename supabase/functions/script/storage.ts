@@ -94,10 +94,13 @@ export async function getScriptFile(supabase: any, licenseId: string, filePath: 
       return { content: null, error: `Failed to download file: ${error.message}`, fileName: normalizedFilePath };
     }
     
+    // Extrahiere den tatsächlichen Dateinamen aus dem Pfad
+    const actualFileName = normalizedFilePath.split('/').pop() || normalizedFilePath;
+    
     // Blob in Text umwandeln
     const content = await data.text();
-    console.log(`Successfully downloaded file: ${fullPath}`);
-    return { content, error: null, fileName: normalizedFilePath };
+    console.log(`Successfully downloaded file: ${fullPath}, filename: ${actualFileName}`);
+    return { content, error: null, fileName: actualFileName };
   } catch (error) {
     console.error(`Exception in getScriptFile: ${error}`);
     return { content: null, error: `Unexpected error getting file`, fileName: filePath };
@@ -190,4 +193,3 @@ end
 print("ForteX Script geladen. Verwenden Sie die 'fortex:initialize' Event, um es zu initialisieren.")
 `;
 }
-
