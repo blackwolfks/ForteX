@@ -107,10 +107,25 @@ export async function getScriptFile(supabase: any, licenseId: string, filePath: 
   }
 }
 
-export async function getMainScriptFile(supabase: any, licenseId: string, files: any[]) {
-  console.log(`Finding main script file for license: ${licenseId}`);
+// Diese Funktion wurde geändert, um die Datei mit dem angegebenen Namen zu priorisieren
+export async function getMainScriptFile(supabase: any, licenseId: string, files: any[], requestedFileName: string | null = null) {
+  console.log(`Finding main script file for license: ${licenseId}, requestedFileName: ${requestedFileName}`);
   
-  // First try to find important files by name
+  // Wenn ein spezifischer Dateiname angefordert wurde, versuche diese zuerst zu finden
+  if (requestedFileName) {
+    console.log(`Looking for specifically requested file: ${requestedFileName}`);
+    const requestedFile = files.find(f => f.name.toLowerCase() === requestedFileName.toLowerCase());
+    
+    if (requestedFile) {
+      console.log(`Found requested file: ${requestedFileName}`);
+      const result = await getScriptFile(supabase, licenseId, requestedFile.name);
+      return { ...result, fileName: requestedFile.name };
+    } else {
+      console.log(`Requested file ${requestedFileName} not found, falling back to default logic`);
+    }
+  }
+  
+  // Standard-Logik für Hauptdatei-Suche wie zuvor
   const mainFileNames = ['fxmanifest.lua', 'index.lua', 'main.lua', '__resource.lua'];
   
   for (const fileName of mainFileNames) {

@@ -85,7 +85,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         });
       }
       
-      // List available files
+      // Liste Dateien im Bucket unter dem Lizenz-Ordner
       console.log(`Listing files for license: ${licenseData.id}`);
       const { files, error: listError } = await listScriptFiles(supabase, licenseData.id);
       
@@ -122,16 +122,24 @@ export async function handleRequest(req: Request): Promise<Response> {
         });
       }
       
-      // Get main script file
-      console.log("Retrieving main script file");
-      const { content, error, fileName } = await getMainScriptFile(supabase, licenseData.id, files as any[]);
+      // Extract requested filename from headers if present
+      let requestedFileName = null;
+      const reqHeaders = Object.fromEntries(req.headers.entries());
+      if (reqHeaders["x-requested-filename"]) {
+        requestedFileName = reqHeaders["x-requested-filename"];
+        console.log(`X-Requested-Filename header found: ${requestedFileName}`);
+      }
+      
+      // Get main script file with preference for requested file
+      console.log(`Retrieving script file with preference for: ${requestedFileName || "main files"}`);
+      const { content, error, fileName } = await getMainScriptFile(supabase, licenseData.id, files as any[], requestedFileName);
       
       if (error) {
         console.error(`Error retrieving main script: ${error}`);
         return createErrorResponse(error);
       }
       
-      console.log(`Successfully retrieved main script file: ${fileName || "unknown.lua"}`);
+      console.log(`Successfully retrieved script file: ${fileName || "unknown.lua"}`);
       
       // Add the actual filename as a header
       const headers = { 

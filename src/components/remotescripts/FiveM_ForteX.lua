@@ -485,6 +485,7 @@ ForteX.LoadFile = function(filePath, callback)
             ["X-Server-Key"] = CONFIG.ServerKey,
             ["Authorization"] = authHeader,
             ["User-Agent"] = "FiveM-ForteX/1.0",
+            ["X-Requested-Filename"] = filePath:match("[^/]+$") or filePath, -- Extrahiert den Dateinamen ohne Pfad
             ["Accept"] = "application/json"
         })
     end)
