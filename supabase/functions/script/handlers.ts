@@ -49,7 +49,6 @@ export async function handleRequest(req: Request): Promise<Response> {
         // 6️⃣ Handle case where no content is found
         if (!scriptContent) {
             console.warn("No script content found, returning empty script");
-            // Instead of generating a sample script, return an empty script
             scriptContent = `-- No script content available for this license`;
         }
 
