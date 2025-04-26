@@ -1,4 +1,3 @@
-
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.33.1"
 
 // Initialize Supabase client
@@ -35,6 +34,9 @@ export async function verifyLicense(supabase: any, licenseKey: string, serverKey
       p_license_key: trimmedLicenseKey,
       p_server_key: trimmedServerKey
     });
+    
+    console.log("RPC Response:", rpcData);
+    console.log("RPC Error:", rpcError);
     
     if (rpcError) {
       console.error("RPC error:", rpcError);
