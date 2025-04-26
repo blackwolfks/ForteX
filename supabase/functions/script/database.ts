@@ -1,3 +1,4 @@
+
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.33.1"
 
 // Initialize Supabase client
@@ -41,15 +42,18 @@ export async function verifyLicense(supabase: any, licenseKey: string, serverKey
       console.error("RPC Fehler:", error);
       return { valid: false, error: error.message };
     }
+
+    // Prüfen ob ein Array zurückkommt
+    const licenseData = Array.isArray(data) ? data[0] : data;
     
-    if (!data || !data.valid) {
-      console.warn("Lizenz ungültig laut RPC:", data);
+    if (!licenseData || !licenseData.valid) {
+      console.warn("Lizenz ungültig laut RPC:", licenseData);
       return { valid: false };
     }
     
     // If we get here, the license is valid and we have data
-    console.log("Lizenz erfolgreich verifiziert:", data);
-    return { valid: true, data };
+    console.log("Lizenz erfolgreich verifiziert:", licenseData);
+    return licenseData;
     
   } catch (error) {
     console.error("License verification error:", error);
