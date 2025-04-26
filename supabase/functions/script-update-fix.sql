@@ -2,6 +2,7 @@
 -- Aktualisiere die create_license Funktion, um mehrdeutige ID-Referenzen zu beheben
 CREATE OR REPLACE FUNCTION public.create_license(
   p_script_name text,
+  p_script_file text DEFAULT NULL,
   p_server_ip text DEFAULT NULL
 )
 RETURNS TABLE(id uuid, license_key text, server_key text)
@@ -31,12 +32,14 @@ BEGIN
     license_key,
     user_id,
     script_name,
+    script_file,
     server_ip,
     server_key
   ) VALUES (
     v_license_key,
     auth.uid(),
     p_script_name,
+    p_script_file,
     p_server_ip,
     v_server_key
   ) RETURNING id INTO v_license_id;
@@ -58,6 +61,7 @@ RETURNS TABLE(
   valid boolean,
   license_key text,
   script_name text,
+  script_file text,
   server_ip text,
   aktiv boolean,
   id uuid,
@@ -73,6 +77,7 @@ BEGIN
     TRUE as valid,
     sl.license_key,
     sl.script_name,
+    sl.script_file,
     sl.server_ip,
     sl.aktiv,
     sl.id,
@@ -87,6 +92,7 @@ BEGIN
       FALSE as valid,
       NULL::TEXT as license_key,
       NULL::TEXT as script_name,
+      NULL::TEXT as script_file,
       NULL::TEXT as server_ip,
       FALSE as aktiv,
       NULL::UUID as id,

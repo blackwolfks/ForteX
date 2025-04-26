@@ -17,6 +17,7 @@ type License = {
   license_key: string;
   server_key: string;
   script_name: string;
+  script_file: string | null;
   server_ip: string | null;
   aktiv: boolean;
   has_file_upload: boolean;
@@ -49,9 +50,10 @@ const LicenseManager = () => {
   });
 
   const createLicenseMutation = useMutation({
-    mutationFn: async (variables: { script_name: string; server_ip?: string; has_file_upload: boolean }) => {
+    mutationFn: async (variables: { script_name: string; script_file?: string; server_ip?: string; has_file_upload: boolean }) => {
       const { data, error } = await callRPC('create_license', {
         p_script_name: variables.script_name,
+        p_script_file: variables.script_file || null,
         p_server_ip: variables.server_ip || null
       });
       
@@ -62,6 +64,7 @@ const LicenseManager = () => {
       queryClient.invalidateQueries({ queryKey: ['licenses'] });
       setIsCreateModalOpen(false);
       setScriptName("");
+      setScriptFile("");
       setServerIp("");
       setHasFileUpload(false);
       
@@ -196,6 +199,7 @@ const LicenseManager = () => {
     
     createLicenseMutation.mutate({
       script_name: scriptName,
+      script_file: scriptFile || undefined,
       server_ip: serverIp || undefined,
       has_file_upload: hasFileUpload
     });
@@ -431,6 +435,9 @@ const LicenseManager = () => {
                       <TableCell>
                         <div>
                           <div className="font-medium">{license.script_name}</div>
+                          {license.script_file && (
+                            <div className="text-xs text-muted-foreground">{license.script_file}</div>
+                          )}
                           {license.server_ip && (
                             <div className="text-xs text-muted-foreground">IP: {license.server_ip}</div>
                           )}
