@@ -48,7 +48,30 @@ export async function getScriptFile(supabase: any, licenseId: string) {
     }
     
     // Convert blob to text
-    const content = await fileData.text();
+    const rawText = await fileData.text();
+    
+    // Clean the text to remove any HTTP headers or boundary markers
+    let content = rawText;
+    
+    // Remove WebKit form boundaries and other HTTP headers if present
+    const luaContentMatch = rawText.match(/Content-Type: text\/x-lua\r?\n\r?\n([\s\S]*?)(?:\r?\n-{4,}WebKit|$)/i);
+    if (luaContentMatch && luaContentMatch[1]) {
+      content = luaContentMatch[1];
+    } else {
+      // Try another pattern that might match
+      const altMatch = rawText.match(/Content-Type: text\/.*?\r?\n\r?\n([\s\S]*?)(?:\r?\n-{4,}|$)/i);
+      if (altMatch && altMatch[1]) {
+        content = altMatch[1];
+      } else {
+        // If still can't match specific pattern, just try to remove obvious headers
+        const lines = rawText.split('\n');
+        const contentStartIndex = lines.findIndex(line => line.trim() === '');
+        if (contentStartIndex !== -1 && contentStartIndex < lines.length - 1) {
+          content = lines.slice(contentStartIndex + 1).join('\n');
+        }
+      }
+    }
+    
     console.log(`Script file '${luaFile.name}' successfully loaded`);
     
     return { content, error: null };
@@ -58,4 +81,3 @@ export async function getScriptFile(supabase: any, licenseId: string) {
     return { content: null, error: "Unexpected error getting file" };
   }
 }
-
