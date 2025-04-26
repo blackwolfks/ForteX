@@ -5,56 +5,48 @@ import { initSupabaseClient, verifyLicense } from "./database.ts";
 import { getScriptFile } from "./storage.ts";
 import { createErrorResponse } from "./response.ts";
 
-// Main handler function for the Edge Function
 export async function handleRequest(req: Request): Promise<Response> {
-    // 1️⃣ Handle CORS preflight requests
+    // CORS handling
     const corsResponse = handleCors(req);
     if (corsResponse) return corsResponse;
 
     try {
         console.log(`Received ${req.method} request to ${new URL(req.url).pathname}`);
 
-        // 2️⃣ Extract license and server key
+        // Extract license and server keys
         const { licenseKey, serverKey } = await extractKeys(req);
-
+        
         if (!licenseKey || !serverKey) {
             console.error("Missing credentials");
             return createErrorResponse("License key and server key are required");
         }
 
-        // 3️⃣ Initialize Supabase client
+        // Initialize Supabase client
         const { client: supabase, error: dbError } = initSupabaseClient();
         if (dbError) {
-            console.error("DB Error:", dbError);
+            console.error("Database connection error:", dbError);
             return createErrorResponse("Database connection error");
         }
 
-        // 4️⃣ Perform license verification
+        // Verify license
         const licenseData = await verifyLicense(supabase, licenseKey, serverKey);
-
+        
         if (!licenseData.valid) {
             console.warn("Invalid license data");
             return createErrorResponse("Invalid license or server key");
         }
 
-        let scriptContent = null;
-
-        // 5️⃣ Try to get script content
-        if (licenseData.script_file) {
-            // Case 1: Script file is specified in the database
-            console.log(`Using script file from database: ${licenseData.script_file}`);
-            scriptContent = await getScriptFile(supabase, licenseData.script_file);
+        // Get script content directly from storage using license ID
+        const scriptResult = await getScriptFile(supabase, licenseData.id);
+        
+        if (!scriptResult || scriptResult.error) {
+            console.warn("No script content found:", scriptResult?.error || "No content");
+            return createErrorResponse("No script file found for this license");
         }
 
-        // 6️⃣ Handle case where no content is found
-        if (!scriptContent) {
-            console.warn("No script content found, returning empty script");
-            scriptContent = `-- No script content available for this license`;
-        }
-
-        // 7️⃣ Success: Deliver script
-        console.log(`Script ${licenseData.script_file || 'default'} successfully delivered`);
-        return new Response(scriptContent, {
+        // Success: Return script content
+        console.log(`Script successfully delivered for license ${licenseData.id}`);
+        return new Response(scriptResult.content, {
             headers: {
                 ...corsHeaders,
                 "Content-Type": "text/plain"
