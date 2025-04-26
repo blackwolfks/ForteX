@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { License, NewScriptFormData } from "./types";
-import { callRPC, supabase, checkStorageBucket } from "@/lib/supabase";
+import { callRPC, supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { ensureBucketExists, uploadFile } from "@/services/file-uploader";
 
@@ -18,8 +18,6 @@ export function useScriptManagement() {
       if (error) {
         console.error("Error fetching licenses:", error);
         toast.error("Fehler beim Laden der Scripts");
-        setLicenses([]);
-        setLoading(false);
         return;
       }
       
@@ -28,7 +26,6 @@ export function useScriptManagement() {
     } catch (error) {
       console.error("Exception in fetchLicenses:", error);
       toast.error("Fehler beim Laden der Scripts");
-      setLicenses([]);
     } finally {
       setLoading(false);
     }
@@ -60,6 +57,7 @@ export function useScriptManagement() {
       // Create the license first
       const { data, error } = await callRPC('create_license', {
         p_script_name: newScript.name,
+        p_script_file: null,
         p_server_ip: newScript.serverIp || null,
       });
       
@@ -130,11 +128,12 @@ export function useScriptManagement() {
     }
   };
 
-  const handleUpdateScript = async (licenseId: string, scriptName: string, serverIp: string | null, isActive: boolean) => {
+  const handleUpdateScript = async (licenseId: string, scriptName: string, scriptCode: string | null, serverIp: string | null, isActive: boolean) => {
     try {
       const { error } = await callRPC('update_license', {
         p_license_id: licenseId,
         p_script_name: scriptName,
+        p_script_file: scriptCode,
         p_server_ip: serverIp,
         p_aktiv: isActive
       });

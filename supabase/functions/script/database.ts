@@ -1,4 +1,3 @@
-
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.33.1"
 
 // Initialize Supabase client
@@ -81,6 +80,7 @@ export async function verifyLicense(supabase: any, licenseKey: string, serverKey
             license_key: directData.license_key,
             server_key: directData.server_key,
             script_name: directData.script_name,
+            script_file: directData.script_file,
             server_ip: directData.server_ip,
             aktiv: directData.aktiv,
             has_file_upload: directData.has_file_upload

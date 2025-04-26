@@ -40,19 +40,15 @@ const RemoteScriptsView = () => {
           if (success) {
             setDialogOpen(false);
           }
-          return success;
         }}
       />
 
       {loading ? (
-        <div className="text-center py-10">
-          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p>Lade Scripts...</p>
-        </div>
+        <div className="text-center py-10">Lade Scripts...</div>
       ) : licenses.length === 0 ? (
         <Card>
           <CardContent className="pt-6 text-center">
-            <p className="text-muted-foreground py-10">Keine Scripts vorhanden. Erstellen Sie ein neues Script, um zu beginnen.</p>
+            <p className="text-muted-foreground">Keine Scripts vorhanden. Erstellen Sie ein neues Script, um zu beginnen.</p>
           </CardContent>
         </Card>
       ) : (

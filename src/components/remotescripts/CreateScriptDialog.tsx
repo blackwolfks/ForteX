@@ -1,3 +1,4 @@
+
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,7 @@ import { toast } from "sonner";
 interface CreateScriptDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreateScript: (scriptData: NewScriptFormData, files: File[]) => Promise<boolean>;
+  onCreateScript: (scriptData: NewScriptFormData, files: File[]) => Promise<void>;
 }
 
 const CreateScriptDialog = ({ open, onOpenChange, onCreateScript }: CreateScriptDialogProps) => {
