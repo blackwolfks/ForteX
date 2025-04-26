@@ -1,16 +1,14 @@
 
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RefreshCw, Save, Trash2, Copy, Check, Shield, Server, FileText, Upload } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Switch } from "@/components/ui/switch";
-import FileAccessManagement from "./FileAccessManagement";
+import { Copy, RefreshCcw, Trash2, Upload, FileText, Info, Check, X } from "lucide-react";
 import { License } from "./types";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import FileUploadDialog from "./FileUploadDialog";
 
 interface ScriptCardProps {
@@ -20,228 +18,252 @@ interface ScriptCardProps {
   onDeleteScript: (licenseId: string) => Promise<boolean>;
 }
 
-export default function ScriptCard({ 
-  license, 
-  onUpdateScript, 
-  onRegenerateServerKey, 
-  onDeleteScript 
-}: ScriptCardProps) {
-  const [copiedKey, setCopiedKey] = useState<{id: string, type: string} | null>(null);
-  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+const ScriptCard = ({ license, onUpdateScript, onRegenerateServerKey, onDeleteScript }: ScriptCardProps) => {
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isFileUploadDialogOpen, setIsFileUploadDialogOpen] = useState(false);
+  const [editScriptName, setEditScriptName] = useState(license.script_name);
+  const [editServerIp, setEditServerIp] = useState(license.server_ip || "");
+  const [isActive, setIsActive] = useState(license.aktiv);
+  const [copiedKey, setCopiedKey] = useState<"license" | "server" | null>(null);
 
-  const copyToClipboard = (text: string, id: string, type: string) => {
+  const handleOpenEditDialog = () => {
+    setEditScriptName(license.script_name);
+    setEditServerIp(license.server_ip || "");
+    setIsActive(license.aktiv);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveEdits = async () => {
+    const success = await onUpdateScript(license.id, editScriptName, editServerIp || null, isActive);
+    if (success) {
+      setIsEditDialogOpen(false);
+    }
+  };
+
+  const handleRegenerateServerKey = async () => {
+    await onRegenerateServerKey(license.id);
+  };
+
+  const handleDelete = async () => {
+    const success = await onDeleteScript(license.id);
+    if (success) {
+      setIsDeleteDialogOpen(false);
+    }
+  };
+
+  const copyToClipboard = (text: string, type: "license" | "server") => {
     navigator.clipboard.writeText(text);
-    setCopiedKey({ id, type });
+    setCopiedKey(type);
+    toast.success(`${type === "license" ? "Lizenzschlüssel" : "Server-Key"} in die Zwischenablage kopiert`);
     setTimeout(() => setCopiedKey(null), 2000);
-    toast.success("In die Zwischenablage kopiert");
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('de-DE', { 
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
   };
 
   return (
     <>
-      <Card key={license.id}>
-        <CardHeader>
-          <CardTitle className="text-lg flex justify-between items-center">
-            <span>{license.script_name}</span>
-            <span className={`px-2 py-1 rounded-full text-xs ${license.aktiv ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-              {license.aktiv ? 'Aktiv' : 'Inaktiv'}
-            </span>
-          </CardTitle>
-          <CardDescription>Erstellt am: {new Date(license.created_at).toLocaleDateString()}</CardDescription>
+      <Card className="overflow-hidden">
+        <CardHeader className="pb-3">
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="text-lg font-semibold">{license.script_name}</CardTitle>
+              <CardDescription>Erstellt am {formatDate(license.created_at)}</CardDescription>
+            </div>
+            <Badge variant={license.aktiv ? "success" : "destructive"}>
+              {license.aktiv ? "Aktiv" : "Inaktiv"}
+            </Badge>
+          </div>
         </CardHeader>
         
-        <CardContent>
-          <Tabs defaultValue="details" className="w-full">
-            <TabsList className="w-full">
-              <TabsTrigger value="details" className="flex-1">Details</TabsTrigger>
-              <TabsTrigger value="files" className="flex-1">
-                <FileText className="h-4 w-4 mr-1" />
-                Dateien
-              </TabsTrigger>
-              <TabsTrigger value="security" className="flex-1">Sicherheit</TabsTrigger>
-              <TabsTrigger value="file-access" className="flex-1">
-                <Shield className="h-4 w-4 mr-1" />
-                Dateizugriff
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="details" className="pt-4 space-y-4">
-              {/* License Key */}
-              <div>
-                <Label className="text-xs">Lizenzschlüssel</Label>
-                <div className="mt-1 p-2 bg-muted rounded break-all text-xs font-mono flex justify-between items-center">
-                  <span className="truncate mr-2">{license.license_key}</span>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => copyToClipboard(license.license_key, license.id, 'license')}
-                    title="Kopieren"
-                  >
-                    {copiedKey?.id === license.id && copiedKey?.type === 'license' ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
+        <CardContent className="pb-3 space-y-4">
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <Label className="text-xs text-muted-foreground">Lizenzschlüssel:</Label>
+              <Button 
+                variant="ghost" 
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => copyToClipboard(license.license_key, "license")}
+              >
+                {copiedKey === "license" ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+              </Button>
+            </div>
+            <code className="relative flex items-center w-full rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-xs">
+              {license.license_key}
+            </code>
+          </div>
+          
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <Label className="text-xs text-muted-foreground">Server-Key:</Label>
+              <Button 
+                variant="ghost" 
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => copyToClipboard(license.server_key, "server")}
+              >
+                {copiedKey === "server" ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+              </Button>
+            </div>
+            <code className="relative flex items-center w-full rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-xs">
+              {license.server_key}
+            </code>
+          </div>
+          
+          {license.server_ip && (
+            <div className="pt-2">
+              <Label className="text-xs text-muted-foreground">Server IP-Beschränkung:</Label>
+              <div className="flex items-center mt-1">
+                <Info className="h-3 w-3 mr-2 text-muted-foreground" />
+                <span className="text-xs">{license.server_ip}</span>
               </div>
-              
-              {/* Server Key */}
-              <div>
-                <Label className="text-xs">Server-Key</Label>
-                <div className="mt-1 p-2 bg-muted rounded break-all text-xs font-mono flex justify-between items-center">
-                  <span className="truncate mr-2">{license.server_key}</span>
-                  <div className="flex">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => copyToClipboard(license.server_key, license.id, 'server')}
-                      title="Kopieren"
-                    >
-                      {copiedKey?.id === license.id && copiedKey?.type === 'server' ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => onRegenerateServerKey(license.id)}
-                      title="Server-Key regenerieren"
-                    >
-                      <RefreshCw className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Server IP */}
-              {license.server_ip && (
-                <div>
-                  <Label className="text-xs">Server IP-Adresse</Label>
-                  <div className="mt-1 p-2 bg-muted rounded break-all text-xs font-mono flex justify-between items-center">
-                    <span className="truncate mr-2">{license.server_ip}</span>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => copyToClipboard(license.server_ip || '', license.id, 'ip')}
-                      title="Kopieren"
-                    >
-                      {copiedKey?.id === license.id && copiedKey?.type === 'ip' ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              )}
-              
-              {/* Actions */}
-              <div className="flex justify-end pt-4 space-x-2">
-                <Button 
-                  variant={license.aktiv ? "destructive" : "outline"} 
-                  size="sm"
-                  onClick={() => onUpdateScript(license.id, license.script_name, license.server_ip, !license.aktiv)}
-                >
-                  {license.aktiv ? 'Deaktivieren' : 'Aktivieren'}
-                </Button>
-                <Button 
-                  variant="destructive" 
-                  size="sm"
-                  onClick={() => onDeleteScript(license.id)}
-                >
-                  <Trash2 className="h-4 w-4 mr-1" /> Löschen
-                </Button>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="files" className="pt-4 space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium">Skript-Dateien</h3>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setIsUploadModalOpen(true)}
-                >
-                  <Upload className="h-4 w-4 mr-1" /> Datei hochladen
-                </Button>
-              </div>
-              <div className="bg-muted p-4 rounded text-center">
-                <p className="text-sm">
-                  {license.has_file_upload 
-                    ? "Verwenden Sie die Datei-Upload-Funktion, um Dateien hochzuladen." 
-                    : "Keine Dateien für dieses Script verfügbar."}
-                </p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Die Dateien können über die FiveM-Integration abgerufen werden.
-                </p>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="security" className="pt-4 space-y-4">
-              <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <Server className="h-5 w-5 text-muted-foreground" />
-                  <Label htmlFor={`server-ip-${license.id}`}>Server IP-Adresse</Label>
-                </div>
-                
-                <Input 
-                  id={`server-ip-${license.id}`} 
-                  defaultValue={license.server_ip || ''} 
-                  placeholder="z.B. 123.456.789.0" 
-                />
-                
-                <p className="text-xs text-muted-foreground">
-                  Wenn gesetzt, kann das Script nur von dieser IP-Adresse abgerufen werden.
-                </p>
-                
-                <div className="flex items-center space-x-2">
-                  <Switch 
-                    id={`active-${license.id}`}
-                    checked={license.aktiv}
-                    onCheckedChange={(checked) => 
-                      onUpdateScript(license.id, license.script_name, license.server_ip, checked)
-                    }
-                  />
-                  <Label htmlFor={`active-${license.id}`}>Script aktiv</Label>
-                </div>
-                
-                <Alert>
-                  <AlertDescription>
-                    Die Sicherheit wird durch drei Faktoren gewährleistet:
-                    <ul className="mt-2 list-disc pl-5 space-y-1">
-                      <li>Lizenzschlüssel - muss im Script konfiguriert werden</li>
-                      <li>Server-Key - wird vom Server für API-Anfragen verwendet</li>
-                      <li>IP-Beschränkung - optional, erlaubt Zugriff nur von einer bestimmten IP</li>
-                    </ul>
-                  </AlertDescription>
-                </Alert>
-                
-                <Button 
-                  size="sm"
-                  onClick={() => {
-                    const ipElement = document.getElementById(`server-ip-${license.id}`) as HTMLInputElement;
-                    onUpdateScript(license.id, license.script_name, ipElement.value, license.aktiv);
-                  }}
-                >
-                  <Save className="h-4 w-4 mr-1" /> Einstellungen speichern
-                </Button>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="file-access" className="pt-4 space-y-4">
-              <FileAccessManagement licenseId={license.id} />
-            </TabsContent>
-          </Tabs>
+            </div>
+          )}
         </CardContent>
+        
+        <CardFooter className="pt-3">
+          <div className="flex justify-between w-full gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex-1"
+              onClick={handleOpenEditDialog}
+            >
+              <FileText className="h-3 w-3 mr-2" />
+              Bearbeiten
+            </Button>
+            
+            {license.has_file_upload && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex-1"
+                onClick={() => setIsFileUploadDialogOpen(true)}
+              >
+                <Upload className="h-3 w-3 mr-2" />
+                Dateien
+              </Button>
+            )}
+            
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex-1"
+              onClick={handleRegenerateServerKey}
+            >
+              <RefreshCcw className="h-3 w-3 mr-2" />
+              Key neu
+            </Button>
+            
+            <Button 
+              variant="destructive" 
+              size="sm" 
+              className="flex-1"
+              onClick={() => setIsDeleteDialogOpen(true)}
+            >
+              <Trash2 className="h-3 w-3 mr-2" />
+              Löschen
+            </Button>
+          </div>
+        </CardFooter>
       </Card>
-
-      <FileUploadDialog 
-        licenseId={license.id} 
-        isOpen={isUploadModalOpen} 
-        onOpenChange={setIsUploadModalOpen} 
+      
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Script Bearbeiten</DialogTitle>
+            <DialogDescription>Aktualisieren Sie die Details für dieses Script.</DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="script-name">Script Name</Label>
+              <Input 
+                id="script-name" 
+                value={editScriptName} 
+                onChange={(e) => setEditScriptName(e.target.value)} 
+              />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="server-ip">Server IP-Adresse (Optional)</Label>
+              <Input 
+                id="server-ip" 
+                value={editServerIp} 
+                onChange={(e) => setEditServerIp(e.target.value)} 
+                placeholder="z.B. 123.456.789.0" 
+              />
+              <p className="text-xs text-muted-foreground">
+                Wenn gesetzt, kann das Script nur von dieser IP-Adresse abgerufen werden.
+              </p>
+            </div>
+            
+            <div className="flex items-center space-x-2 pt-2">
+              <input
+                type="checkbox"
+                id="is-active"
+                checked={isActive}
+                onChange={(e) => setIsActive(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              />
+              <Label htmlFor="is-active">Script aktiv</Label>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIsEditDialogOpen(false)}>Abbrechen</Button>
+            <Button onClick={handleSaveEdits}>Speichern</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Script löschen</DialogTitle>
+            <DialogDescription>
+              Sind Sie sicher, dass Sie dieses Script löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="pt-4 pb-2">
+            <p className="font-medium">{license.script_name}</p>
+            <p className="text-sm text-muted-foreground">Lizenzschlüssel: {license.license_key}</p>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIsDeleteDialogOpen(false)}>
+              <X className="h-4 w-4 mr-2" />
+              Abbrechen
+            </Button>
+            <Button variant="destructive" onClick={handleDelete}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Löschen bestätigen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* File Upload Dialog */}
+      <FileUploadDialog
+        licenseId={license.id}
+        isOpen={isFileUploadDialogOpen}
+        onOpenChange={setIsFileUploadDialogOpen}
       />
     </>
   );
-}
+};
+
+export default ScriptCard;
