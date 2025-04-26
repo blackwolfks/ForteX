@@ -29,86 +29,28 @@ export async function verifyLicense(supabase: any, licenseKey: string, serverKey
     
     console.log(`Trimmed-Keys: License='${trimmedLicenseKey}', Server='${trimmedServerKey}'`);
     
-    // First attempt: Try using the RPC function which should be the primary method
-    const { data: rpcData, error: rpcError } = await supabase.rpc("check_license_by_keys", {
+    // Call the RPC function to check the license
+    const { data, error } = await supabase.rpc("check_license_by_keys", {
       p_license_key: trimmedLicenseKey,
       p_server_key: trimmedServerKey
     });
     
-    console.log("RPC Response:", rpcData);
-    console.log("RPC Error:", rpcError);
+    console.log("RPC Response:", data);
     
-    if (rpcError) {
-      console.error("RPC error:", rpcError);
-      
-      // Second attempt: Direct database query as fallback
-      console.log("Fallback: Direkte Datenbankabfrage der server_licenses Tabelle");
-      const { data: directData, error: directError } = await supabase
-        .from('server_licenses')
-        .select('*')
-        .eq('license_key', trimmedLicenseKey)
-        .eq('server_key', trimmedServerKey)
-        .limit(1)
-        .single();
-      
-      if (directError) {
-        console.error("Direct query error:", directError);
-        
-        // Third attempt: Check if license exists but server key doesn't match
-        console.log("Überprüfe, ob Lizenz existiert aber Server-Key nicht stimmt");
-        const { data: licenseCheck } = await supabase
-          .from('server_licenses')
-          .select('license_key, server_key')
-          .eq('license_key', trimmedLicenseKey)
-          .limit(1);
-          
-        if (licenseCheck && licenseCheck.length > 0) {
-          console.error(`Lizenz gefunden, aber Server-Key stimmt nicht überein. DB-Key: ${licenseCheck[0].server_key}, Erhalten: ${trimmedServerKey}`);
-          return { valid: false, error: "Server key does not match license key", license_found: true };
-        }
-        
-        return { valid: false, error: `Database error: ${directError.message}` };
-      }
-      
-      if (directData) {
-        console.log("Lizenz direkt in der Datenbank gefunden:", directData);
-        return { 
-          valid: true, 
-          data: {
-            ...directData,
-            id: directData.id,
-            license_key: directData.license_key,
-            server_key: directData.server_key,
-            script_name: directData.script_name,
-            script_file: directData.script_file,
-            server_ip: directData.server_ip,
-            aktiv: directData.aktiv,
-            has_file_upload: directData.has_file_upload
-          }
-        };
-      }
-      
-      // If we got here, no license was found via direct query either
-      return { valid: false, error: "Invalid license or server key" };
+    if (error) {
+      console.error("RPC Fehler:", error);
+      return { valid: false, error: error.message };
     }
     
-    if (!rpcData) {
-      console.error("RPC returned no data");
-      return { valid: false, error: "Database returned no data" };
+    if (!data || !data.valid) {
+      console.warn("Lizenz ungültig laut RPC:", data);
+      return { valid: false };
     }
     
-    if (!rpcData.valid) {
-      console.error("Invalid license or server key according to RPC");
-      return { valid: false, error: "Invalid license or server key" };
-    }
+    // If we get here, the license is valid and we have data
+    console.log("Lizenz erfolgreich verifiziert:", data);
+    return { valid: true, data };
     
-    if (!rpcData.aktiv) {
-      console.error("License is not active");
-      return { valid: false, error: "License is not active" };
-    }
-    
-    console.log("License verification successful:", rpcData);
-    return { valid: true, data: rpcData };
   } catch (error) {
     console.error("License verification error:", error);
     return { valid: false, error: "License verification failed: " + (error as Error).message };
