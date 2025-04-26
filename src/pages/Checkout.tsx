@@ -1,20 +1,14 @@
 
 import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { authService } from '@/services/auth-service';
-import { paymentService } from '@/services/payment-service';
 import { orderService } from '@/services/order-service';
-import { ProductCartItem } from '@/services/product/types';
 import { productService } from '@/services/product';
+import { ProductCartItem } from '@/services/product/types';
+import { OrderSummary } from '@/components/checkout/OrderSummary';
+import { PaymentMethods } from '@/components/checkout/PaymentMethods';
 
 const Checkout = () => {
-  const location = useLocation();
   const navigate = useNavigate();
   const [cartItems, setCartItems] = useState<ProductCartItem[]>([]);
   const [totalAmount, setTotalAmount] = useState(0);
@@ -37,10 +31,9 @@ const Checkout = () => {
 
     fetchCartItems();
     
-    // Load PayPal script - using window script tag instead of library function
+    // Load PayPal script
     const initPayPal = () => {
       try {
-        // Create a script element to load PayPal
         const script = document.createElement('script');
         script.src = `https://www.paypal.com/sdk/js?client-id=${import.meta.env.VITE_PAYPAL_CLIENT_ID || 'test'}`;
         script.async = true;
@@ -77,54 +70,18 @@ const Checkout = () => {
     }
   };
 
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
-
   return (
-    <div className="checkout-container">
-      <Card>
-        <CardHeader>
-          <CardTitle>Checkout</CardTitle>
-          <CardDescription>Überprüfen Sie Ihre Bestellung und bezahlen Sie.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {cartItems.length === 0 ? (
-            <div>Ihr Warenkorb ist leer.</div>
-          ) : (
-            <div>
-              {cartItems.map((item) => (
-                <div key={item.id} className="cart-item">
-                  <h4>{item.name}</h4>
-                  <p>Preis: {item.price} €</p>
-                  <p>Menge: {item.quantity}</p>
-                  <Separator />
-                </div>
-              ))}
-              <h3>Gesamtbetrag: {totalAmount} €</h3>
-            </div>
-          )}
-        </CardContent>
-        <CardFooter>
-          {paypalLoaded && cartItems.length > 0 && (
-            <div id="paypal-button-container" className="w-full">
-              {/* PayPal buttons will be rendered here by the PayPal JS SDK */}
-              <Button 
-                onClick={() => {
-                  // Simulate PayPal payment for demo purposes
-                  toast.info('PayPal Zahlung wird simuliert...');
-                  setTimeout(() => {
-                    handlePaymentSuccess({ id: 'sim-' + Date.now() });
-                  }, 2000);
-                }}
-                className="w-full bg-blue-500 hover:bg-blue-600"
-              >
-                Mit PayPal bezahlen (Demo)
-              </Button>
-            </div>
-          )}
-        </CardFooter>
-      </Card>
+    <div className="max-w-4xl mx-auto p-4 space-y-6">
+      <OrderSummary 
+        cartItems={cartItems}
+        totalAmount={totalAmount}
+        isLoading={isLoading}
+      />
+      <PaymentMethods 
+        onPaymentSuccess={handlePaymentSuccess}
+        cartItems={cartItems}
+        paypalLoaded={paypalLoaded}
+      />
     </div>
   );
 };
