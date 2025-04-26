@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { License, NewScriptFormData } from "./types";
-import { callRPC, supabase, checkStorageBucket } from "@/lib/supabase";
+import { callRPC, supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { ensureBucketExists, uploadFile } from "@/services/file-uploader";
 
