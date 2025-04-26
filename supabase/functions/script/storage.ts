@@ -60,6 +60,33 @@ export async function listScriptFiles(supabase: any, licenseId: string) {
   }
 }
 
+export async function getScriptFile(supabase: any, filePath: string) {
+  try {
+    console.log(`Getting file: ${filePath}`);
+    
+    // Normalisieren des Dateipfads
+    const normalizedFilePath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
+    
+    // Datei herunterladen
+    const { data, error } = await supabase.storage
+      .from('script')
+      .download(normalizedFilePath);
+    
+    if (error) {
+      console.error(`Error downloading file: ${error.message}`);
+      return null;
+    }
+    
+    // Blob in Text umwandeln
+    const content = await data.text();
+    console.log(`Successfully downloaded file: ${normalizedFilePath}`);
+    return content;
+  } catch (error) {
+    console.error(`Exception in getScriptFile: ${error}`);
+    return null;
+  }
+}
+
 export async function getScriptFile(supabase: any, licenseId: string, filePath: string) {
   try {
     console.log(`Getting file: ${licenseId}/${filePath}`);
@@ -126,7 +153,7 @@ export async function getMainScriptFile(supabase: any, licenseId: string, files:
   }
   
   // Standard-Logik für Hauptdatei-Suche wie zuvor
-  const mainFileNames = ['fxmanifest.lua', 'index.lua', 'main.lua', '__resource.lua'];
+  const mainFileNames = ['fxmanifest.lua', 'index.lua', 'main.lua', '__resource.lua', 'wolfstest.lua'];
   
   for (const fileName of mainFileNames) {
     const file = files.find(f => f.name.toLowerCase() === fileName.toLowerCase());
