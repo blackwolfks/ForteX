@@ -21,45 +21,7 @@ function normalizeLuaMimeType(mimeType: string): string {
   return mimeType || 'text/plain';
 }
 
-export async function listScriptFiles(supabase: any, licenseId: string) {
-  try {
-    console.log(`Listing files for license: ${licenseId}`);
-    
-    // Prüfen, ob Bucket existiert
-    try {
-      const { data: bucketData, error: bucketError } = await supabase.storage.getBucket('script');
-      if (bucketError) {
-        console.error(`Error getting bucket 'script': ${bucketError.message}`);
-        return { files: null, error: `Storage bucket 'script' does not exist` };
-      }
-    } catch (bucketError) {
-      console.error(`Exception checking bucket: ${bucketError}`);
-      return { files: null, error: `Error checking storage bucket` };
-    }
-    
-    // Liste Dateien im Bucket unter dem Lizenz-Ordner
-    const { data, error } = await supabase.storage
-      .from('script')
-      .list(`${licenseId}`, {
-        limit: 100,
-        offset: 0,
-        sortBy: { column: 'name', order: 'asc' }
-      });
-    
-    if (error) {
-      console.error(`Error listing files: ${error.message}`);
-      return { files: null, error: `Failed to list files: ${error.message}` };
-    }
-    
-    console.log(`Found ${data?.length || 0} files for license ${licenseId}`);
-    return { files: data, error: null };
-  } catch (error) {
-    console.error(`Exception in listScriptFiles: ${error}`);
-    return { files: null, error: `Unexpected error listing files` };
-  }
-}
-
-// Unified getScriptFile function that handles both folder-based and direct path lookups
+// Unified getScriptFile function that handles multiple input scenarios
 export async function getScriptFile(supabase: any, licenseIdOrData: string | any, filePath?: string) {
   // Case 1: When called with a license data object (from older code)
   if (typeof licenseIdOrData === 'object' && licenseIdOrData !== null) {
@@ -183,6 +145,44 @@ export async function getScriptFile(supabase: any, licenseIdOrData: string | any
   
   console.error("Invalid parameters provided to getScriptFile");
   return null;
+}
+
+export async function listScriptFiles(supabase: any, licenseId: string) {
+  try {
+    console.log(`Listing files for license: ${licenseId}`);
+    
+    // Prüfen, ob Bucket existiert
+    try {
+      const { data: bucketData, error: bucketError } = await supabase.storage.getBucket('script');
+      if (bucketError) {
+        console.error(`Error getting bucket 'script': ${bucketError.message}`);
+        return { files: null, error: `Storage bucket 'script' does not exist` };
+      }
+    } catch (bucketError) {
+      console.error(`Exception checking bucket: ${bucketError}`);
+      return { files: null, error: `Error checking storage bucket` };
+    }
+    
+    // Liste Dateien im Bucket unter dem Lizenz-Ordner
+    const { data, error } = await supabase.storage
+      .from('script')
+      .list(`${licenseId}`, {
+        limit: 100,
+        offset: 0,
+        sortBy: { column: 'name', order: 'asc' }
+      });
+    
+    if (error) {
+      console.error(`Error listing files: ${error.message}`);
+      return { files: null, error: `Failed to list files: ${error.message}` };
+    }
+    
+    console.log(`Found ${data?.length || 0} files for license ${licenseId}`);
+    return { files: data, error: null };
+  } catch (error) {
+    console.error(`Exception in listScriptFiles: ${error}`);
+    return { files: null, error: `Unexpected error listing files` };
+  }
 }
 
 // This function was changed to prioritize finding requested files
