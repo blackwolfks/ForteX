@@ -18,6 +18,8 @@ export function useScriptManagement() {
       if (error) {
         console.error("Error fetching licenses:", error);
         toast.error("Fehler beim Laden der Scripts");
+        setLicenses([]);
+        setLoading(false);
         return;
       }
       
@@ -26,6 +28,7 @@ export function useScriptManagement() {
     } catch (error) {
       console.error("Exception in fetchLicenses:", error);
       toast.error("Fehler beim Laden der Scripts");
+      setLicenses([]);
     } finally {
       setLoading(false);
     }
