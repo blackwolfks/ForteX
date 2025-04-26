@@ -58,3 +58,4 @@ export async function getScriptFile(supabase: any, licenseId: string) {
     return { content: null, error: "Unexpected error getting file" };
   }
 }
+
