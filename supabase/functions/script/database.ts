@@ -1,5 +1,6 @@
 
-import { createClient } from '@supabase/supabase-js';
+// Use Deno-compatible imports
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { Database } from './types';
 
 // Environment variables are automatically available
