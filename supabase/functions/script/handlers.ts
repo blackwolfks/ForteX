@@ -1,192 +1,68 @@
 
 import { handleCors, corsHeaders } from "./cors.ts";
 import { extractKeys, getClientIp } from "./auth.ts";
-import { initSupabaseClient, verifyLicense, checkIpRestriction } from "./database.ts";
-import { getScriptFile, listScriptFiles, getMainScriptFile, generateSampleScript } from "./storage.ts";
+import { initSupabaseClient, verifyLicense } from "./database.ts";
+import { getScriptFile } from "./storage.ts";
 import { createErrorResponse } from "./response.ts";
 
-// Main handler function
+// Main handler function for the Edge Function
 export async function handleRequest(req: Request): Promise<Response> {
-  // Handle CORS preflight requests
-  const corsResponse = handleCors(req);
-  if (corsResponse) return corsResponse;
-  
-  try {
-    console.log(`Received ${req.method} request to ${new URL(req.url).pathname}`);
-    
-    // Extract license key and server key
-    const { licenseKey, serverKey } = await extractKeys(req);
-    
-    // Validate required credentials
-    if (!licenseKey || !serverKey) {
-      console.error("Missing credentials - License key or server key not provided");
-      return createErrorResponse("License key and server key are required");
-    }
-    
-    console.log(`Processing request with License Key: ${licenseKey.substring(0, 4)}**** and Server Key: ${serverKey.substring(0, 4)}****`);
-    console.log(`Full keys for debugging: License='${licenseKey}', Server='${serverKey}'`);
-    
-    // Extract client IP
-    const clientIp = getClientIp(req);
-    console.log(`Client IP: ${clientIp}`);
-    
-    // Initialize Supabase client
-    const { client: supabase, error: initError } = initSupabaseClient();
-    if (initError) {
-      console.error("Supabase client initialization error:", initError);
-      return createErrorResponse("Server configuration error");
-    }
-    
-    // Verify license - with more detailed logging
-    console.log("Verifying license...");
-    const licenseVerification = await verifyLicense(supabase, licenseKey, serverKey);
-    console.log("License verification result:", JSON.stringify(licenseVerification));
-    
-    if (!licenseVerification.valid) {
-      console.error("License verification failed:", licenseVerification.error);
-      if (licenseVerification.license_found) {
-        return createErrorResponse("Server key does not match this license", "The provided server key is not valid for this license. Please check your configuration.");
-      }
-      return createErrorResponse(licenseVerification.error);
-    }
-    
-    const licenseData = licenseVerification.data;
-    console.log(`License verified for script: ${licenseData.script_name}`);
-    
-    // Check IP restriction
-    const ipCheck = checkIpRestriction(licenseData, clientIp);
-    if (!ipCheck.passed) {
-      console.error(`IP restriction failed. Expected: ${ipCheck.expected}, Got: ${clientIp}`);
-      return createErrorResponse(ipCheck.error as string, `Expected IP: ${ipCheck.expected}\nYour IP: ${clientIp}`);
-    }
-    
-    // Handle script files
-    const url = new URL(req.url);
-    const pathParts = url.pathname.split('/');
-    const specificFile = pathParts.length > 2 ? pathParts.slice(2).join('/') : null;
-    
-    // Extract requested filename from headers if present
-    let requestedFileName = null;
-    const reqHeaders = Object.fromEntries(req.headers.entries());
-    if (reqHeaders["x-requested-filename"]) {
-      requestedFileName = reqHeaders["x-requested-filename"];
-      console.log(`X-Requested-Filename header found: ${requestedFileName}`);
-    }
-    
-    console.log(`Has file upload: ${licenseData.has_file_upload}, Specific file requested: ${specificFile || requestedFileName || "None"}`);
-    
-    if (licenseData.has_file_upload) {
-      if (specificFile) {
-        console.log(`Attempting to retrieve specific file: ${specificFile}`);
-        const { content, error, fileName } = await getScriptFile(supabase, licenseData.id, specificFile);
-        if (error) {
-          console.error(`Error retrieving specific file: ${error}`);
-          return createErrorResponse(error);
+    // 1️⃣ Handle CORS preflight requests
+    const corsResponse = handleCors(req);
+    if (corsResponse) return corsResponse;
+
+    try {
+        console.log(`Received ${req.method} request to ${new URL(req.url).pathname}`);
+
+        // 2️⃣ Extract license and server key
+        const { licenseKey, serverKey } = await extractKeys(req);
+
+        if (!licenseKey || !serverKey) {
+            console.error("Missing credentials");
+            return createErrorResponse("License key and server key are required");
         }
-        
-        console.log(`Successfully retrieved file: ${fileName || specificFile}`);
-        
-        // Add the actual filename as a header so client knows which file was loaded
-        const headers = { 
-          ...corsHeaders, 
-          "Content-Type": "text/plain",
-          "X-Script-Filename": fileName || specificFile
-        };
-        
-        return new Response(content, {
-          headers,
-          status: 200
-        });
-      }
-      
-      // Liste Dateien im Bucket unter dem Lizenz-Ordner
-      console.log(`Listing files for license: ${licenseData.id}`);
-      const { files, error: listError } = await listScriptFiles(supabase, licenseData.id);
-      
-      if (listError) {
-        console.error(`Error listing files: ${listError}`);
-        
-        // If this is a storage bucket issue, generate a sample script
-        if (listError.includes("bucket does not exist")) {
-          console.log("Generating sample script due to storage bucket issue");
-          const sampleScript = generateSampleScript(licenseData);
-          return new Response(sampleScript, {
-            headers: { 
-              ...corsHeaders, 
-              "Content-Type": "text/plain",
-              "X-Script-Filename": "sample.lua" 
+
+        // 3️⃣ Initialize Supabase client
+        const { client: supabase, error: dbError } = initSupabaseClient();
+        if (dbError) {
+            console.error("DB Error:", dbError);
+            return createErrorResponse("Database connection error");
+        }
+
+        // 4️⃣ Perform license verification
+        const licenseData = await verifyLicense(supabase, licenseKey, serverKey);
+
+        if (!licenseData.valid) {
+            console.warn("Invalid license data");
+            return createErrorResponse("Invalid license or server key");
+        }
+
+        // 5️⃣ Check if script file is assigned
+        if (!licenseData.script_file) {
+            console.warn("No script file assigned");
+            return createErrorResponse("No script file assigned to this license. Please add one in the admin panel.");
+        }
+
+        // 6️⃣ Load script file from storage
+        const scriptContent = await getScriptFile(supabase, licenseData.script_file);
+
+        if (!scriptContent) {
+            console.error("Script file not found:", licenseData.script_file);
+            return createErrorResponse("The assigned script file was not found in storage");
+        }
+
+        // 7️⃣ Success: Deliver script
+        console.log(`Script '${licenseData.script_file}' successfully delivered`);
+        return new Response(scriptContent, {
+            headers: {
+                ...corsHeaders,
+                "Content-Type": "text/plain"
             },
             status: 200
-          });
-        }
-        
-        return createErrorResponse(listError);
-      }
-      
-      if (!files || files.length === 0) {
-        console.log("No files found, generating sample script");
-        const sampleScript = generateSampleScript(licenseData);
-        return new Response(sampleScript, {
-          headers: { 
-            ...corsHeaders, 
-            "Content-Type": "text/plain",
-            "X-Script-Filename": "sample.lua" 
-          },
-          status: 200
         });
-      }
-      
-      // Get main script file with preference for requested file
-      console.log(`Retrieving script file with preference for: ${requestedFileName || "main files"}`);
-      const { content, error, fileName } = await getMainScriptFile(supabase, licenseData.id, files as any[], requestedFileName);
-      
-      if (error) {
-        console.error(`Error retrieving main script: ${error}`);
-        return createErrorResponse(error);
-      }
-      
-      console.log(`Successfully retrieved script file: ${fileName || "unknown.lua"}`);
-      
-      // Add the actual filename as a header
-      const headers = { 
-        ...corsHeaders, 
-        "Content-Type": "text/plain",
-        "X-Script-Filename": fileName || "main.lua" 
-      };
-      
-      return new Response(content, {
-        headers,
-        status: 200
-      });
+
+    } catch (error) {
+        console.error("Unexpected error:", error);
+        return createErrorResponse("Internal server error");
     }
-    
-    // Return script from database if no file upload
-    if (!licenseData.script_file) {
-      console.log("No script file found in database");
-      const sampleScript = generateSampleScript(licenseData);
-      return new Response(sampleScript, {
-        headers: { 
-          ...corsHeaders, 
-          "Content-Type": "text/plain",
-          "X-Script-Filename": "sample.lua" 
-        },
-        status: 200
-      });
-    }
-    
-    // Return the script with proper content type
-    console.log("Returning script from database");
-    return new Response(licenseData.script_file, {
-      headers: { 
-        ...corsHeaders, 
-        "Content-Type": "text/plain",
-        "X-Script-Filename": `${licenseData.script_name || "script"}.lua`
-      },
-      status: 200
-    });
-    
-  } catch (error) {
-    console.error("Unexpected error:", error);
-    return createErrorResponse("Internal server error occurred");
-  }
 }
