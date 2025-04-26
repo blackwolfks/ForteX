@@ -15,7 +15,7 @@ import FileUploadDialog from "./FileUploadDialog";
 
 interface ScriptCardProps {
   license: License;
-  onUpdateScript: (licenseId: string, scriptName: string, scriptCode: string | null, serverIp: string | null, isActive: boolean) => Promise<boolean>;
+  onUpdateScript: (licenseId: string, scriptName: string, serverIp: string | null, isActive: boolean) => Promise<boolean>;
   onRegenerateServerKey: (licenseId: string) => Promise<boolean>;
   onDeleteScript: (licenseId: string) => Promise<boolean>;
 }
@@ -142,7 +142,7 @@ export default function ScriptCard({
                 <Button 
                   variant={license.aktiv ? "destructive" : "outline"} 
                   size="sm"
-                  onClick={() => onUpdateScript(license.id, license.script_name, license.script_file, license.server_ip, !license.aktiv)}
+                  onClick={() => onUpdateScript(license.id, license.script_name, license.server_ip, !license.aktiv)}
                 >
                   {license.aktiv ? 'Deaktivieren' : 'Aktivieren'}
                 </Button>
@@ -201,7 +201,7 @@ export default function ScriptCard({
                     id={`active-${license.id}`}
                     checked={license.aktiv}
                     onCheckedChange={(checked) => 
-                      onUpdateScript(license.id, license.script_name, license.script_file, license.server_ip, checked)
+                      onUpdateScript(license.id, license.script_name, license.server_ip, checked)
                     }
                   />
                   <Label htmlFor={`active-${license.id}`}>Script aktiv</Label>
@@ -222,7 +222,7 @@ export default function ScriptCard({
                   size="sm"
                   onClick={() => {
                     const ipElement = document.getElementById(`server-ip-${license.id}`) as HTMLInputElement;
-                    onUpdateScript(license.id, license.script_name, license.script_file, ipElement.value, license.aktiv);
+                    onUpdateScript(license.id, license.script_name, ipElement.value, license.aktiv);
                   }}
                 >
                   <Save className="h-4 w-4 mr-1" /> Einstellungen speichern

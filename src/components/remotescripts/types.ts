@@ -4,23 +4,23 @@ export interface License {
   license_key: string;
   server_key: string;
   script_name: string;
-  script_file: string | null;
-  server_ip: string | null;
   aktiv: boolean;
-  has_file_upload: boolean;
   created_at: string;
+  server_ip: string | null;
+  has_file_upload: boolean;
+  updated_at: string;
 }
 
 export interface NewScriptFormData {
   name: string;
-  serverIp: string;
-  code?: string; // Keeping for backward compatibility, but will be unused
+  serverIp?: string;
 }
 
-export interface FileItem {
-  name: string;
-  id?: string;
-  size?: number;
-  isPublic: boolean;
-  fullPath: string;
+export interface FileAccessInfo {
+  id: string;
+  license_id: string;
+  file_path: string;
+  is_public: boolean;
+  created_at: string;
+  updated_at: string;
 }

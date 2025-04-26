@@ -257,7 +257,6 @@ export type Database = {
           has_file_upload: boolean | null
           id: string
           license_key: string
-          script_file: string | null
           script_name: string
           server_ip: string | null
           server_key: string
@@ -270,7 +269,6 @@ export type Database = {
           has_file_upload?: boolean | null
           id?: string
           license_key: string
-          script_file?: string | null
           script_name: string
           server_ip?: string | null
           server_key: string
@@ -283,7 +281,6 @@ export type Database = {
           has_file_upload?: boolean | null
           id?: string
           license_key?: string
-          script_file?: string | null
           script_name?: string
           server_ip?: string | null
           server_key?: string
@@ -497,7 +494,6 @@ export type Database = {
           has_file_upload: boolean | null
           id: string | null
           license_key: string | null
-          script_file: string | null
           script_name: string | null
           server_ip: string | null
           server_key: string | null
@@ -510,7 +506,6 @@ export type Database = {
           has_file_upload?: boolean | null
           id?: string | null
           license_key?: string | null
-          script_file?: string | null
           script_name?: string | null
           server_ip?: string | null
           server_key?: string | null
@@ -523,7 +518,6 @@ export type Database = {
           has_file_upload?: boolean | null
           id?: string | null
           license_key?: string | null
-          script_file?: string | null
           script_name?: string | null
           server_ip?: string | null
           server_key?: string | null
@@ -548,7 +542,6 @@ export type Database = {
           valid: boolean
           license_key: string
           script_name: string
-          script_file: string
           server_ip: string
           aktiv: boolean
           id: string
@@ -561,7 +554,6 @@ export type Database = {
           valid: boolean
           license_key: string
           script_name: string
-          script_file: string
           server_ip: string
           aktiv: boolean
           id: string
