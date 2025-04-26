@@ -79,7 +79,7 @@ const ScriptCard = ({ license, onUpdateScript, onRegenerateServerKey, onDeleteSc
               <CardTitle className="text-lg font-semibold">{license.script_name}</CardTitle>
               <CardDescription>Erstellt am {formatDate(license.created_at)}</CardDescription>
             </div>
-            <Badge variant={license.aktiv ? "success" : "destructive"}>
+            <Badge variant={license.aktiv ? "default" : "destructive"}>
               {license.aktiv ? "Aktiv" : "Inaktiv"}
             </Badge>
           </div>
