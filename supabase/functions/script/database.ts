@@ -1,7 +1,7 @@
 
 // Use Deno-compatible imports
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { Database } from './types';
+import { Database } from './types.ts';
 
 // Environment variables are automatically available
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
