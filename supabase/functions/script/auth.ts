@@ -28,6 +28,7 @@ export async function extractKeys(req: Request) {
     if (!licenseKey && urlParams.has("license_key")) licenseKey = urlParams.get("license_key");
     if (!serverKey && urlParams.has("server_key")) serverKey = urlParams.get("server_key");
 
+    console.log(`Extracted Keys -> LicenseKey: ${licenseKey}, ServerKey: ${serverKey}`);
     return { licenseKey, serverKey };
 }
 
