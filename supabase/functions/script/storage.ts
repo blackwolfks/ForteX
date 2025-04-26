@@ -1,4 +1,3 @@
-
 import { createErrorResponse } from "./response.ts";
 import { corsHeaders } from "./cors.ts";
 
@@ -236,4 +235,54 @@ export async function getMainScriptFile(supabase: any, licenseId: string, files:
   
   console.error(`No files found for license: ${licenseId}`);
   return { content: null, error: 'No files found', fileName: null };
+}
+
+// Generate a sample script if no script files are found
+export function generateSampleScript(licenseData: any) {
+  const licenseKey = licenseData?.license_key || 'XXXX-XXXX-XXXX-XXXX';
+  const serverKey = licenseData?.server_key || 'XXXXXXXXXXXX';
+  
+  return `-- ForteX Framework - Beispiel Skript
+-- Generiert für Lizenz: ${licenseKey}
+
+-- Konfiguration
+local CONFIG = {
+    LicenseKey = "${licenseKey}",  -- Ihr Lizenzschlüssel
+    ServerKey = "${serverKey}",    -- Ihr Server-Key
+    Debug = true                   -- Debug-Modus aktivieren
+}
+
+-- Variablen
+local isInitialized = false
+
+-- Funktionen
+function Initialize()
+    if isInitialized then return end
+    
+    print("ForteX Script wird initialisiert...")
+    print("Lizenz: " .. CONFIG.LicenseKey)
+    
+    -- Hier können Sie weitere Initialisierungsschritte hinzufügen
+    
+    isInitialized = true
+    print("ForteX Script erfolgreich initialisiert!")
+end
+
+-- Registriere Ereignisse
+RegisterNetEvent("fortex:initialize")
+AddEventHandler("fortex:initialize", Initialize)
+
+-- Initialisiere beim Ressourcenstart
+AddEventHandler("onResourceStart", function(resourceName) 
+    if GetCurrentResourceName() ~= resourceName then return end
+    Initialize()
+end)
+
+-- Beispielfunktion zur Verwendung in Ihrem Skript
+function GetForteXVersion()
+    return "1.0.0"
+end
+
+print("ForteX Script geladen. Verwenden Sie die 'fortex:initialize' Event, um es zu initialisieren.")
+`;
 }
