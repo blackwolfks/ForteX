@@ -1,4 +1,3 @@
-
 import { createErrorResponse } from "./response.ts";
 import { corsHeaders } from "./cors.ts";
 
@@ -60,31 +59,49 @@ export async function listScriptFiles(supabase: any, licenseId: string) {
   }
 }
 
-export async function getScriptFile(supabase: any, filePath: string) {
-  try {
-    console.log(`Getting file: ${filePath}`);
-    
-    // Normalisieren des Dateipfads
-    const normalizedFilePath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
-    
-    // Datei herunterladen
-    const { data, error } = await supabase.storage
-      .from('script')
-      .download(normalizedFilePath);
-    
+export async function getScriptFile(supabase: any, licenseData: any) {
+    const folderPath = `${licenseData.id}/`;  // Folder name = UUID from database
+
+    console.log(`Searching storage folder: ${folderPath}`);
+
+    // List all files in the folder
+    const { data: files, error } = await supabase.storage.from('script').list(folderPath);
+
     if (error) {
-      console.error(`Error downloading file: ${error.message}`);
-      return null;
+        console.error("Error listing files:", error);
+        return null;
     }
-    
-    // Blob in Text umwandeln
-    const content = await data.text();
-    console.log(`Successfully downloaded file: ${normalizedFilePath}`);
-    return content;
-  } catch (error) {
-    console.error(`Exception in getScriptFile: ${error}`);
-    return null;
-  }
+
+    if (!files || files.length === 0) {
+        console.warn("No files found in folder:", folderPath);
+        return null;
+    }
+
+    // Search for the first .lua file
+    const luaFile = files.find(file => file.name.endsWith('.lua'));
+
+    if (!luaFile) {
+        console.warn(`No .lua file found in folder ${folderPath}`);
+        return null;
+    }
+
+    const downloadPath = `${folderPath}${luaFile.name}`;
+    console.log(`Found file: ${downloadPath}`);
+
+    // Download the file
+    const { data: fileData, error: downloadError } = await supabase.storage.from('script').download(downloadPath);
+
+    if (downloadError || !fileData) {
+        console.error("Error downloading file:", downloadError);
+        return null;
+    }
+
+    // Return file content as text
+    const scriptContent = await fileData.text();
+
+    console.log(`Script file '${luaFile.name}' successfully loaded.`);
+
+    return scriptContent;
 }
 
 export async function getScriptFile(supabase: any, licenseId: string, filePath: string) {
@@ -234,4 +251,3 @@ end
 
 print("ForteX Script geladen. Verwenden Sie die 'fortex:initialize' Event, um es zu initialisieren.")
 `;
-}
