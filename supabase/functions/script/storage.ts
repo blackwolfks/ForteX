@@ -285,4 +285,3 @@ end
 
 print("ForteX Script geladen. Verwenden Sie die 'fortex:initialize' Event, um es zu initialisieren.")
 `;
-}
