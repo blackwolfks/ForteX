@@ -1,17 +1,10 @@
-// Helper functions for extracting and validating authentication data
-import { corsHeaders } from "./cors.ts";
 
-// Extract client IP from request headers
-export function getClientIp(req: Request): string {
-  let rawClientIp = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "unknown";
-  return rawClientIp.split(",")[0].trim(); // Get first IP address
-}
-
+// Extract keys from various sources in the request
 export async function extractKeys(req: Request) {
     let licenseKey = null;
     let serverKey = null;
 
-    // 1. Basic Auth hat Priorität
+    // 1️⃣ Basic Auth hat höchste Priorität
     const authHeader = req.headers.get("authorization");
     if (authHeader && authHeader.startsWith("Basic ")) {
         try {
@@ -25,15 +18,24 @@ export async function extractKeys(req: Request) {
         }
     }
 
-    // 2. Falls Basic Auth fehlt, Header nutzen
+    // 2️⃣ Falls Basic Auth fehlt oder unvollständig, verwende Header
     if (!licenseKey) licenseKey = req.headers.get("x-license-key");
     if (!serverKey) serverKey = req.headers.get("x-server-key");
 
-    // 3. Falls noch leer, URL-Parameter prüfen
+    // 3️⃣ Falls noch immer leer, prüfe URL-Parameter
     const url = new URL(req.url);
     const urlParams = url.searchParams;
     if (!licenseKey && urlParams.has("license_key")) licenseKey = urlParams.get("license_key");
     if (!serverKey && urlParams.has("server_key")) serverKey = urlParams.get("server_key");
 
     return { licenseKey, serverKey };
+}
+
+// Client-IP extrahieren (falls benötigt)
+export function getClientIp(req: Request) {
+    const forwardedFor = req.headers.get("x-forwarded-for");
+    if (forwardedFor) {
+        return forwardedFor.split(",")[0].trim();
+    }
+    return req.headers.get("cf-connecting-ip") || "unknown";
 }
