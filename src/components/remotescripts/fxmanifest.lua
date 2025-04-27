@@ -13,12 +13,8 @@ server_script {
     'FiveM_ForteX.lua'
 }
 
--- Client Scripts
-client_script {
-    'client/fortex_client_loader.lua'
-}
-
 -- Files to be downloaded with the resource
 files {
     'ForteX_README.md'
 }
+
