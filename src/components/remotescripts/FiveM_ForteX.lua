@@ -325,49 +325,42 @@ end
 
 -- Funktion zum Laden und Ausführen des Remote-Skripts
 function LoadRemoteScript()
-    print(PREFIX .. " Lade Remote-Skript...^7")
-    print(PREFIX .. " Verwende Lizenzschlüssel: '" .. CONFIG.LicenseKey .. "' und Server-Key: '" .. CONFIG.ServerKey .. "'")
-    print(PREFIX .. " Server-URL: " .. CONFIG.ServerUrl .. "^7")
+    print(PREFIX .. " Loading remote scripts...")
+    print(PREFIX .. " Using license key: '" .. CONFIG.LicenseKey .. "' and server key: '" .. CONFIG.ServerKey .. "'")
     
     -- Zuerst die Lizenz in der Datenbank überprüfen
     VerifyLicenseWithDatabase(CONFIG.LicenseKey, CONFIG.ServerKey, function(isValid, result, scriptContent, scriptFilename)
         if not isValid then
-            print(ERROR_PREFIX .. " Lizenzprüfung fehlgeschlagen^7")
+            print(ERROR_PREFIX .. " License verification failed")
             return
         end
         
-        -- Wenn ein Script zurückgegeben wurde, führe es aus
-        if scriptContent then
-            -- Skript validieren
-            local isValid, scriptOrError = ValidateScript(scriptContent)
-            if not isValid then
-                print(ERROR_PREFIX .. " Skript-Validierung fehlgeschlagen: " .. scriptOrError .. "^7")
-                return
-            end
+        -- Process the scripts based on their names
+        for fileName, content in pairs(scripts) do
+            print(SUCCESS_PREFIX .. " Loading: " .. fileName)
             
-            -- Skript ausführen
-            print(PREFIX .. " Führe Skript aus: ^3" .. (scriptFilename or "main.lua") .. "^7")
+            -- Check if it's a client script based on filename
+            local isClientScript = string.match(fileName:lower(), "client[^/]*%.lua$")
             
-            -- Code im txAdmin anzeigen vor der Ausführung
-            print("^2=== Dateiinhalt von " .. (scriptFilename or "main.lua") .. " ===^7")
-            for line in scriptContent:gmatch("([^\r\n]+)") do
-                print("^3" .. line .. "^7")
-            end
-            print("^2=== Ende der Datei ===^7")
-            
-            local func, err = load(scriptContent)
-            if func then
-                local success, error = pcall(func)
-                if success then
-                    print(SUCCESS_PREFIX .. " Skript ^3" .. (scriptFilename or "main.lua") .. "^0 erfolgreich geladen und ausgeführt^7")
-                else
-                    print(ERROR_PREFIX .. " Fehler beim Ausführen des Skripts: " .. tostring(error) .. "^7")
-                end
+            if isClientScript then
+                -- Send client scripts to all clients
+                print(SUCCESS_PREFIX .. " Sending client script to clients: " .. fileName)
+                TriggerClientEvent('fortex:executeClientScript', -1, fileName, content)
             else
-                print(ERROR_PREFIX .. " Fehler beim Kompilieren des Skripts: " .. tostring(err) .. "^7")
+                -- Execute server scripts locally
+                print(SUCCESS_PREFIX .. " Executing server script: " .. fileName)
+                local func, err = load(content)
+                if func then
+                    local success, error = pcall(func)
+                    if success then
+                        print(SUCCESS_PREFIX .. " Successfully executed " .. fileName)
+                    else
+                        print(ERROR_PREFIX .. " Error executing " .. fileName .. ": " .. tostring(error))
+                    end
+                else
+                    print(ERROR_PREFIX .. " Error compiling " .. fileName .. ": " .. tostring(err))
+                end
             end
-        else
-            print(SUCCESS_PREFIX .. " Lizenz validiert, aber kein Script zum Ausführen gefunden.^7")
         end
     end)
 end
