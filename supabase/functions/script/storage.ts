@@ -105,18 +105,20 @@ export async function getAllScriptFiles(supabase: any, licenseId: string) {
       return { content: null, error: "No files found" };
     }
     
-    // Find all .lua files
-    const luaFiles = files.filter(file => file.name.endsWith('.lua'));
+    // Find both .lua and .json files
+    const validFiles = files.filter(file => 
+      file.name.endsWith('.lua') || file.name.endsWith('.json')
+    );
     
-    if (luaFiles.length === 0) {
-      console.warn(`No .lua files found in folder ${licenseId}`);
-      return { content: null, error: "No .lua files found" };
+    if (validFiles.length === 0) {
+      console.warn(`No .lua or .json files found in folder ${licenseId}`);
+      return { content: null, error: "No .lua or .json files found" };
     }
     
     const scripts: Record<string, string> = {};
     
-    // Download each .lua file
-    for (const file of luaFiles) {
+    // Download each valid file
+    for (const file of validFiles) {
       const downloadPath = `${licenseId}/${file.name}`;
       console.log(`Processing file: ${downloadPath}`);
       
@@ -132,30 +134,33 @@ export async function getAllScriptFiles(supabase: any, licenseId: string) {
       // Convert blob to text and clean it
       const rawText = await fileData.text();
       
-      // Clean the text to remove any HTTP headers or boundary markers
+      // Clean the text depending on file type
       let content = rawText;
       
-      // Remove WebKit form boundaries and other HTTP headers if present
-      const luaContentMatch = rawText.match(/Content-Type: text\/x-lua\r?\n\r?\n([\s\S]*?)(?:\r?\n-{4,}WebKit|$)/i);
-      if (luaContentMatch && luaContentMatch[1]) {
-        content = luaContentMatch[1];
-      } else {
-        // Try another pattern that might match
-        const altMatch = rawText.match(/Content-Type: text\/.*?\r?\n\r?\n([\s\S]*?)(?:\r?\n-{4,}|$)/i);
-        if (altMatch && altMatch[1]) {
-          content = altMatch[1];
+      if (file.name.endsWith('.lua')) {
+        // Remove WebKit form boundaries and other HTTP headers if present for Lua files
+        const luaContentMatch = rawText.match(/Content-Type: text\/x-lua\r?\n\r?\n([\s\S]*?)(?:\r?\n-{4,}WebKit|$)/i);
+        if (luaContentMatch && luaContentMatch[1]) {
+          content = luaContentMatch[1];
         } else {
-          // If still can't match specific pattern, just try to remove obvious headers
-          const lines = rawText.split('\n');
-          const contentStartIndex = lines.findIndex(line => line.trim() === '');
-          if (contentStartIndex !== -1 && contentStartIndex < lines.length - 1) {
-            content = lines.slice(contentStartIndex + 1).join('\n');
+          // Try another pattern that might match
+          const altMatch = rawText.match(/Content-Type: text\/.*?\r?\n\r?\n([\s\S]*?)(?:\r?\n-{4,}|$)/i);
+          if (altMatch && altMatch[1]) {
+            content = altMatch[1];
           }
+        }
+      } else if (file.name.endsWith('.json')) {
+        try {
+          // Validate JSON format
+          JSON.parse(content);
+        } catch (e) {
+          console.error(`Invalid JSON format in file ${file.name}:`, e);
+          continue;
         }
       }
       
       scripts[file.name] = content;
-      console.log(`Script file '${file.name}' successfully loaded`);
+      console.log(`File '${file.name}' successfully loaded`);
     }
     
     return { content: scripts, error: null };

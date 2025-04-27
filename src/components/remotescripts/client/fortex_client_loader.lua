@@ -37,8 +37,8 @@ end)
 if CONFIG and CONFIG.ConfigFileName then
     ForteX.LoadFile(CONFIG.ConfigFileName, function(success, data)
         if success then
-            local cfg = json.decode(data)
-            if cfg and cfg.Signature == CONFIG.ConfigSignature then
+            local success, cfg = pcall(json.decode, data)
+            if success and cfg and cfg.Signature == CONFIG.ConfigSignature then
                 cachedKosatkaConfig = cfg
                 print(SUCCESS_PREFIX .. " Config '" .. CONFIG.ConfigFileName .. "' erfolgreich geladen & validiert!")
             else
