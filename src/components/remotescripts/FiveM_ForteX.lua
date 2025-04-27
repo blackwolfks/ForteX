@@ -32,17 +32,17 @@ ShowASCIILogo()
 
 -- Konfigurationsdatei laden
 local resourceName = GetCurrentResourceName()
-local configFile = LoadResourceFile(resourceName, "config.lua")
+local configFile = LoadResourceFile(resourceName, "config_fortex.lua")
 
 if not configFile then
-    print(ERROR_PREFIX .. " Fehler: config.lua konnte nicht geladen werden^7")
+    print(ERROR_PREFIX .. " Fehler: config_fortex.lua konnte nicht geladen werden^7")
     return
 end
 
 -- Config-Datei ausführen
 local configFunc, configError = load(configFile)
 if not configFunc then
-    print(ERROR_PREFIX .. " Fehler beim Laden der config.lua: " .. tostring(configError) .. "^7")
+    print(ERROR_PREFIX .. " Fehler beim Laden der config_fortex.lua: " .. tostring(configError) .. "^7")
     return
 end
 
@@ -57,7 +57,7 @@ end
 
 if not CONFIG.LicenseKey or not CONFIG.ServerKey then
     print(ERROR_PREFIX .. " Fehler: Lizenzschlüssel oder ServerKey nicht konfiguriert^7")
-    print(ERROR_PREFIX .. " Bitte geben Sie gültige Werte in config.lua ein^7")
+    print(ERROR_PREFIX .. " Bitte geben Sie gültige Werte in config_fortex.lua ein^7")
     return
 end
 
@@ -134,7 +134,7 @@ function DebugResponse(statusCode, responseData, responseHeaders)
             -- Prüfe auf bekannte Antwortprobleme
             if preview:match("<!doctype") or preview:match("<html") then
                 print(ERROR_PREFIX .. " Die Antwort enthält HTML anstatt Lua-Code. Dies deutet auf ein Verbindungs- oder Konfigurationsproblem hin.^7")
-                print(ERROR_PREFIX .. " Überprüfen Sie die ServerUrl in config.lua und stellen Sie sicher, dass sie direkt auf die Edge Function zeigt.^7")
+                print(ERROR_PREFIX .. " Überprüfen Sie die ServerUrl in config_fortex.lua und stellen Sie sicher, dass sie direkt auf die Edge Function zeigt.^7")
             end
             
             -- Prüfe auf JSON-Antwort

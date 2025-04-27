@@ -9,7 +9,7 @@ version '1.0.0'
 
 -- Server Scripts
 server_script {
-    'config.lua',
+    'config_fortex.lua',
     'FiveM_ForteX.lua'
 }
 
