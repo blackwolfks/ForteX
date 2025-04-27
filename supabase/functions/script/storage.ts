@@ -1,3 +1,4 @@
+
 import { createErrorResponse } from "./response.ts";
 import { corsHeaders } from "./cors.ts";
 
@@ -151,11 +152,14 @@ export async function getAllScriptFiles(supabase: any, licenseId: string) {
         }
       } else if (file.name.endsWith('.json')) {
         try {
-          // Validate JSON format
+          // Just to validate JSON format, we parse it and don't modify the content
           JSON.parse(content);
+          console.log(`JSON file '${file.name}' validated successfully`);
         } catch (e) {
           console.error(`Invalid JSON format in file ${file.name}:`, e);
-          continue;
+          console.error(`JSON content preview: ${content.substring(0, 100)}...`);
+          // We still include the file even if it's invalid JSON
+          // so that proper error messages can be shown on the client
         }
       }
       
