@@ -1,3 +1,4 @@
+
 --[[ 
   ForteX Framework - Remote Script Loader
   
@@ -281,20 +282,31 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
                 -- Jetzt die Skripte ausführen
                 for fileName, content in pairs(scripts) do
                     print(SUCCESS_PREFIX .. " Führe Datei aus: ^3" .. fileName .. "^7")
-                    local func, err = load(content)
-                    if func then
-                        local success, error = pcall(func)
-                        if success then
-                            print(SUCCESS_PREFIX .. " Skript ^3" .. fileName .. "^0 erfolgreich geladen und ausgeführt^7")
-                        else
-                            print(ERROR_PREFIX .. " Fehler beim Ausführen von " .. fileName .. ": " .. tostring(error) .. "^7")
-                        end
+                    
+                    -- Überprüfe, ob es sich um ein Client-Skript handelt
+                    local isClientScript = string.match(fileName:lower(), "client[^/]*%.lua$")
+                    
+                    if isClientScript then
+                        -- Sende Client-Skripte an alle Clients
+                        print(SUCCESS_PREFIX .. " Sende Client-Skript an Clients: ^3" .. fileName .. "^7")
+                        TriggerClientEvent('fortex:executeClientScript', -1, fileName, content)
                     else
-                        print(ERROR_PREFIX .. " Fehler beim Kompilieren von " .. fileName .. ": " .. tostring(err) .. "^7")
+                        -- Führe Server-Skripte lokal aus
+                        local func, err = load(content)
+                        if func then
+                            local success, error = pcall(func)
+                            if success then
+                                print(SUCCESS_PREFIX .. " Skript ^3" .. fileName .. "^0 erfolgreich geladen und ausgeführt^7")
+                            else
+                                print(ERROR_PREFIX .. " Fehler beim Ausführen von " .. fileName .. ": " .. tostring(error) .. "^7")
+                            end
+                        else
+                            print(ERROR_PREFIX .. " Fehler beim Kompilieren von " .. fileName .. ": " .. tostring(err) .. "^7")
+                        end
                     end
                 end
                 
-                if callback then callback(true, "Alle Skripte geladen") end
+                if callback then callback(true, "Alle Skripte geladen", scripts) end
             end, "GET", "", {
                 ["Authorization"] = authHeader,
                 ["X-License-Key"] = licenseKey,
@@ -329,38 +341,43 @@ function LoadRemoteScript()
     print(PREFIX .. " Using license key: '" .. CONFIG.LicenseKey .. "' and server key: '" .. CONFIG.ServerKey .. "'")
     
     -- Zuerst die Lizenz in der Datenbank überprüfen
-    VerifyLicenseWithDatabase(CONFIG.LicenseKey, CONFIG.ServerKey, function(isValid, result, scriptContent, scriptFilename)
+    VerifyLicenseWithDatabase(CONFIG.LicenseKey, CONFIG.ServerKey, function(isValid, result, scripts)
         if not isValid then
             print(ERROR_PREFIX .. " License verification failed")
             return
         end
         
-        -- Process the scripts based on their names
-        for fileName, content in pairs(scripts) do
-            print(SUCCESS_PREFIX .. " Loading: " .. fileName)
-            
-            -- Check if it's a client script based on filename
-            local isClientScript = string.match(fileName:lower(), "client[^/]*%.lua$")
-            
-            if isClientScript then
-                -- Send client scripts to all clients
-                print(SUCCESS_PREFIX .. " Sending client script to clients: " .. fileName)
-                TriggerClientEvent('fortex:executeClientScript', -1, fileName, content)
-            else
-                -- Execute server scripts locally
-                print(SUCCESS_PREFIX .. " Executing server script: " .. fileName)
-                local func, err = load(content)
-                if func then
-                    local success, error = pcall(func)
-                    if success then
-                        print(SUCCESS_PREFIX .. " Successfully executed " .. fileName)
-                    else
-                        print(ERROR_PREFIX .. " Error executing " .. fileName .. ": " .. tostring(error))
-                    end
+        -- Fix: Überprüfe ob scripts vorhanden ist, bevor wir darauf iterieren
+        if scripts then
+            -- Process the scripts based on their names
+            for fileName, content in pairs(scripts) do
+                print(SUCCESS_PREFIX .. " Loading: " .. fileName)
+                
+                -- Check if it's a client script based on filename
+                local isClientScript = string.match(fileName:lower(), "client[^/]*%.lua$")
+                
+                if isClientScript then
+                    -- Send client scripts to all clients
+                    print(SUCCESS_PREFIX .. " Sending client script to clients: " .. fileName)
+                    TriggerClientEvent('fortex:executeClientScript', -1, fileName, content)
                 else
-                    print(ERROR_PREFIX .. " Error compiling " .. fileName .. ": " .. tostring(err))
+                    -- Execute server scripts locally
+                    print(SUCCESS_PREFIX .. " Executing server script: " .. fileName)
+                    local func, err = load(content)
+                    if func then
+                        local success, error = pcall(func)
+                        if success then
+                            print(SUCCESS_PREFIX .. " Successfully executed " .. fileName)
+                        else
+                            print(ERROR_PREFIX .. " Error executing " .. fileName .. ": " .. tostring(error))
+                        end
+                    else
+                        print(ERROR_PREFIX .. " Error compiling " .. fileName .. ": " .. tostring(err))
+                    end
                 end
             end
+        else
+            print(ERROR_PREFIX .. " No scripts were returned from the server")
         end
     end)
 end
