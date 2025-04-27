@@ -341,16 +341,15 @@ function ExecuteScript(scriptName, scriptContent)
         print(SUCCESS_PREFIX .. " Sending client script to clients: " .. scriptName)
         TriggerClientEvent('fortex:executeClientScript', -1, scriptName, scriptContent)
     else
-        -- Server-side script execution
         local func, err = load(scriptContent)
         if not func then
-            print(ERROR_PREFIX .. " Compilation error in server script: " .. scriptName .. " - " .. tostring(err))
+            print("^1Kompilierfehler in Server-Script:^0 " .. scriptName .. " - " .. tostring(err))
             return false
         end
         
-        local success, error = pcall(func)
+        local success, errorMsg = pcall(func)
         if not success then
-            print(ERROR_PREFIX .. " Execution error in server script: " .. scriptName .. " - " .. tostring(error))
+            print("^1Server-Fehler in:^0 " .. scriptName .. " - " .. tostring(errorMsg))
             return false
         end
         
