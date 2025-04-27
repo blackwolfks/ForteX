@@ -1,4 +1,3 @@
-
 import { createErrorResponse } from "./response.ts";
 import { corsHeaders } from "./cors.ts";
 
@@ -130,7 +129,7 @@ export async function getAllScriptFiles(supabase: any, licenseId: string) {
         continue;
       }
       
-      // Convert blob to text
+      // Convert blob to text and clean it
       const rawText = await fileData.text();
       
       // Clean the text to remove any HTTP headers or boundary markers

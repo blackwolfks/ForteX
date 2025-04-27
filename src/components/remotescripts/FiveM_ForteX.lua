@@ -1,4 +1,3 @@
-
 --[[ 
   ForteX Framework - Remote Script Loader
   
@@ -253,65 +252,49 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
             
             -- Jetzt den Skript-Endpunkt aufrufen, um das Skript zu laden
             local scriptUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/script"
-            print(SUCCESS_PREFIX .. " Versuche Skript zu laden von: " .. scriptUrl .. "^7")
+            print(SUCCESS_PREFIX .. " Versuche Skripte zu laden von: " .. scriptUrl .. "^7")
             
             PerformHttpRequest(scriptUrl, function(scriptStatusCode, scriptContent, scriptHeaders)
                 if scriptStatusCode ~= 200 then
-                    print(ERROR_PREFIX .. " Fehler beim Laden des Scripts: " .. tostring(scriptStatusCode) .. "^7")
+                    print(ERROR_PREFIX .. " Fehler beim Laden der Scripts: " .. tostring(scriptStatusCode) .. "^7")
                     if callback then callback(false, "Script-Ladefehler: " .. tostring(scriptStatusCode)) end
                     return
                 end
                 
-                -- Überprüfen, ob die Antwort Lua-Code oder eine Fehlermeldung ist
-                local isLuaCode = scriptContent:match("^%s*--") or 
-                                  scriptContent:match("^%s*function") or 
-                                  scriptContent:match("^%s*local") or
-                                  scriptContent:match("^%s*return") or
-                                  scriptContent:match("^%s*if")
-                                  
-                if isLuaCode then
-                    -- Extrahiere den Skriptnamen aus dem Content (falls vorhanden) oder verwende den Dateinamen aus dem Header
-                    local scriptName = "main.lua"
-                    
-                    -- Versuche zuerst, den Dateinamen aus dem Header zu extrahieren
-                    if scriptHeaders and scriptHeaders["X-Script-Filename"] then
-                        scriptName = scriptHeaders["X-Script-Filename"]
-                    else
-                        -- Fallback: Versuche den Namen aus dem Skript-Kommentar zu extrahieren
-                        local nameMatch = scriptContent:match("%-%-%s*@name%s*([^\r\n]+)")
-                        if nameMatch then
-                            scriptName = nameMatch
+                -- Überprüfen, ob die Antwort gültige Skripte enthält
+                local scripts = json.decode(scriptContent)
+                if type(scripts) ~= "table" then
+                    print(ERROR_PREFIX .. " Ungültiges Antwortformat vom Script-Server^7")
+                    if callback then callback(false, "Ungültiges Antwortformat") end
+                    return
+                end
+                
+                -- Skripte laden und ausführen
+                print(SUCCESS_PREFIX .. " Gefundene Skriptdateien:")
+                local fileCount = 0
+                for fileName, content in pairs(scripts) do
+                    fileCount = fileCount + 1
+                    print("^3" .. fileCount .. ".^7 " .. fileName)
+                end
+                print(SUCCESS_PREFIX .. " Insgesamt ^3" .. fileCount .. "^7 Skriptdateien gefunden")
+                
+                -- Jetzt die Skripte ausführen
+                for fileName, content in pairs(scripts) do
+                    print(SUCCESS_PREFIX .. " Führe Datei aus: ^3" .. fileName .. "^7")
+                    local func, err = load(content)
+                    if func then
+                        local success, error = pcall(func)
+                        if success then
+                            print(SUCCESS_PREFIX .. " Skript ^3" .. fileName .. "^0 erfolgreich geladen und ausgeführt^7")
+                        else
+                            print(ERROR_PREFIX .. " Fehler beim Ausführen von " .. fileName .. ": " .. tostring(error) .. "^7")
                         end
-                    end
-                    
-                    print(SUCCESS_PREFIX .. " Führe Datei aus: ^3" .. scriptName .. "^7")
-                    
-                    -- Code im txAdmin anzeigen vor der Ausführung
-                    print("^2=== Dateiinhalt von " .. scriptName .. " ===^7")
-                    
-                    -- Zeilenweise ausgeben für bessere Formatierung
-                    for line in scriptContent:gmatch("([^\r\n]+)") do
-                        print("^3" .. line .. "^7")
-                    end
-                    
-                    print("^2=== Ende der Datei ===^7")
-                    
-                    if CONFIG.Debug then
-                        print(DEBUG_PREFIX .. " Skript-Inhalt (ersten 100 Zeichen): " .. scriptContent:sub(1, 100))
-                    end
-                    if callback then callback(true, result, scriptContent, scriptName) end
-                else
-                    -- Versuche es als JSON zu parsen (könnte eine Fehlermeldung sein)
-                    local errorData, _ = DecodeJSON(scriptContent)
-                    if errorData and errorData.error then
-                        print(ERROR_PREFIX .. " Server-Fehler: " .. errorData.error .. "^7")
-                        if callback then callback(false, errorData.error) end
                     else
-                        -- Wenn es kein JSON ist, geben wir den Inhalt als Fehler zurück
-                        print(ERROR_PREFIX .. " Unerwartete Antwort vom Script-Server. Inhalt: " .. scriptContent:sub(1, 100) .. "^7")
-                        if callback then callback(false, "Unerwartetes Antwortformat vom Script-Server") end
+                        print(ERROR_PREFIX .. " Fehler beim Kompilieren von " .. fileName .. ": " .. tostring(err) .. "^7")
                     end
                 end
+                
+                if callback then callback(true, "Alle Skripte geladen") end
             end, "GET", "", {
                 ["Authorization"] = authHeader,
                 ["X-License-Key"] = licenseKey,
