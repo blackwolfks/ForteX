@@ -650,6 +650,22 @@ RegisterCommand('fortex_config', function(source, args, rawCommand)
     end
 end, true)
 
+-- Direkt JSON dekodieren ohne zu laden
+if CONFIG and CONFIG.ConfigFileName then
+    local jsonString = CONFIG.JsonContent -- Nehmen Sie den JSON-String direkt
+    if jsonString then
+        local cfg = SafeJsonDecode(jsonString, CONFIG.ConfigFileName)
+        if cfg and cfg.Signature == CONFIG.ConfigSignature then
+            cachedKosatkaConfig = cfg
+            print(SUCCESS_PREFIX .. " Config successfully decoded & validated!")
+        else
+            print(ERROR_PREFIX .. " Invalid config or wrong signature! Expected: " .. CONFIG.ConfigSignature)
+        end
+    else
+        print(ERROR_PREFIX .. " No JSON content provided in CONFIG.JsonContent")
+    end
+end
+
 -- Konfigurationsdatei laden
 if CONFIG and CONFIG.ConfigFileName then
     ForteX.LoadFile(CONFIG.ConfigFileName, function(success, data)
