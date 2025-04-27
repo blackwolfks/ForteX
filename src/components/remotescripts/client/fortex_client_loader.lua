@@ -13,20 +13,20 @@ local SUCCESS_PREFIX = "^8[^2ForteX Client^8, ^2SUCCESS^8]^0"
 
 -- Register event handler for executing client scripts
 RegisterNetEvent('fortex:executeClientScript')
-AddEventHandler('fortex:executeClientScript', function(scriptName, scriptContent)
-    print(PREFIX .. " Received client script: " .. scriptName)
+AddEventHandler('fortex:executeClientScript', function(fileName, scriptContent)
+    print(PREFIX .. " Received client script: " .. fileName)
     
     local func, err = load(scriptContent)
     if not func then
-        print(ERROR_PREFIX .. " Compilation error in " .. scriptName .. ": " .. tostring(err))
+        print(ERROR_PREFIX .. " Compilation error in " .. fileName .. ": " .. tostring(err))
         return
     end
     
     local success, error = pcall(func)
     if not success then
-        print(ERROR_PREFIX .. " Execution error in " .. scriptName .. ": " .. tostring(error))
+        print(ERROR_PREFIX .. " Execution error in " .. fileName .. ": " .. tostring(error))
     else
-        print(SUCCESS_PREFIX .. " Successfully executed " .. scriptName)
+        print(SUCCESS_PREFIX .. " Successfully executed " .. fileName)
     end
 end)
 

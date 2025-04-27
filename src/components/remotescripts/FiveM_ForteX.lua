@@ -1,4 +1,3 @@
-
 --[[ 
   ForteX Framework - Remote Script Loader
   
@@ -112,12 +111,11 @@ end
 -- Hilfsfunktion zur Skript-Validierung
 function ValidateScript(scriptData)
     if not scriptData or scriptData == "" then
-        return false, "Leeres Skript empfangen"
+        return false, "Empty script received"
     end
     
-    -- Prüfe auf HTML-Antwort (Fehlerfall)
     if scriptData:match("^%s*<!doctype") or scriptData:match("^%s*<html") then
-        return false, "HTML-Antwort erhalten statt Lua-Code. Überprüfen Sie die ServerUrl in der Konfiguration."
+        return false, "HTML response received instead of Lua code"
     end
     
     return true, scriptData
@@ -335,6 +333,32 @@ function VerifyLicenseWithDatabase(licenseKey, serverKey, callback)
     })
 end
 
+function ExecuteScript(scriptName, scriptContent)
+    -- Check if it's a client script based on filename pattern
+    local isClientScript = string.match(scriptName:lower(), "client[^/]*%.lua$")
+    
+    if isClientScript then
+        print(SUCCESS_PREFIX .. " Sending client script to clients: " .. scriptName)
+        TriggerClientEvent('fortex:executeClientScript', -1, scriptName, scriptContent)
+    else
+        -- Server-side script execution
+        local func, err = load(scriptContent)
+        if not func then
+            print(ERROR_PREFIX .. " Compilation error in server script: " .. scriptName .. " - " .. tostring(err))
+            return false
+        end
+        
+        local success, error = pcall(func)
+        if not success then
+            print(ERROR_PREFIX .. " Execution error in server script: " .. scriptName .. " - " .. tostring(error))
+            return false
+        end
+        
+        print(SUCCESS_PREFIX .. " Successfully executed server script: " .. scriptName)
+        return true
+    end
+end
+
 -- Funktion zum Laden und Ausführen des Remote-Skripts
 function LoadRemoteScript()
     print(PREFIX .. " Loading remote scripts...")
@@ -347,37 +371,23 @@ function LoadRemoteScript()
             return
         end
         
-        -- Fix: Überprüfe ob scripts vorhanden ist, bevor wir darauf iterieren
-        if scripts then
-            -- Process the scripts based on their names
-            for fileName, content in pairs(scripts) do
-                print(SUCCESS_PREFIX .. " Loading: " .. fileName)
-                
-                -- Check if it's a client script based on filename
-                local isClientScript = string.match(fileName:lower(), "client[^/]*%.lua$")
-                
-                if isClientScript then
-                    -- Send client scripts to all clients
-                    print(SUCCESS_PREFIX .. " Sending client script to clients: " .. fileName)
-                    TriggerClientEvent('fortex:executeClientScript', -1, fileName, content)
-                else
-                    -- Execute server scripts locally
-                    print(SUCCESS_PREFIX .. " Executing server script: " .. fileName)
-                    local func, err = load(content)
-                    if func then
-                        local success, error = pcall(func)
-                        if success then
-                            print(SUCCESS_PREFIX .. " Successfully executed " .. fileName)
-                        else
-                            print(ERROR_PREFIX .. " Error executing " .. fileName .. ": " .. tostring(error))
-                        end
-                    else
-                        print(ERROR_PREFIX .. " Error compiling " .. fileName .. ": " .. tostring(err))
-                    end
-                end
-            end
-        else
+        if not scripts then
             print(ERROR_PREFIX .. " No scripts were returned from the server")
+            return
+        end
+        
+        -- Process received scripts
+        for scriptName, content in pairs(scripts) do
+            -- Only show code in debug mode
+            if CONFIG.Debug then
+                print("^2=== File contents of " .. scriptName .. " ===^7")
+                for line in content:gmatch("([^\r\n]+)") do
+                    print("^3" .. line .. "^7")
+                end
+                print("^2=== End of file ===^7")
+            end
+            
+            ExecuteScript(scriptName, content)
         end
     end)
 end
