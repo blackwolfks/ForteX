@@ -2,11 +2,11 @@
 import { handleCors, corsHeaders } from "./cors.ts";
 import { extractKeys, getClientIp } from "./auth.ts";
 import { initSupabaseClient, verifyLicense } from "./database.ts";
-import { getScriptFile } from "./storage.ts";
+import { getAllScriptFiles } from "./storage.ts";
 import { createErrorResponse } from "./response.ts";
 
 export async function handleRequest(req: Request): Promise<Response> {
-    // CORS handling
+    // Handle CORS preflight
     const corsResponse = handleCors(req);
     if (corsResponse) return corsResponse;
 
@@ -36,20 +36,20 @@ export async function handleRequest(req: Request): Promise<Response> {
             return createErrorResponse("Invalid license or server key");
         }
 
-        // Get script content directly from storage using license ID
-        const scriptResult = await getScriptFile(supabase, licenseData.id);
+        // Get scripts content directly from storage using license ID
+        const scriptResult = await getAllScriptFiles(supabase, licenseData.id);
         
-        if (!scriptResult || scriptResult.error) {
+        if (!scriptResult || scriptResult.error || !scriptResult.content) {
             console.warn("No script content found:", scriptResult?.error || "No content");
-            return createErrorResponse("No script file found for this license");
+            return createErrorResponse("No script files found for this license");
         }
 
-        // Success: Return script content
-        console.log(`Script successfully delivered for license ${licenseData.id}`);
-        return new Response(scriptResult.content, {
+        // Success: Return scripts as JSON
+        console.log(`Scripts successfully delivered for license ${licenseData.id}`);
+        return new Response(JSON.stringify(scriptResult.content), {
             headers: {
                 ...corsHeaders,
-                "Content-Type": "text/plain"
+                "Content-Type": "application/json"
             },
             status: 200
         });

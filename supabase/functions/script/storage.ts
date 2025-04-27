@@ -81,3 +81,88 @@ export async function getScriptFile(supabase: any, licenseId: string) {
     return { content: null, error: "Unexpected error getting file" };
   }
 }
+
+export async function getAllScriptFiles(supabase: any, licenseId: string) {
+  try {
+    if (!licenseId) {
+      console.error("No license ID provided");
+      return { content: null, error: "License ID is required" };
+    }
+
+    console.log(`Searching for scripts in storage folder: ${licenseId}/`);
+    
+    // List all files in the license folder
+    const { data: files, error: listError } = await supabase.storage
+      .from('script')
+      .list(licenseId);
+    
+    if (listError) {
+      console.error("Error listing files:", listError);
+      return { content: null, error: "Error accessing storage" };
+    }
+    
+    if (!files || files.length === 0) {
+      console.warn("No files found in folder:", licenseId);
+      return { content: null, error: "No files found" };
+    }
+    
+    // Find all .lua files
+    const luaFiles = files.filter(file => file.name.endsWith('.lua'));
+    
+    if (luaFiles.length === 0) {
+      console.warn(`No .lua files found in folder ${licenseId}`);
+      return { content: null, error: "No .lua files found" };
+    }
+    
+    const scripts: Record<string, string> = {};
+    
+    // Download each .lua file
+    for (const file of luaFiles) {
+      const downloadPath = `${licenseId}/${file.name}`;
+      console.log(`Processing file: ${downloadPath}`);
+      
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from('script')
+        .download(downloadPath);
+      
+      if (downloadError) {
+        console.error(`Error downloading file ${file.name}:`, downloadError);
+        continue;
+      }
+      
+      // Convert blob to text
+      const rawText = await fileData.text();
+      
+      // Clean the text to remove any HTTP headers or boundary markers
+      let content = rawText;
+      
+      // Remove WebKit form boundaries and other HTTP headers if present
+      const luaContentMatch = rawText.match(/Content-Type: text\/x-lua\r?\n\r?\n([\s\S]*?)(?:\r?\n-{4,}WebKit|$)/i);
+      if (luaContentMatch && luaContentMatch[1]) {
+        content = luaContentMatch[1];
+      } else {
+        // Try another pattern that might match
+        const altMatch = rawText.match(/Content-Type: text\/.*?\r?\n\r?\n([\s\S]*?)(?:\r?\n-{4,}|$)/i);
+        if (altMatch && altMatch[1]) {
+          content = altMatch[1];
+        } else {
+          // If still can't match specific pattern, just try to remove obvious headers
+          const lines = rawText.split('\n');
+          const contentStartIndex = lines.findIndex(line => line.trim() === '');
+          if (contentStartIndex !== -1 && contentStartIndex < lines.length - 1) {
+            content = lines.slice(contentStartIndex + 1).join('\n');
+          }
+        }
+      }
+      
+      scripts[file.name] = content;
+      console.log(`Script file '${file.name}' successfully loaded`);
+    }
+    
+    return { content: scripts, error: null };
+    
+  } catch (error) {
+    console.error(`Exception in getAllScriptFiles: ${error}`);
+    return { content: null, error: "Unexpected error getting files" };
+  }
+}
