@@ -497,6 +497,7 @@ export type Database = {
           has_file_upload: boolean | null
           id: string | null
           license_key: string | null
+          script_file: string | null
           script_name: string | null
           server_ip: string | null
           server_key: string | null
@@ -509,6 +510,7 @@ export type Database = {
           has_file_upload?: boolean | null
           id?: string | null
           license_key?: string | null
+          script_file?: string | null
           script_name?: string | null
           server_ip?: string | null
           server_key?: string | null
@@ -521,6 +523,7 @@ export type Database = {
           has_file_upload?: boolean | null
           id?: string | null
           license_key?: string | null
+          script_file?: string | null
           script_name?: string | null
           server_ip?: string | null
           server_key?: string | null
@@ -564,7 +567,13 @@ export type Database = {
         }[]
       }
       create_license: {
-        Args: { p_script_name: string; p_server_ip?: string }
+        Args:
+          | {
+              p_script_name: string
+              p_script_file?: string
+              p_server_ip?: string
+            }
+          | { p_script_name: string; p_server_ip?: string }
         Returns: {
           id: string
           license_key: string
