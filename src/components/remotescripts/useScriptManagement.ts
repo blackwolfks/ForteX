@@ -54,7 +54,7 @@ export function useScriptManagement() {
         return false;
       }
       
-      // Create the license first
+      // Create the license first - Corrected parameter order: p_script_name, p_script_file, p_server_ip
       const { data, error } = await callRPC('create_license', {
         p_script_name: newScript.name,
         p_script_file: null,
