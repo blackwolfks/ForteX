@@ -54,16 +54,22 @@ export function useScriptManagement() {
         return false;
       }
       
-      // Create the license first - explizit die Parameter mit korrekten Namen
+      // Create the license first with explicit parameter names in the correct order
       const { data, error } = await callRPC('create_license', {
         p_script_name: newScript.name,
         p_script_file: null,
-        p_server_ip: newScript.serverIp || null,
+        p_server_ip: newScript.serverIp || null
       });
       
       if (error) {
         console.error("Error creating license:", error);
         toast.error("Fehler beim Erstellen des Scripts: " + error.message);
+        return false;
+      }
+      
+      if (!data || !data.id) {
+        console.error("No license data returned from create_license");
+        toast.error("Fehler beim Erstellen des Scripts: Keine Lizenz-ID erhalten");
         return false;
       }
       

@@ -42,7 +42,7 @@ BEGIN
     p_script_file,
     p_server_ip,
     v_server_key
-  ) RETURNING id INTO v_license_id;
+  ) RETURNING public.server_licenses.id INTO v_license_id;
   
   RETURN QUERY 
   SELECT 
@@ -53,6 +53,7 @@ END;
 $$;
 
 -- Fix check_license_by_keys function to use qualified column names
+DROP FUNCTION IF EXISTS public.check_license_by_keys(text, text);
 CREATE OR REPLACE FUNCTION public.check_license_by_keys(
   p_license_key text, 
   p_server_key text
@@ -105,11 +106,6 @@ $$;
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('script', 'script', true)
 ON CONFLICT (id) DO UPDATE SET public = true;
-
--- Update existing bucket to be public if it exists
-UPDATE storage.buckets
-SET public = true
-WHERE name = 'script';
 
 -- Make sure all policies for the bucket allow proper access
 BEGIN;

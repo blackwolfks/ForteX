@@ -42,12 +42,62 @@ BEGIN
     p_script_file,
     p_server_ip,
     v_server_key
-  ) RETURNING id INTO v_license_id;
+  ) RETURNING public.server_licenses.id INTO v_license_id;
   
   RETURN QUERY 
   SELECT 
     v_license_id AS id, 
     v_license_key AS license_key, 
     v_server_key AS server_key;
+END;
+$$;
+
+-- Stelle sicher, dass die check_license_by_keys Funktion ebenfalls korrekte Spaltennamen verwendet
+DROP FUNCTION IF EXISTS public.check_license_by_keys(text, text);
+CREATE OR REPLACE FUNCTION public.check_license_by_keys(
+  p_license_key text, 
+  p_server_key text
+)
+RETURNS TABLE(
+  valid boolean,
+  license_key text,
+  script_name text,
+  script_file text,
+  server_ip text,
+  aktiv boolean,
+  id uuid,
+  has_file_upload boolean
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    TRUE as valid,
+    sl.license_key,
+    sl.script_name,
+    sl.script_file,
+    sl.server_ip,
+    sl.aktiv,
+    sl.id,
+    sl.has_file_upload
+  FROM public.server_licenses sl
+  WHERE sl.license_key = p_license_key 
+    AND sl.server_key = p_server_key
+  LIMIT 1;
+  
+  IF NOT FOUND THEN
+    RETURN QUERY SELECT 
+      FALSE as valid,
+      NULL::TEXT as license_key,
+      NULL::TEXT as script_name,
+      NULL::TEXT as script_file,
+      NULL::TEXT as server_ip,
+      FALSE as aktiv,
+      NULL::UUID as id,
+      FALSE as has_file_upload;
+  END IF;
 END;
 $$;
