@@ -548,6 +548,7 @@ export type Database = {
           valid: boolean
           license_key: string
           script_name: string
+          script_file: string
           server_ip: string
           aktiv: boolean
           id: string

@@ -30,7 +30,7 @@ export async function verifyLicense(supabase: any, licenseKey: string, serverKey
     
     console.log(`Trimmed-Keys: License='${trimmedLicenseKey}', Server='${trimmedServerKey}'`);
     
-    // Call the RPC function to check the license
+    // Call the RPC function to check the license with explicit parameter names
     const { data, error } = await supabase.rpc("check_license_by_keys", {
       p_license_key: trimmedLicenseKey,
       p_server_key: trimmedServerKey
@@ -75,4 +75,3 @@ export function checkIpRestriction(licenseData: any, clientIp: string): { passed
   }
   return { passed: true };
 }
-

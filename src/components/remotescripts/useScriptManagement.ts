@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { License, NewScriptFormData } from "./types";
 import { callRPC, supabase } from "@/lib/supabase";
@@ -47,14 +46,14 @@ export function useScriptManagement() {
     }
 
     try {
-      // First ensure bucket exists - Changed to 'script'
+      // First ensure bucket exists
       const bucketReady = await ensureBucketExists('script');
       if (!bucketReady) {
         toast.error("Fehler: Storage-Bucket konnte nicht erstellt werden");
         return false;
       }
       
-      // Create the license first - Corrected parameter order: p_script_name, p_script_file, p_server_ip
+      // Create the license first - explizit die Parameter mit korrekten Namen
       const { data, error } = await callRPC('create_license', {
         p_script_name: newScript.name,
         p_script_file: null,
@@ -88,7 +87,6 @@ export function useScriptManagement() {
           let filePath = file.webkitRelativePath || file.name;
           
           try {
-            // Changed to 'script' bucket with direct path
             const { error: uploadError } = await uploadFile('script', `${licenseId}/${filePath}`, file);
             
             if (uploadError) {
@@ -191,7 +189,6 @@ export function useScriptManagement() {
 
       // Also clean up storage
       try {
-        // Changed to 'script' bucket with direct prefix
         const { data, error: listError } = await supabase.storage
           .from('script')
           .list(`${licenseId}`);
