@@ -1,451 +1,231 @@
 
--- ForteX.lua - FiveM Lizenz-System
--- Entwickelt von ForteX-Team für sichere FiveM-Skript-Nutzung
+-- ForteX - Remote Script Framework für FiveM
+-- Unterstützt dynamisches Nachladen von Skripten ohne Neustart
 
-CONFIG = {
-    Debug = true,              -- Debug-Modus aktivieren/deaktivieren
-    
-    -- Hauptkonfiguration
-    BaseURL = "",              -- URL zur API (wird automatisch aus license/server key generiert)
-    APIRateLimitTime = 5000,   -- Mindestzeit zwischen API-Anfragen (ms)
-    
-    -- Authentifizierung
-    LicenseKey = "",           -- Dein Lizenzschlüssel (wird aus der fxmanifest.lua gelesen)
-    ServerKey = "",            -- Dein Server-Key (wird aus der fxmanifest.lua gelesen)
-    
-    -- Dateimanagement
-    ConfigSignature = "",      -- Signatur für die Konfiguration
-    ConfigFileName = nil,      -- Name der zu ladenden Konfigurationsdatei
-    JsonContent = nil,         -- JSON-Inhalt zum Dekodieren (direkt als String)
-    FilePathReplacements = {   -- Ersetzungen für lokale Dateipfade
-        ["file/path/here"] = "replaced/path/here"
-    },
-    
-    -- Anwendungssteuerung
-    ExitOnFailure = false,     -- Skript beenden, wenn Validierung fehlschlägt
-    HookTable = nil,           -- Tabelle, die beim Erfolg aufgerufen wird
-    HookFn = nil,              -- Funktion, die beim Erfolg aufgerufen wird
-    
-    -- Eigene Header für API-Anfragen
-    CustomHeaders = {}
+-- Konfiguration aus config_fortex.lua laden
+local Config = {}
+if LoadResourceFile(GetCurrentResourceName(), "config_fortex.lua") then
+    local configData = LoadResourceFile(GetCurrentResourceName(), "config_fortex.lua")
+    local func, err = load(configData)
+    if func then
+        local status, result = pcall(func)
+        if status and type(result) == "table" then
+            Config = result
+        else
+            print("^1ForteX Fehler: Konfiguration konnte nicht geladen werden - Fehlerhafte config_fortex.lua^0")
+        end
+    else
+        print("^1ForteX Fehler: Konfiguration konnte nicht geladen werden - " .. tostring(err) .. "^0")
+    end
+else
+    print("^1ForteX Fehler: config_fortex.lua nicht gefunden^0")
+end
+
+-- Überprüfen, ob Lizenzschlüssel und Server-Key gesetzt sind
+if not Config.LicenseKey or Config.LicenseKey == "" then
+    print("^1ForteX Fehler: Lizenzschlüssel nicht konfiguriert^0")
+    return
+end
+
+if not Config.ServerKey or Config.ServerKey == "" then
+    print("^1ForteX Fehler: Server-Key nicht konfiguriert^0")
+    return
+end
+
+-- API URL konfigurieren
+local apiUrl = Config.ApiUrl or "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/script"
+
+-- ForteX Hauptklasse
+ForteX = {
+    version = "1.0.0",
+    loaded = false,
+    files = {},
+    scriptName = "",
+    scriptId = "",
+    license = nil
 }
 
-local ForteX = {}  -- Namespace für ForteX-Funktionen
-local cachedKosatkaConfig = nil  -- Cache für die geladene Konfiguration
-local lastAPIRequestTime = 0  -- Zeitstempel der letzten API-Anfrage
-
--- Konstanten für Ausgaben
-local SUCCESS_PREFIX = "^2[ForteX]^7"  -- Grüner Erfolgstext
-local ERROR_PREFIX = "^1[ForteX]^7"    -- Roter Fehlertext
-local INFO_PREFIX = "^5[ForteX]^7"     -- Blauer Infotext
-local DEBUG_PREFIX = "^3[ForteX]^7"    -- Gelber Debug-Text
-
--- Hilfsfunktionen
-
--- Überprüft, ob ein String mit einem bestimmten Muster beginnt
-local function startswith(str, pattern)
-    return str:sub(1, #pattern) == pattern
-end
-
--- Überprüft, ob ein String mit einem bestimmten Muster endet
-local function endswith(str, pattern)
-    return str:sub(-#pattern) == pattern
-end
-
--- Debug-Ausgabe, wenn Debug-Modus aktiviert ist
-local function debugLog(...)
-    if CONFIG.Debug then
-        print(DEBUG_PREFIX, ...)
-    end
-end
-
--- Sichere JSON-Dekodierung
-local function SafeJsonDecode(jsonStr, fileIdentifier)
-    if not jsonStr then return nil end
-    
-    local status, result = pcall(function()
-        return json.decode(jsonStr)
-    end)
-    
-    if status then
-        return result
-    else
-        print(ERROR_PREFIX, "Failed to decode JSON" .. (fileIdentifier and (" from " .. fileIdentifier) or "") .. ": " .. tostring(result))
-        return nil
-    end
-end
-
--- Prüft, ob ein API-Aufruf aufgrund des Rate-Limits möglich ist
-local function CanMakeRequest()
-    local currentTime = GetGameTimer()
-    local timeSinceLastRequest = currentTime - lastAPIRequestTime
-    
-    if timeSinceLastRequest < CONFIG.APIRateLimitTime then
-        debugLog("API rate limit hit. Need to wait " .. (CONFIG.APIRateLimitTime - timeSinceLastRequest) .. "ms more.")
-        return false
-    end
-    
-    lastAPIRequestTime = currentTime
-    return true
-end
-
--- Parst den Pfad aus der Konfiguration
-local function ParseFilePath(path)
-    if not path then
-        return nil
-    end
-    
-    -- Ersetzungen für bestimmte Pfade durchführen
-    for search, replace in pairs(CONFIG.FilePathReplacements) do
-        if path:find(search) then
-            path = path:gsub(search, replace)
-            debugLog("Replaced file path:", path)
-        end
-    end
-    
-    -- Prüfen ob es sich um einen Remotepfad handelt
-    if startswith(path, "http") then 
-        return path
-    end
-    
-    -- Lokalen Pfad zurückgeben
-    return path
-end
-
--- Generiert die API-URL basierend auf der Konfiguration
-local function GenerateApiUrl()
-    -- Ein Standard-Fallback, wenn nichts konfiguriert ist
-    if not CONFIG.LicenseKey or CONFIG.LicenseKey == "" or not CONFIG.ServerKey or CONFIG.ServerKey == "" then
-        debugLog("No license or server key provided!")
-        return nil
-    end
-
-    -- Basisurl bestimmen
-    local baseUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/script"
-    if CONFIG.BaseURL and CONFIG.BaseURL ~= "" then
-        baseUrl = CONFIG.BaseURL
-    end
-    
-    -- Führende und nachfolgende Slashes entfernen, um Doppelslashes zu vermeiden
-    if endswith(baseUrl, "/") then
-        baseUrl = baseUrl:sub(1, -2)
-    end
-    
-    return baseUrl
-end
-
--- Liest den Inhalt einer lokalen Datei
-local function ReadLocalFile(filePath, callback)
-    debugLog("Reading local file:", filePath)
-    
-    -- FileExists-Check in einer separaten Funktion, falls nötig
-    if not filePath then
-        callback(false, "No file path specified")
-        return
-    end
-    
-    local resourceName = GetCurrentResourceName()
-    local finalPath = filePath
-    
-    -- Je nach Pfadformat anpassen
-    if not string.find(filePath, ":/") and not string.find(filePath, "./") then
-        finalPath = resourceName .. "/" .. filePath
-    end
-    
-    debugLog("Final path for local file:", finalPath)
-    
-    -- API zum Lesen der Datei
-    PerformHttpRequest(finalPath, function(errorCode, fileContent, resultHeaders)
-        if errorCode == 200 and fileContent and fileContent ~= "" then
-            debugLog("Successfully read local file:", filePath)
-            callback(true, fileContent)
-        else
-            debugLog("Failed to read local file:", filePath, "Error:", errorCode)
-            callback(false, "Failed to read file: " .. tostring(errorCode))
-        end
-    end, "GET")
-end
-
--- Hauptfunktionen von ForteX
-
--- Validiert eine Konfiguration gegen die erwartete Signatur
-function ForteX.ValidateConfig(config, expectedSignature)
-    if not config then
-        return false, "Config is nil"
-    end
-    
-    if not config.Signature then
-        return false, "Config has no signature"
-    end
-    
-    if config.Signature ~= expectedSignature then
-        return false, "Invalid signature: " .. tostring(config.Signature) .. " expected: " .. tostring(expectedSignature)
-    end
-    
-    return true, "Config validated successfully"
-end
-
--- Führt einen API-Request durch
-function ForteX.Request(endpoint, method, data, callback)
-    if not CanMakeRequest() then
-        debugLog("API rate limit prevented request to:", endpoint)
-        if callback then
-            callback(false, "Rate limited")
-        end
-        return
-    end
-    
-    local requestData = data or {}
-    local requestMethod = method or "GET"
-    local apiUrl = GenerateApiUrl()
-    
-    if not apiUrl then
-        debugLog("Failed to generate API URL")
-        if callback then
-            callback(false, "Failed to generate API URL")
-        end
-        return
-    end
-    
-    local url = apiUrl
-    if endpoint and endpoint ~= "" then
-        url = apiUrl .. "/" .. endpoint
-    end
-    
-    debugLog("Making request to:", url, "Method:", requestMethod)
-    
-    -- Headers für den Request vorbereiten
+-- Funktion zum Senden von Anfragen mit dem Server-Key
+function ForteX.sendRequest(endpoint, method, data, callback)
     local headers = {
         ["Content-Type"] = "application/json",
-        ["license-key"] = CONFIG.LicenseKey,
-        ["server-key"] = CONFIG.ServerKey
+        ["Authorization"] = "Bearer " .. Config.ServerKey
     }
     
-    -- Custom Headers hinzufügen
-    if CONFIG.CustomHeaders then
-        for key, value in pairs(CONFIG.CustomHeaders) do
-            headers[key] = value
-        end
-    end
+    local url = apiUrl .. endpoint
     
-    -- Request durchführen
-    PerformHttpRequest(url, function(statusCode, responseText, responseHeaders)
-        debugLog("API Response:", statusCode)
+    PerformHttpRequest(url, function(statusCode, responseText, headers)
+        local response = nil
         
-        if statusCode == 200 and responseText and responseText ~= "" then
-            local response = SafeJsonDecode(responseText)
-            if response then
-                if callback then
-                    callback(true, response)
-                end
-                return
-            else
-                debugLog("Failed to parse API response as JSON")
-                if callback then
-                    callback(false, "Invalid JSON response")
-                end
-                return
-            end
-        else
-            debugLog("API request failed:", statusCode, responseText)
-            if callback then
-                callback(false, "API request failed: " .. tostring(statusCode))
-            end
+        if responseText and responseText ~= "" then
+            response = json.decode(responseText)
         end
-    end, requestMethod, requestMethod ~= "GET" and json.encode(requestData) or "", headers)
+        
+        if statusCode >= 200 and statusCode < 300 then
+            if callback then callback(true, response) end
+        else
+            print("^1ForteX Fehler: API-Anfrage fehlgeschlagen (" .. tostring(statusCode) .. ")^0")
+            if response and response.error then
+                print("^1ForteX Fehler: " .. tostring(response.error) .. "^0")
+            end
+            if callback then callback(false, response) end
+        end
+    end, method, data and json.encode(data) or "", headers)
 end
 
--- Validiert die aktuelle Lizenz
-function ForteX.ValidateLicense(callback)
-    debugLog("Validating license...")
+-- Lizenz überprüfen
+function ForteX.checkLicense(callback)
+    print("^3ForteX: Überprüfe Lizenz...^0")
     
-    ForteX.Request("", "GET", nil, function(success, data)
-        if success and data and data.valid then
-            debugLog("License validated successfully")
-            if callback then
-                callback(true, data)
-            end
+    ForteX.sendRequest("/license", "POST", {
+        license_key = Config.LicenseKey,
+        server_key = Config.ServerKey
+    }, function(success, response)
+        if success and response and response.valid then
+            print("^2ForteX: Lizenz gültig für Skript '" .. response.script_name .. "'!^0")
+            ForteX.license = response
+            ForteX.scriptName = response.script_name
+            ForteX.scriptId = response.id
+            if callback then callback(true) end
         else
-            local errorMsg = "License validation failed"
-            if data and data.error then
-                errorMsg = data.error
-            end
-            
-            debugLog("License validation failed:", errorMsg)
-            if callback then
-                callback(false, errorMsg)
-            end
-            
-            if CONFIG.ExitOnFailure then
-                print(ERROR_PREFIX, "License validation failed. Exiting resource.")
-                -- Wenn wir im Server-Kontext sind
-                if IsDuplicityVersion() then
-                    -- StopResource(GetCurrentResourceName())
-                    -- Wird nicht verwendet, da es zu hart wäre
-                end
-            end
+            print("^1ForteX Fehler: Lizenz ungültig oder Server nicht erreichbar!^0")
+            if callback then callback(false) end
         end
     end)
 end
 
--- Lädt eine Datei (lokal oder remote)
-function ForteX.LoadFile(filePath, callback)
-    if not filePath then
-        if callback then
-            callback(false, "No file path provided")
-        end
+-- Datei(en) vom Remote-Server laden
+function ForteX.loadRemoteFile(path, callback)
+    if not ForteX.license then
+        print("^1ForteX Fehler: Vor dem Laden von Dateien muss die Lizenz überprüft werden!^0")
+        if callback then callback(false, nil) end
         return
     end
     
-    local parsedPath = ParseFilePath(filePath)
-    if not parsedPath then
-        if callback then
-            callback(false, "Failed to parse file path")
+    ForteX.sendRequest("/file", "POST", {
+        license_id = ForteX.scriptId,
+        path = path
+    }, function(success, response)
+        if success and response and response.content then
+            if callback then callback(true, response.content) end
+        else
+            print("^1ForteX Fehler: Datei '" .. path .. "' konnte nicht geladen werden!^0")
+            if callback then callback(false, nil) end
         end
-        return
-    end
+    end)
+end
+
+-- Mehrere Dateien laden und ausführen
+function ForteX.loadRemoteFiles(filesList, callback)
+    local loaded = 0
+    local failed = 0
+    local totalFiles = #filesList
     
-    debugLog("Loading file:", parsedPath)
-    
-    -- Prüfen ob es sich um eine Remote- oder Lokale Datei handelt
-    if startswith(parsedPath, "http") then
-        -- Remote-Datei laden
-        debugLog("Loading remote file:", parsedPath)
-        
-        PerformHttpRequest(parsedPath, function(statusCode, responseText, responseHeaders)
-            if statusCode == 200 and responseText and responseText ~= "" then
-                debugLog("Successfully loaded remote file:", parsedPath)
-                if callback then
-                    callback(true, responseText)
+    for i, file in ipairs(filesList) do
+        ForteX.loadRemoteFile(file, function(success, content)
+            if success and content then
+                local fileName = "fortex_" .. string.gsub(file, "[^%w]", "_")
+                ForteX.files[file] = fileName
+                
+                -- Datei als temporäre Ressource speichern und ausführen
+                local resourceFile = LoadResourceFile(GetCurrentResourceName(), fileName)
+                if resourceFile then
+                    -- Wenn die Datei bereits existiert, löschen
+                    os.remove(GetResourcePath(GetCurrentResourceName()) .. "/" .. fileName)
+                end
+                
+                -- Neue Datei erstellen
+                SaveResourceFile(GetCurrentResourceName(), fileName, content, -1)
+                
+                -- Je nach Dateityp unterschiedlich laden
+                local extension = string.match(file, "%.([^%.]+)$")
+                if extension == "lua" then
+                    local func, err = load(content, fileName)
+                    if func then
+                        local status, error = pcall(func)
+                        if status then
+                            print("^2ForteX: Datei " .. file .. " erfolgreich geladen und ausgeführt!^0")
+                            loaded = loaded + 1
+                        else
+                            print("^1ForteX Fehler: Ausführung fehlgeschlagen - " .. tostring(error) .. "^0")
+                            failed = failed + 1
+                        end
+                    else
+                        print("^1ForteX Fehler: Lua-Parsing fehlgeschlagen - " .. tostring(err) .. "^0")
+                        failed = failed + 1
+                    end
+                else
+                    print("^3ForteX: Datei " .. file .. " erfolgreich geladen (nicht ausführbar)^0")
+                    loaded = loaded + 1
                 end
             else
-                debugLog("Failed to load remote file:", parsedPath, "Status:", statusCode)
-                if callback then
-                    callback(false, "Failed to load remote file: " .. tostring(statusCode))
-                end
+                print("^1ForteX Fehler: Datei " .. file .. " konnte nicht geladen werden!^0")
+                failed = failed + 1
             end
-        end, "GET")
-    else
-        -- Lokale Datei laden
-        ReadLocalFile(parsedPath, function(success, content)
-            if success then
-                if callback then
-                    callback(true, content)
-                end
-            else
-                if callback then
-                    callback(false, content) -- Fehlermeldung wird hier als content übergeben
-                end
+            
+            -- Wenn alle Dateien verarbeitet wurden, Callback aufrufen
+            if loaded + failed >= totalFiles then
+                print("^3ForteX: " .. loaded .. "/" .. totalFiles .. " Dateien geladen, " .. failed .. " fehlgeschlagen^0")
+                if callback then callback(loaded, failed) end
             end
         end)
     end
 end
 
--- Initialisiert das ForteX-System
-function ForteX.Init(customConfig)
-    -- Konfiguration überschreiben, wenn übergeben
-    if customConfig then
-        for key, value in pairs(customConfig) do
-            CONFIG[key] = value
-        end
-    end
+-- ForteX initialisieren
+CreateThread(function()
+    print("^3ForteX: Initialisiere ForteX Remote Script Framework v" .. ForteX.version .. "^0")
     
-    -- Validiert die Lizenz
-    ForteX.ValidateLicense(function(success, data)
-        if success then
-            print(SUCCESS_PREFIX, "License validated successfully. Initializing...")
+    ForteX.checkLicense(function(valid)
+        if valid then
+            ForteX.loaded = true
             
-            -- Wenn eine Hook-Funktion definiert ist, rufen wir sie auf
-            if CONFIG.HookFn and type(CONFIG.HookFn) == "function" then
-                CONFIG.HookFn(data)
+            -- Event registrieren, um Skripte von anderen Ressourcen nachladen zu können
+            RegisterNetEvent("ForteX:LoadScript")
+            AddEventHandler("ForteX:LoadScript", function(path, cb)
+                if not path then return end
+                
+                ForteX.loadRemoteFile(path, function(success, content)
+                    if cb then
+                        cb(success, content)
+                    end
+                end)
+            end)
+            
+            -- Event zum Laden von mehreren Dateien
+            RegisterNetEvent("ForteX:LoadScripts")
+            AddEventHandler("ForteX:LoadScripts", function(files, cb)
+                if not files or type(files) ~= "table" then return end
+                
+                ForteX.loadRemoteFiles(files, function(loaded, failed)
+                    if cb then
+                        cb(loaded, failed)
+                    end
+                end)
+            end)
+            
+            -- Standardmäßige Dateien laden, falls konfiguriert
+            if Config.AutoloadFiles and type(Config.AutoloadFiles) == "table" and #Config.AutoloadFiles > 0 then
+                print("^3ForteX: Lade " .. #Config.AutoloadFiles .. " konfigurierte Dateien...^0")
+                ForteX.loadRemoteFiles(Config.AutoloadFiles)
             end
             
-            -- Oder wenn eine Hook-Tabelle mit einer OnValidated-Funktion definiert ist
-            if CONFIG.HookTable and type(CONFIG.HookTable) == "table" and CONFIG.HookTable.OnValidated then
-                CONFIG.HookTable.OnValidated(data)
-            end
+            print("^2ForteX: Erfolgreich initialisiert und betriebsbereit!^0")
         else
-            print(ERROR_PREFIX, "License validation failed:", data)
-            
-            if CONFIG.ExitOnFailure then
-                print(ERROR_PREFIX, "Exiting due to license validation failure.")
-                -- Hier könnte man den Resource beenden, wenn gewünscht
-            end
+            print("^1ForteX Fehler: Initialisierung fehlgeschlagen - Ungültige Lizenz!^0")
         end
     end)
-end
-
--- Automatische Initialisierung, wenn die Konfiguration in der fxmanifest.lua bereitgestellt wird
-RegisterNetEvent("ForteX:SetConfig")
-AddEventHandler("ForteX:SetConfig", function(config)
-    if config then
-        -- Konfiguration aus dem Server übernehmen
-        for key, value in pairs(config) do
-            CONFIG[key] = value
-        end
-        
-        print(INFO_PREFIX, "Received configuration from server")
-        
-        -- ForteX initialisieren
-        ForteX.Init()
-    else
-        print(ERROR_PREFIX, "Received empty configuration from server")
-    end
 end)
 
--- Exports für den Zugriff von außen
-exports('GetConfig', function()
-    return CONFIG
+-- Export-Funktionen für andere Ressourcen
+exports("isReady", function()
+    return ForteX.loaded
 end)
 
-exports('GetForteX', function()
-    return ForteX
+exports("loadFile", function(path, cb)
+    ForteX.loadRemoteFile(path, cb)
 end)
 
-exports('GetValidatedConfig', function()
-    return cachedKosatkaConfig
+exports("loadFiles", function(files, cb)
+    ForteX.loadRemoteFiles(files, cb)
 end)
-
--- Automatische Initialisierung wenn direkt aufgerufen
-Citizen.CreateThread(function()
-    Wait(100) -- Kleiner Delay, damit die Events time haben zu registrieren
-    
-    -- Check ob die Konfiguration vom Server kommt oder lokal ist
-    if CONFIG.LicenseKey and CONFIG.LicenseKey ~= "" and CONFIG.ServerKey and CONFIG.ServerKey ~= "" then
-        print(INFO_PREFIX, "Using local configuration")
-        ForteX.Init()
-    end
-end)
-
--- Direkt JSON dekodieren ohne zu laden
-if CONFIG and CONFIG.JsonContent then
-    local jsonString = CONFIG.JsonContent -- Nehmen Sie den JSON-String direkt
-    if jsonString then
-        local cfg = SafeJsonDecode(jsonString, CONFIG.ConfigFileName)
-        if cfg and cfg.Signature == CONFIG.ConfigSignature then
-            cachedKosatkaConfig = cfg
-            print(SUCCESS_PREFIX .. " Config successfully decoded & validated!")
-        else
-            print(ERROR_PREFIX .. " Invalid config or wrong signature! Expected: " .. CONFIG.ConfigSignature)
-        end
-    else
-        print(ERROR_PREFIX .. " No JSON content provided in CONFIG.JsonContent")
-    end
-end
-
--- Konfigurationsdatei laden (nur wenn kein JSON-String direkt bereitgestellt wurde)
-if CONFIG and CONFIG.ConfigFileName and not (CONFIG and CONFIG.JsonContent) then
-    ForteX.LoadFile(CONFIG.ConfigFileName, function(success, data)
-        if success then
-            local cfg = SafeJsonDecode(data, CONFIG.ConfigFileName)
-            if cfg and cfg.Signature == CONFIG.ConfigSignature then
-                cachedKosatkaConfig = cfg
-                print(SUCCESS_PREFIX .. " Config successfully loaded & validated!")
-            else
-                print(ERROR_PREFIX .. " Invalid config or wrong signature! Expected: " .. CONFIG.ConfigSignature)
-            end
-        else
-            print(ERROR_PREFIX .. " Failed to load config file: " .. CONFIG.ConfigFileName)
-        end
-    end)
-end
