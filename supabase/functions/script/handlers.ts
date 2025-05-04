@@ -34,17 +34,19 @@ export async function handleRequest(req: Request): Promise<Response> {
         
         if (!licenseData.valid) {
             console.warn("Invalid license data");
-            // Log the failed verification attempt
-            await addScriptLog(
-                supabase,
-                licenseData.id || null, 
-                'error',
-                'License verification failed',
-                'verify-license',
-                'Invalid license or server key',
-                'E1001',
-                clientIp
-            );
+            // Log the failed verification attempt, only if we have an ID
+            if (licenseData.id) {
+                await addScriptLog(
+                    supabase,
+                    licenseData.id, 
+                    'error',
+                    'License verification failed',
+                    'verify-license',
+                    'Invalid license or server key',
+                    'E1001',
+                    clientIp
+                );
+            }
             return createErrorResponse("Invalid license or server key");
         }
 

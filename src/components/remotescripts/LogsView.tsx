@@ -97,8 +97,11 @@ const LogsView = () => {
   const fetchLogs = async () => {
     setLoading(true);
     try {
+      // Fix: Ensure licenseId is null when 'all' is selected, not the string "all"
+      const licenseIdParam = filters.licenseId === 'all' ? null : filters.licenseId;
+      
       const { data, error } = await supabase.rpc('get_script_logs', {
-        p_license_id: filters.licenseId || null,
+        p_license_id: licenseIdParam,
         p_level: filters.level !== 'all' ? filters.level : null,
         p_source: filters.source !== 'all' ? filters.source : null,
         p_search: filters.search || null,
@@ -234,7 +237,7 @@ const LogsView = () => {
             <div>
               <Select 
                 value={filters.licenseId || 'all'}
-                onValueChange={(value) => setFilters({...filters, licenseId: value === 'all' ? undefined : value})}
+                onValueChange={(value) => setFilters({...filters, licenseId: value})}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Script auswählen" />
@@ -253,7 +256,7 @@ const LogsView = () => {
             <div>
               <Select 
                 value={filters.source || 'all'}
-                onValueChange={(value) => setFilters({...filters, source: value === 'all' ? undefined : value})}
+                onValueChange={(value) => setFilters({...filters, source: value})}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Quelle auswählen" />
