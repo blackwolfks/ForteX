@@ -19,46 +19,10 @@ const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditD
 
   useEffect(() => {
     if (content !== null) {
-      // Bereinige WebKit-Formgrenzen und andere unerwünschte Teile
-      const cleanedContent = cleanFileContent(content);
-      setEditedContent(cleanedContent);
+      // Use the raw content directly without cleaning
+      setEditedContent(content);
     }
   }, [content]);
-
-  // Verbesserte Funktion zum Bereinigen von Dateiinhalten
-  const cleanFileContent = (text: string): string => {
-    // Entfernt WebKit-Formgrenzen und MIME-Multipart-Teile
-    let cleaned = text;
-    
-    // Entferne numerischen Code am Anfang (wie "3600")
-    cleaned = cleaned.replace(/^\d+\s*/, "");
-    
-    // Entferne alle WebKit-Formgrenzlinien (beginnt mit ------WebKit...)
-    cleaned = cleaned.replace(/^------WebKit[^\r\n]*(\r?\n)?/gm, "");
-    
-    // Entferne Content-Type und Content-Disposition Header
-    cleaned = cleaned.replace(/^Content-(Type|Disposition)[^\r\n]*(\r?\n)?/gm, "");
-    
-    // Entferne leere Zeilen am Anfang des Textes
-    cleaned = cleaned.replace(/^\s+/, "");
-    
-    // Wenn der Text mit MIME-Header beginnt, versuche den eigentlichen Inhalt zu extrahieren
-    const contentMatchLua = cleaned.match(/Content-Type: text\/x-lua\r?\n\r?\n([\s\S]*?)(?:\r?\n-{4,}|$)/i);
-    if (contentMatchLua && contentMatchLua[1]) {
-      return contentMatchLua[1];
-    }
-    
-    // Alternative Muster für andere Content-Types
-    const contentMatchGeneral = cleaned.match(/Content-Type: [^\r\n]*\r?\n\r?\n([\s\S]*?)(?:\r?\n-{4,}|$)/i);
-    if (contentMatchGeneral && contentMatchGeneral[1]) {
-      return contentMatchGeneral[1];
-    }
-    
-    // Wenn kein spezifisches Muster erkannt wird, entferne doppelte Leerzeilen
-    cleaned = cleaned.replace(/\n\s*\n/g, "\n\n");
-    
-    return cleaned;
-  };
 
   const handleSave = async () => {
     if (!editedContent) return;
