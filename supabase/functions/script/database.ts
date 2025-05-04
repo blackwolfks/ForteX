@@ -61,6 +61,16 @@ export async function verifyLicense(supabase: any, licenseKey: string, serverKey
   }
 }
 
+// Helper function to check if a value is a valid UUID
+function isValidUuid(value: any): boolean {
+  if (!value) return false;
+  if (value === 'all') return false;
+  
+  // Simple UUID format validation regex
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(String(value));
+}
+
 // Log events to the script_logs table
 export async function addScriptLog(
   supabase: any,
@@ -80,8 +90,8 @@ export async function addScriptLog(
   
   try {
     // If there's no license ID, we can't log to the database
-    if (!licenseId) {
-      console.warn("Cannot log to database without license ID");
+    if (!licenseId || !isValidUuid(licenseId)) {
+      console.warn("Cannot log to database: Invalid or missing license ID");
       return false;
     }
     
@@ -89,6 +99,7 @@ export async function addScriptLog(
     
     try {
       const params: Record<string, any> = {
+        p_license_id: licenseId,
         p_level: level,
         p_message: message,
         p_source: source,
@@ -97,11 +108,6 @@ export async function addScriptLog(
         p_client_ip: clientIp || null,
         p_file_name: fileName || null
       };
-      
-      // Only add license_id if it's a valid UUID
-      if (licenseId) {
-        params.p_license_id = licenseId;
-      }
       
       console.log("RPC parameters for add_script_log:", params);
       

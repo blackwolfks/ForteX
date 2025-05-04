@@ -100,14 +100,30 @@ const LogsView = () => {
       console.log("Fetching logs with filters:", filters);
       
       // Create parameters object with proper handling of 'all' values
-      const params: Record<string, any> = {
-        p_level: filters.level !== 'all' ? filters.level : null,
-        p_source: filters.source !== 'all' ? filters.source : null,
-        p_search: filters.search || null,
-        p_start_date: filters.startDate ? filters.startDate.toISOString() : null,
-        p_end_date: filters.endDate ? filters.endDate.toISOString() : null,
-        p_limit: 100
-      };
+      const params: Record<string, any> = {};
+      
+      // Only add parameters that are not 'all' and not undefined
+      if (filters.level && filters.level !== 'all') {
+        params.p_level = filters.level;
+      }
+      
+      if (filters.source && filters.source !== 'all') {
+        params.p_source = filters.source;
+      }
+      
+      if (filters.search) {
+        params.p_search = filters.search;
+      }
+      
+      if (filters.startDate) {
+        params.p_start_date = filters.startDate.toISOString();
+      }
+      
+      if (filters.endDate) {
+        params.p_end_date = filters.endDate.toISOString();
+      }
+      
+      params.p_limit = 100;
       
       // Only add license_id parameter if it's not 'all' and not undefined
       if (filters.licenseId && filters.licenseId !== 'all') {
