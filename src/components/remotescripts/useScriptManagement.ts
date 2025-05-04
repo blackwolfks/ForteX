@@ -44,14 +44,16 @@ export function useScriptManagement() {
     try {
       console.log("Creating license with parameters:", {
         p_script_name: newScript.name,
-        p_server_ip: newScript.serverIp || null
+        p_server_ip: newScript.serverIp || null,
+        p_description: newScript.description || null
       });
       
       // Create the license first with explicit parameter names
       const { data, error } = await callRPC('create_license', {
         p_script_name: newScript.name,
         p_script_file: null,
-        p_server_ip: newScript.serverIp || null
+        p_server_ip: newScript.serverIp || null,
+        p_description: newScript.description || null
       });
       
       if (error) {
