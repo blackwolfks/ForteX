@@ -51,11 +51,15 @@ export async function verifyLicense(supabase: any, licenseKey: string, serverKey
 
     if (error) {
       console.error("RPC Error:", error);
+      // Log verification error
+      await logLicenseVerificationError(supabase, "error", "License verification failed", "RPC error", error.message);
       return { valid: false };
     }
 
     if (!data || data.length === 0) {
       console.warn("No license data returned");
+      // Log no license data
+      await logLicenseVerificationError(supabase, "warning", "License verification failed", "No license data returned", "Empty response from RPC");
       return { valid: false };
     }
 
@@ -68,6 +72,8 @@ export async function verifyLicense(supabase: any, licenseKey: string, serverKey
     // Check if license is active
     if (!licenseData.aktiv) {
       console.warn("License is not active");
+      // Log inactive license
+      await logInactiveLicense(supabase, licenseData.id, "warning", "Inactive license access attempt", licenseData.license_key);
       return { valid: false };
     }
 
@@ -81,6 +87,33 @@ export async function verifyLicense(supabase: any, licenseKey: string, serverKey
     };
   } catch (error) {
     console.error("License verification error:", error);
+    // Log catch block error
+    await logLicenseVerificationError(supabase, "error", "License verification exception", "Exception in verification process", error instanceof Error ? error.message : String(error));
     return { valid: false };
+  }
+}
+
+// Helper function to log license verification errors when license ID is unknown
+async function logLicenseVerificationError(supabase: any, level: string, message: string, source: string, details: string) {
+  try {
+    console.error(`${level.toUpperCase()}: ${message} - ${details}`);
+    // We can't use add_script_log without a valid license ID, so just log to console
+  } catch (logError) {
+    console.error("Error logging license verification error:", logError);
+  }
+}
+
+// Helper function to log inactive license access attempts
+async function logInactiveLicense(supabase: any, licenseId: string, level: string, message: string, licenseKey: string) {
+  try {
+    await supabase.rpc("add_script_log", {
+      p_license_id: licenseId,
+      p_level: level,
+      p_message: message,
+      p_source: "auth",
+      p_details: `License key: ${licenseKey}`
+    });
+  } catch (logError) {
+    console.error("Error logging inactive license access:", logError);
   }
 }
