@@ -1,18 +1,18 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useFileAccess } from "./hooks/useFileAccess";
 import FileAccessSearch from "./FileAccessSearch";
 import FileAccessList from "./FileAccessList";
 import FileEditDialog from "./FileEditDialog";
+import { Badge } from "@/components/ui/badge";
 
 interface FileAccessProps {
   licenseId: string;
 }
 
 const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
-  const [searchQuery, setSearchQuery] = useState("");
   const { 
     files, 
     loading, 
@@ -27,13 +27,18 @@ const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
     saveEditedFile,
     deleteFile,
     formatFileSize,
-    setEditDialogOpen
+    setEditDialogOpen,
+    searchQuery,
+    setSearchQuery,
+    sortOrder,
+    setSortOrder,
+    fileTypeFilter,
+    setFileTypeFilter,
+    getFilteredAndSortedFiles
   } = useFileAccess(licenseId);
-
-  // Filter files based on search query
-  const filteredFiles = files.filter(file => 
-    file.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  
+  // Get filtered and sorted files
+  const searchResults = getFilteredAndSortedFiles();
 
   return (
     <Card>
@@ -58,19 +63,47 @@ const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
             setSearchQuery={setSearchQuery}
             saving={saving}
             onSave={saveFileAccess}
+            sortOrder={sortOrder}
+            setSortOrder={setSortOrder}
+            fileTypeFilter={fileTypeFilter}
+            setFileTypeFilter={setFileTypeFilter}
           />
 
           {loading ? (
             <div className="text-center py-4">Lade Dateien...</div>
           ) : (
-            <FileAccessList 
-              files={filteredFiles}
-              formatFileSize={formatFileSize}
-              toggleFileVisibility={toggleFileVisibility}
-              onDownloadFile={downloadFile}
-              onEditFile={editFile}
-              onDeleteFile={deleteFile}
-            />
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <div className="text-sm text-muted-foreground">
+                  {searchResults.length} {searchResults.length === 1 ? "Datei gefunden" : "Dateien gefunden"}
+                </div>
+                {(searchQuery || fileTypeFilter !== "all") && (
+                  <div className="flex gap-2">
+                    {searchQuery && (
+                      <Badge variant="outline" className="flex items-center gap-1">
+                        Suche: {searchQuery}
+                        <button className="ml-1 text-xs" onClick={() => setSearchQuery("")}>×</button>
+                      </Badge>
+                    )}
+                    {fileTypeFilter !== "all" && (
+                      <Badge variant="outline" className="flex items-center gap-1">
+                        Filter: {fileTypeFilter}
+                        <button className="ml-1 text-xs" onClick={() => setFileTypeFilter("all")}>×</button>
+                      </Badge>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              <FileAccessList 
+                files={searchResults}
+                formatFileSize={formatFileSize}
+                toggleFileVisibility={toggleFileVisibility}
+                onDownloadFile={downloadFile}
+                onEditFile={editFile}
+                onDeleteFile={deleteFile}
+              />
+            </div>
           )}
           
           <FileEditDialog
