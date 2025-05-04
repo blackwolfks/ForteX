@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { License, NewScriptFormData } from "./types";
 import { callRPC, supabase } from "@/lib/supabase";
@@ -93,14 +92,15 @@ export function useScriptManagement() {
     }
   };
 
-  const handleUpdateScript = async (licenseId: string, scriptName: string, scriptCode: string | null, serverIp: string | null, isActive: boolean) => {
+  const handleUpdateScript = async (licenseId: string, scriptName: string, scriptCode: string | null, serverIp: string | null, isActive: boolean, description?: string) => {
     try {
       const { error } = await callRPC('update_license', {
         p_license_id: licenseId,
         p_script_name: scriptName,
         p_script_file: scriptCode,
         p_server_ip: serverIp,
-        p_aktiv: isActive
+        p_aktiv: isActive,
+        p_description: description
       });
       
       if (error) {

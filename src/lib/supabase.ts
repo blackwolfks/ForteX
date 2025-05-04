@@ -104,6 +104,7 @@ export type RpcParams = {
     p_script_name: string;
     p_script_file?: string | null;
     p_server_ip?: string | null;
+    p_description?: string | null;
   };
   'regenerate_server_key': {
     p_license_id: string;
