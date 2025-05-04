@@ -1,4 +1,5 @@
 
+
 export interface License {
   id: string;
   script_name: string;
@@ -46,4 +47,13 @@ export interface FileItem {
   isPublic: boolean;
   lastModified: string;
   type: string;
+  fullPath: string;
+  metadata?: {
+    size: number;
+    mimetype?: string;
+    cacheControl?: string;
+    lastModified?: string;
+  };
+  updated_at?: string;
+  id?: string;
 }

@@ -4,7 +4,7 @@ import { TableRow, TableCell } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { FileItem } from "./hooks/useFileAccess";
+import { FileItem } from "./types";
 
 interface FileAccessItemProps {
   file: FileItem;

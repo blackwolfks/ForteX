@@ -7,6 +7,7 @@ import FileAccessSearch from "./FileAccessSearch";
 import FileAccessList from "./FileAccessList";
 import FileEditDialog from "./FileEditDialog";
 import { Badge } from "@/components/ui/badge";
+import { FileItem } from "./types";
 
 interface FileAccessProps {
   licenseId: string;

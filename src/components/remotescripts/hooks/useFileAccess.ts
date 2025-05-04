@@ -1,21 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { callRPC, supabase, checkStorageBucket } from "@/lib/supabase";
-
-export interface FileItem {
-  name: string;
-  id?: string;
-  size?: number;
-  isPublic: boolean;
-  fullPath: string;
-  metadata?: {
-    size: number;
-    mimetype?: string;
-    cacheControl?: string;
-    lastModified?: string;
-  };
-  updated_at?: string;
-}
+import { FileItem } from "../types";
 
 export const useFileAccess = (licenseId: string) => {
   const [files, setFiles] = useState<FileItem[]>([]);
@@ -86,7 +72,10 @@ export const useFileAccess = (licenseId: string) => {
           id: file.id,
           size: file.metadata?.size,
           isPublic: accessEntry ? accessEntry.is_public : false,
-          fullPath: `${licenseId}/${file.name}`
+          fullPath: `${licenseId}/${file.name}`,
+          lastModified: file.metadata?.lastModified || new Date().toISOString(),
+          type: file.metadata?.mimetype || "application/octet-stream",
+          metadata: file.metadata
         };
       });
       

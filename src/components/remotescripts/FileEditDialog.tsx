@@ -1,9 +1,9 @@
 
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { useState, useEffect } from "react";
 import { FileItem } from "./types";
-import Editor from "@monaco-editor/react";
 
 interface FileEditDialogProps {
   open: boolean;
@@ -15,83 +15,65 @@ interface FileEditDialogProps {
 
 const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditDialogProps) => {
   const [editedContent, setEditedContent] = useState<string>("");
-  const [saving, setSaving] = useState(false);
-
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  
+  // Update the local state when the content prop changes
   useEffect(() => {
     if (content !== null) {
-      // The content should already be cleaned by the useFileAccess hook
       setEditedContent(content);
     }
   }, [content]);
-
+  
   const handleSave = async () => {
     if (!editedContent) return;
     
-    setSaving(true);
+    setIsSaving(true);
     try {
       const success = await onSave(editedContent);
       if (success) {
         onOpenChange(false);
       }
+    } catch (error) {
+      console.error("Error saving file:", error);
     } finally {
-      setSaving(false);
+      setIsSaving(false);
     }
   };
-
-  // Determine the language for the editor based on file extension
-  const getLanguage = () => {
-    if (!file?.name) return "plaintext";
-    
-    if (file.name.endsWith(".lua")) return "lua";
-    if (file.name.endsWith(".js")) return "javascript";
-    if (file.name.endsWith(".ts")) return "typescript";
-    if (file.name.endsWith(".json")) return "json";
-    if (file.name.endsWith(".html")) return "html";
-    if (file.name.endsWith(".css")) return "css";
-    if (file.name.endsWith(".md")) return "markdown";
-    if (file.name.endsWith(".xml")) return "xml";
-    if (file.name.endsWith(".sql")) return "sql";
-    if (file.name.endsWith(".py")) return "python";
-    
-    return "plaintext";
-  };
-
+  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh]">
+      <DialogContent className="max-w-3xl h-[80vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>
-            Datei bearbeiten: {file?.name || ""}
-          </DialogTitle>
+          <DialogTitle>Datei bearbeiten: {file?.name}</DialogTitle>
         </DialogHeader>
         
-        <div className="mt-4 h-[60vh] border rounded-md overflow-hidden">
-          <Editor
-            height="100%"
-            defaultLanguage={getLanguage()}
-            language={getLanguage()}
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <Textarea
+            className="w-full h-full font-mono text-sm"
             value={editedContent}
-            onChange={(value) => setEditedContent(value || "")}
-            options={{
-              minimap: { enabled: false },
-              fontSize: 14,
-              wordWrap: "on",
-              automaticLayout: true,
-              scrollBeyondLastLine: false
+            onChange={(e) => setEditedContent(e.target.value)}
+            style={{ 
+              height: "calc(100% - 4rem)",
+              resize: "none",
+              fontFamily: "monospace"
             }}
-            theme="vs-dark"
           />
         </div>
         
         <DialogFooter className="mt-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button 
+            variant="outline" 
+            onClick={() => onOpenChange(false)}
+            disabled={isSaving}
+          >
             Abbrechen
           </Button>
           <Button 
+            type="submit"
             onClick={handleSave}
-            disabled={saving}
+            disabled={isSaving}
           >
-            {saving ? "Wird gespeichert..." : "Speichern"}
+            {isSaving ? "Wird gespeichert..." : "Speichern"}
           </Button>
         </DialogFooter>
       </DialogContent>

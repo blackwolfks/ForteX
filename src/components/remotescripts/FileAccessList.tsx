@@ -1,7 +1,7 @@
 
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import FileAccessItem from "./FileAccessItem";
-import { FileItem } from "./hooks/useFileAccess";
+import { FileItem } from "./types";
 
 interface FileAccessListProps {
   files: FileItem[];
