@@ -30,13 +30,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { FileWarning, AlertTriangle, Info, Bug, Calendar } from "lucide-react";
+import { AlertTriangle, Info, Database, Search, Filter, Calendar, Clock, FileText, X, Check } from "lucide-react";
 import { LogEntry, LogsFilter } from "./types";
 import { supabase } from "@/lib/supabase";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { DatePicker } from "@/components/ui/datepicker";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from 'sonner';
 
 const LogsView = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -47,7 +47,6 @@ const LogsView = () => {
   });
   const [licenses, setLicenses] = useState<{id: string, name: string}[]>([]);
   const [sources, setSources] = useState<string[]>([]);
-  const { toast } = useToast();
 
   // Fetch licenses and logs
   useEffect(() => {
@@ -61,16 +60,12 @@ const LogsView = () => {
           id: license.id,
           name: license.script_name
         })));
-
+        
         // After fetching licenses, fetch logs
         await fetchLogs();
       } catch (error) {
         console.error('Error fetching licenses:', error);
-        toast({
-          title: "Fehler",
-          description: "Lizenzen konnten nicht geladen werden.",
-          variant: "destructive",
-        });
+        toast.error("Lizenzen konnten nicht geladen werden.");
         setLoading(false);
       }
     };
@@ -149,6 +144,7 @@ const LogsView = () => {
         errorCode: log.error_code,
         clientIp: log.client_ip,
         fileName: log.file_name,
+        scriptName: log.script_name,
       }));
       
       setLogs(formattedLogs);
@@ -161,11 +157,7 @@ const LogsView = () => {
       
     } catch (error) {
       console.error('Error fetching logs:', error);
-      toast({
-        title: "Fehler",
-        description: "Logs konnten nicht geladen werden.",
-        variant: "destructive",
-      });
+      toast.error("Logs konnten nicht geladen werden.");
     } finally {
       setLoading(false);
     }
@@ -186,13 +178,13 @@ const LogsView = () => {
   const getLevelIcon = (level: string) => {
     switch(level) {
       case 'error': 
-        return <FileWarning className="h-4 w-4 text-red-500" />;
+        return <AlertTriangle className="h-4 w-4 text-red-500" />;
       case 'warning': 
         return <AlertTriangle className="h-4 w-4 text-amber-500" />;
       case 'info': 
         return <Info className="h-4 w-4 text-blue-500" />;
       case 'debug': 
-        return <Bug className="h-4 w-4 text-gray-500" />;
+        return <Database className="h-4 w-4 text-gray-500" />;
       default: 
         return null;
     }
@@ -320,7 +312,7 @@ const LogsView = () => {
                   fetchLogs();
                 }}
               >
-                Zurücksetzen
+                <X className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -366,7 +358,9 @@ const LogsView = () => {
               size="sm"
               onClick={fetchLogs}
               disabled={loading}
+              className="gap-1"
             >
+              <Search className="h-4 w-4" />
               Aktualisieren
             </Button>
           </div>
@@ -386,9 +380,9 @@ const LogsView = () => {
                     <TableHead className="w-[180px]">Zeitstempel</TableHead>
                     <TableHead className="w-[100px]">Level</TableHead>
                     <TableHead>Nachricht</TableHead>
+                    <TableHead>Script Name</TableHead>
                     <TableHead>Quelle</TableHead>
-                    <TableHead>Fehlercode</TableHead>
-                    <TableHead>Datei</TableHead>
+                    <TableHead>IP/Datei</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -410,19 +404,25 @@ const LogsView = () => {
                             {log.details}
                           </div>
                         )}
-                      </TableCell>
-                      <TableCell>{log.source}</TableCell>
-                      <TableCell>
                         {log.errorCode && (
-                          <span className="font-mono bg-muted px-2 py-1 rounded text-sm">
-                            {log.errorCode}
-                          </span>
+                          <div className="mt-1">
+                            <span className="font-mono bg-red-50 text-red-700 px-2 py-1 rounded text-xs">
+                              {log.errorCode}
+                            </span>
+                          </div>
                         )}
                       </TableCell>
+                      <TableCell>{log.scriptName}</TableCell>
+                      <TableCell>{log.source || '—'}</TableCell>
                       <TableCell>
-                        {log.fileName && (
-                          <span className="font-mono text-sm">{log.fileName}</span>
-                        )}
+                        {log.clientIp ? (
+                          <span className="font-mono text-xs">{log.clientIp}</span>
+                        ) : log.fileName ? (
+                          <div className="flex items-center gap-1">
+                            <FileText className="h-3 w-3 text-muted-foreground" />
+                            <span className="font-mono text-xs">{log.fileName}</span>
+                          </div>
+                        ) : '—'}
                       </TableCell>
                     </TableRow>
                   ))}

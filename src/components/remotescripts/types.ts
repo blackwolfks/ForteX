@@ -36,19 +36,20 @@ export interface LogEntry {
   id: string;
   licenseId: string;
   timestamp: string;
-  level: 'info' | 'warning' | 'error' | 'debug';
+  level: string;
   message: string;
-  source: string;
+  source?: string;
   details?: string;
   errorCode?: string;
   clientIp?: string;
   fileName?: string;
+  scriptName?: string;
 }
 
 export interface LogsFilter {
-  level?: 'info' | 'warning' | 'error' | 'debug' | 'all';
-  source?: string;
+  level?: 'all' | 'error' | 'warning' | 'info' | 'debug';
   licenseId?: string;
+  source?: string;
   search?: string;
   startDate?: Date;
   endDate?: Date;
