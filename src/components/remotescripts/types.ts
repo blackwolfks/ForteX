@@ -1,3 +1,4 @@
+
 export interface License {
   id: string;
   script_name: string;
@@ -8,6 +9,7 @@ export interface License {
   user_id: string;
   created_at: string;
   has_file_upload: boolean;
+  script_file: string | null;
 }
 
 export interface NewScriptFormData {
@@ -36,4 +38,12 @@ export interface LogsFilter {
   licenseId: string | null;
   startDate?: Date;
   endDate?: Date;
+}
+
+export interface FileItem {
+  name: string;
+  size: number;
+  isPublic: boolean;
+  lastModified: string;
+  type: string;
 }
