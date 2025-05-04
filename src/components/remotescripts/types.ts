@@ -48,7 +48,7 @@ export interface LogEntry {
 
 export interface LogsFilter {
   level?: 'all' | 'error' | 'warning' | 'info' | 'debug';
-  licenseId?: string | null; // Changed to allow null to avoid 'all' string being sent as UUID
+  licenseId?: string | null; // Must allow null to avoid UUID type errors
   source?: string;
   search?: string;
   startDate?: Date;

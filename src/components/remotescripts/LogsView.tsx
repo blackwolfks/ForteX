@@ -54,9 +54,15 @@ const LogsView = () => {
     // Fetch licenses for the dropdown
     const fetchLicenses = async () => {
       try {
+        // Get the user's licenses directly using the RPC function
         const { data, error } = await supabase.rpc('get_user_licenses');
+        console.log("Licenses retrieved:", data);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error fetching licenses:', error);
+          throw error;
+        }
+        
         setLicenses(data.map((license: any) => ({
           id: license.id,
           name: license.script_name
@@ -95,44 +101,16 @@ const LogsView = () => {
     try {
       console.log("Fetching logs with filters:", filters);
       
-      // Create parameters object with proper handling
-      const params: Record<string, any> = {};
-      
-      // Handle level filter
-      if (filters.level && filters.level !== 'all') {
-        params.p_level = filters.level;
-      }
-      
-      // Handle source filter
-      if (filters.source && filters.source !== 'all') {
-        params.p_source = filters.source;
-      }
-      
-      // Handle search filter
-      if (filters.search) {
-        params.p_search = filters.search;
-      }
-      
-      // Handle date filters
-      if (filters.startDate) {
-        params.p_start_date = filters.startDate.toISOString();
-      }
-      
-      if (filters.endDate) {
-        params.p_end_date = filters.endDate.toISOString();
-      }
-      
-      params.p_limit = 100;
-      
-      // CRITICAL FIX: Handle licenseId properly
-      // Only pass licenseId if it's a valid UUID (not 'all' and not null/undefined)
-      if (filters.licenseId && filters.licenseId !== 'all') {
-        params.p_license_id = filters.licenseId;
-      }
-      
-      console.log("RPC parameters:", params);
-      
-      const { data, error } = await supabase.rpc('get_script_logs', params);
+      // Create a query object for the RPC call
+      const { data, error } = await supabase.rpc('get_script_logs', {
+        p_level: filters.level !== 'all' ? filters.level : undefined,
+        p_source: filters.source !== 'all' ? filters.source : undefined,
+        p_search: filters.search || undefined,
+        p_start_date: filters.startDate?.toISOString(),
+        p_end_date: filters.endDate?.toISOString(),
+        p_limit: 100,
+        p_license_id: filters.licenseId && filters.licenseId !== 'all' ? filters.licenseId : undefined
+      });
 
       if (error) {
         console.error('Error from get_script_logs:', error);
@@ -264,9 +242,8 @@ const LogsView = () => {
               <Select 
                 value={filters.licenseId || 'all'}
                 onValueChange={(value) => {
-                  // IMPORTANT: Convert 'all' to null for proper handling
-                  const licenseId = value === 'all' ? null : value;
-                  setFilters({...filters, licenseId});
+                  console.log("License selection changed to:", value);
+                  setFilters({...filters, licenseId: value === 'all' ? null : value});
                 }}
               >
                 <SelectTrigger>
