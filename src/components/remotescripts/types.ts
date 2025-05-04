@@ -51,6 +51,6 @@ export interface LogsFilter {
   source?: string;
   licenseId?: string;
   search?: string;
-  startDate?: Date;
-  endDate?: Date;
+  startDate?: Date | string;
+  endDate?: Date | string;
 }

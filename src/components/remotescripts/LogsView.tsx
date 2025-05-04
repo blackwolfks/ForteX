@@ -56,14 +56,23 @@ const LogsView = () => {
           name: license.script_name
         })));
 
+        // Format dates to ISO strings if they exist
+        const formattedStartDate = filters.startDate instanceof Date 
+          ? filters.startDate.toISOString() 
+          : filters.startDate;
+          
+        const formattedEndDate = filters.endDate instanceof Date 
+          ? filters.endDate.toISOString() 
+          : filters.endDate;
+
         // Fetch actual logs from the database
         const { data: logsData, error: logsError } = await supabase.rpc('get_script_logs', {
           p_license_id: filters.licenseId || null,
           p_level: filters.level !== 'all' ? filters.level : null,
           p_source: filters.source || null,
           p_search: filters.search || null,
-          p_start_date: filters.startDate || null,
-          p_end_date: filters.endDate || null
+          p_start_date: formattedStartDate || null,
+          p_end_date: formattedEndDate || null
         });
 
         if (logsError) throw logsError;
