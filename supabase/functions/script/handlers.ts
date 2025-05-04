@@ -1,61 +1,84 @@
 
-import { handleCors, corsHeaders } from "./cors.ts";
-import { extractKeys, getClientIp } from "./auth.ts";
-import { initSupabaseClient, verifyLicense } from "./database.ts";
-import { getAllScriptFiles } from "./storage.ts";
-import { createErrorResponse } from "./response.ts";
+import { corsHeaders } from "./cors.ts";
 
-export async function handleRequest(req: Request): Promise<Response> {
-    // Handle CORS preflight
-    const corsResponse = handleCors(req);
-    if (corsResponse) return corsResponse;
+// Define request types
+export type RequestMethod = "verify" | "getFile" | "uploadFile" | "log";
 
-    try {
-        console.log(`Received ${req.method} request to ${new URL(req.url).pathname}`);
+export interface RequestData {
+  licenseKey: string;
+  serverKey: string;
+  requestMethod?: RequestMethod;
+  fileName?: string;
+  fileContent?: string;
+  level?: 'info' | 'warning' | 'error' | 'debug';
+  message?: string;
+  source?: string;
+  details?: string;
+  errorCode?: string;
+  [key: string]: any;
+}
 
-        // Extract license and server keys
-        const { licenseKey, serverKey } = await extractKeys(req);
-        
-        if (!licenseKey || !serverKey) {
-            console.error("Missing credentials");
-            return createErrorResponse("License key and server key are required");
-        }
+// Parse request and return required data
+export async function getRequest(req: Request) {
+  let requestData: RequestData | null = null;
+  let requestMethod: RequestMethod | null = null;
+  let requestError: string | null = null;
 
-        // Initialize Supabase client
-        const { client: supabase, error: dbError } = initSupabaseClient();
-        if (dbError) {
-            console.error("Database connection error:", dbError);
-            return createErrorResponse("Database connection error");
-        }
-
-        // Verify license
-        const licenseData = await verifyLicense(supabase, licenseKey, serverKey);
-        
-        if (!licenseData.valid) {
-            console.warn("Invalid license data");
-            return createErrorResponse("Invalid license or server key");
-        }
-
-        // Get scripts content directly from storage using license ID
-        const scriptResult = await getAllScriptFiles(supabase, licenseData.id);
-        
-        if (!scriptResult || scriptResult.error || !scriptResult.content) {
-            console.warn("No script content found:", scriptResult?.error || "No content");
-            return createErrorResponse("No script files found for this license");
-        }
-
-        // Success: Return scripts as JSON
-        console.log(`Scripts successfully delivered for license ${licenseData.id}`);
-        return new Response(JSON.stringify(scriptResult.content), {
-            headers: {
-                ...corsHeaders,
-                "Content-Type": "application/json"
-            },
-            status: 200
-        });
-
-    } catch (error) {
-        console.error("Unexpected error:", error);
-        return createErrorResponse("Internal server error");
+  try {
+    // Check if it's a POST request
+    if (req.method !== "POST") {
+      requestError = "Only POST requests are accepted";
+      return { requestData, requestMethod, requestError };
     }
+
+    // Try to parse JSON body
+    try {
+      requestData = await req.json();
+    } catch (e) {
+      requestError = "Invalid JSON format";
+      return { requestData, requestMethod, requestError };
+    }
+
+    // Extract request method - default to "verify" if not provided
+    requestMethod = requestData.requestMethod as RequestMethod || "verify";
+
+    return { requestData, requestMethod, requestError };
+  } catch (error) {
+    requestError = `Request parsing error: ${(error as Error).message}`;
+    return { requestData, requestMethod, requestError };
+  }
+}
+
+// Create standardized success response
+export function createSuccessResponse(data: any, status = 200): Response {
+  return new Response(
+    JSON.stringify({
+      success: true,
+      data
+    }),
+    {
+      headers: { 
+        ...corsHeaders,
+        "Content-Type": "application/json" 
+      },
+      status
+    }
+  );
+}
+
+// Create standardized error response
+export function createErrorResponse(message: string, status = 400): Response {
+  return new Response(
+    JSON.stringify({
+      success: false,
+      error: message
+    }),
+    {
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json"
+      },
+      status
+    }
+  );
 }

@@ -75,3 +75,49 @@ export function checkIpRestriction(licenseData: any, clientIp: string): { passed
   }
   return { passed: true };
 }
+
+// Log message to the database
+export async function addScriptLog(
+  supabase: any, 
+  licenseId: string,
+  level: 'info' | 'warning' | 'error' | 'debug',
+  message: string,
+  source?: string,
+  details?: string,
+  errorCode?: string,
+  clientIp?: string,
+  fileName?: string
+): Promise<{ success: boolean, id?: string, error?: string }> {
+  try {
+    // Call the add_script_log RPC function
+    const { data, error } = await supabase.rpc("add_script_log", {
+      p_license_id: licenseId,
+      p_level: level,
+      p_message: message,
+      p_source: source,
+      p_details: details,
+      p_error_code: errorCode,
+      p_client_ip: clientIp,
+      p_file_name: fileName
+    });
+
+    if (error) {
+      console.error("Error adding script log:", error);
+      return { 
+        success: false,
+        error: error.message
+      };
+    }
+
+    return {
+      success: true,
+      id: data
+    };
+  } catch (error) {
+    console.error("Exception adding script log:", error);
+    return { 
+      success: false,
+      error: (error as Error).message
+    };
+  }
+}

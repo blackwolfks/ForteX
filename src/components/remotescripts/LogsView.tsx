@@ -39,8 +39,8 @@ const LogsView = () => {
     search: '',
   });
   const [licenses, setLicenses] = useState<{id: string, name: string}[]>([]);
+  const [sources, setSources] = useState<string[]>([]);
 
-  // Mock data for now - will be replaced with actual data
   useEffect(() => {
     // Fetch licenses for the dropdown
     const fetchLicenses = async () => {
@@ -60,101 +60,56 @@ const LogsView = () => {
       }
     };
 
-    // Mock data for logs
-    // In a real implementation, this would fetch from the database
-    const mockLogs: LogEntry[] = [
-      {
-        id: '1',
-        licenseId: 'license-1',
-        timestamp: new Date().toISOString(),
-        level: 'error',
-        message: 'Failed to load script configuration',
-        source: 'script-loader',
-        errorCode: 'E1001',
-        clientIp: '192.168.1.1',
-        fileName: 'config.lua'
-      },
-      {
-        id: '2',
-        licenseId: 'license-1',
-        timestamp: new Date(Date.now() - 3600000).toISOString(),
-        level: 'warning',
-        message: 'Performance degradation detected',
-        source: 'resource-monitor',
-        details: 'High CPU usage in script execution'
-      },
-      {
-        id: '3',
-        licenseId: 'license-2',
-        timestamp: new Date(Date.now() - 7200000).toISOString(),
-        level: 'info',
-        message: 'Script started successfully',
-        source: 'script-loader'
-      },
-      {
-        id: '4',
-        licenseId: 'license-2',
-        timestamp: new Date(Date.now() - 86400000).toISOString(),
-        level: 'debug',
-        message: 'Processing file operations',
-        source: 'file-handler',
-        fileName: 'client.lua'
-      },
-      {
-        id: '5',
-        licenseId: 'license-1',
-        timestamp: new Date(Date.now() - 172800000).toISOString(),
-        level: 'error',
-        message: 'Invalid syntax in script file',
-        source: 'compiler',
-        errorCode: 'E2003',
-        fileName: 'server.lua',
-        details: 'Unexpected end of file at line 45'
-      }
-    ];
+    // Fetch logs from database
+    const fetchLogs = async () => {
+      setLoading(true);
+      try {
+        // Call the get_script_logs RPC function
+        const { data, error } = await supabase.rpc('get_script_logs', {
+          p_license_id: filters.licenseId === 'all' ? null : filters.licenseId,
+          p_level: filters.level === 'all' ? null : filters.level,
+          p_source: filters.source === 'all' ? null : filters.source,
+          p_search: filters.search || null,
+          p_start_date: filters.startDate || null,
+          p_end_date: filters.endDate || null,
+          p_limit: 100
+        });
 
-    setLogs(mockLogs);
+        if (error) throw error;
+
+        if (data) {
+          // Transform the returned data to match our LogEntry type
+          const formattedLogs: LogEntry[] = data.map(log => ({
+            id: log.id,
+            licenseId: log.license_id,
+            timestamp: log.log_timestamp,
+            level: log.level as 'info' | 'warning' | 'error' | 'debug',
+            message: log.message,
+            source: log.source || undefined,
+            details: log.details || undefined,
+            errorCode: log.error_code || undefined,
+            clientIp: log.client_ip || undefined,
+            fileName: log.file_name || undefined
+          }));
+          
+          setLogs(formattedLogs);
+          
+          // Extract unique sources for filter dropdown
+          const uniqueSources = Array.from(new Set(data
+            .map(log => log.source)
+            .filter(Boolean)));
+          setSources(uniqueSources as string[]);
+        }
+      } catch (error) {
+        console.error('Error fetching logs:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchLicenses();
-    setLoading(false);
-  }, []);
-
-  // Filter logs based on current filters
-  const filteredLogs = logs.filter(log => {
-    // Filter by level
-    if (filters.level && filters.level !== 'all' && log.level !== filters.level) {
-      return false;
-    }
-
-    // Filter by license
-    if (filters.licenseId && log.licenseId !== filters.licenseId) {
-      return false;
-    }
-
-    // Filter by source
-    if (filters.source && log.source !== filters.source) {
-      return false;
-    }
-
-    // Filter by search term (in message, details, or filename)
-    if (filters.search) {
-      const searchTerm = filters.search.toLowerCase();
-      const message = log.message?.toLowerCase() || '';
-      const details = log.details?.toLowerCase() || '';
-      const fileName = log.fileName?.toLowerCase() || '';
-      
-      if (!message.includes(searchTerm) && 
-          !details.includes(searchTerm) && 
-          !fileName.includes(searchTerm) &&
-          !log.errorCode?.toLowerCase().includes(searchTerm)) {
-        return false;
-      }
-    }
-
-    return true;
-  });
-
-  // Get unique sources for filter dropdown
-  const sources = Array.from(new Set(logs.map(log => log.source)));
+    fetchLogs();
+  }, [filters]);
 
   // Get level icon
   const getLevelIcon = (level: string) => {
@@ -229,7 +184,7 @@ const LogsView = () => {
             
             <div>
               <Select 
-                value={filters.licenseId || ''}
+                value={filters.licenseId || 'all'}
                 onValueChange={(value) => setFilters({...filters, licenseId: value})}
               >
                 <SelectTrigger>
@@ -248,7 +203,7 @@ const LogsView = () => {
             
             <div>
               <Select 
-                value={filters.source || ''}
+                value={filters.source || 'all'}
                 onValueChange={(value) => setFilters({...filters, source: value})}
               >
                 <SelectTrigger>
@@ -274,7 +229,7 @@ const LogsView = () => {
               />
               <Button 
                 variant="outline"
-                onClick={() => setFilters({ level: 'all', search: '' })}
+                onClick={() => setFilters({ level: 'all', search: '', licenseId: 'all', source: 'all' })}
               >
                 Zurücksetzen
               </Button>
@@ -284,7 +239,7 @@ const LogsView = () => {
           {/* Logs table */}
           {loading ? (
             <div className="text-center py-8">Logs werden geladen...</div>
-          ) : filteredLogs.length === 0 ? (
+          ) : logs.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               Keine Logs gefunden, die den Filterkriterien entsprechen.
             </div>
@@ -302,7 +257,7 @@ const LogsView = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredLogs.map((log) => (
+                  {logs.map((log) => (
                     <TableRow key={log.id}>
                       <TableCell className="font-mono text-xs">
                         {formatTimestamp(log.timestamp)}
