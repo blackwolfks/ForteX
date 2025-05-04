@@ -97,19 +97,22 @@ const LogsView = () => {
       // Create parameters object with proper handling of 'all' values
       const params: Record<string, any> = {};
       
-      // Only add parameters that are not 'all' and not undefined
+      // Handle the level filter
       if (filters.level && filters.level !== 'all') {
         params.p_level = filters.level;
       }
       
+      // Handle the source filter
       if (filters.source && filters.source !== 'all') {
         params.p_source = filters.source;
       }
       
+      // Handle the search filter
       if (filters.search) {
         params.p_search = filters.search;
       }
       
+      // Handle date filters
       if (filters.startDate) {
         params.p_start_date = filters.startDate.toISOString();
       }
@@ -120,7 +123,7 @@ const LogsView = () => {
       
       params.p_limit = 100;
       
-      // Only add license_id parameter if it's not 'all' and not undefined
+      // Handle the license filter - only pass licenseId if it's not 'all'
       if (filters.licenseId && filters.licenseId !== 'all') {
         params.p_license_id = filters.licenseId;
       }
@@ -128,8 +131,6 @@ const LogsView = () => {
       console.log("RPC parameters:", params);
       
       const { data, error } = await supabase.rpc('get_script_logs', params);
-
-      console.log("Response from get_script_logs:", { data, error });
 
       if (error) throw error;
       
@@ -305,11 +306,10 @@ const LogsView = () => {
                     level: 'all', 
                     search: '',
                     source: undefined,
-                    licenseId: undefined,
+                    licenseId: null, // Use null instead of undefined to properly reset
                     startDate: undefined,
                     endDate: undefined
                   });
-                  fetchLogs();
                 }}
               >
                 <X className="h-4 w-4" />
@@ -373,7 +373,7 @@ const LogsView = () => {
               Keine Logs gefunden, die den Filterkriterien entsprechen.
             </div>
           ) : (
-            <div className="border rounded-md overflow-hidden">
+            <div className="border rounded-md overflow-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
