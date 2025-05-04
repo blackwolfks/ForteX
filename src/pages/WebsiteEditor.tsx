@@ -45,7 +45,9 @@ export default function WebsiteEditor() {
       try {
         // Check if the bucket exists before proceeding
         setBucketStatus('checking');
+        console.log("[WebsiteEditor] Checking if 'websites' bucket exists...");
         const bucketExists = await mediaService.ensureBucketExists('websites');
+        console.log("[WebsiteEditor] Bucket existence check result:", bucketExists);
         setBucketStatus(bucketExists ? 'exists' : 'error');
         
         if (!bucketExists) {
@@ -79,9 +81,11 @@ export default function WebsiteEditor() {
       return null;
     }
     
+    // Ensure bucket exists before attempting upload
     if (bucketStatus !== 'exists') {
-      // Ensure bucket exists before attempting upload
+      console.log("[WebsiteEditor] Bucket status check before upload:", bucketStatus);
       const bucketExists = await mediaService.ensureBucketExists('websites');
+      console.log("[WebsiteEditor] Bucket exists check result:", bucketExists);
       setBucketStatus(bucketExists ? 'exists' : 'error');
       
       if (!bucketExists) {

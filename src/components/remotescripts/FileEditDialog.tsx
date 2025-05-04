@@ -4,6 +4,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Button } from "@/components/ui/button";
 import { FileItem } from "./hooks/useFileAccess";
 import Editor from "@monaco-editor/react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 interface FileEditDialogProps {
   open: boolean;
@@ -17,14 +19,28 @@ const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditD
   const [editedContent, setEditedContent] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [hasErrors, setHasErrors] = useState(false);
+  const [editorReady, setEditorReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Aktualisiere editedContent, wenn sich content ändert und nicht null ist
+  // Reset state when dialog opens or closes
+  useEffect(() => {
+    if (!open) {
+      setEditorReady(false);
+      setError(null);
+    }
+  }, [open]);
+
+  // Update editedContent when content changes
   useEffect(() => {
     if (content !== null) {
       setEditedContent(content);
       console.log("Content loaded in dialog:", content.substring(0, 50));
+      setError(null);
+    } else if (open && file) {
+      // If dialog is open, file exists, but content is null
+      setError("Konnte Dateiinhalt nicht laden. Bitte versuchen Sie es erneut.");
     }
-  }, [content]);
+  }, [content, open, file]);
 
   const handleSave = async () => {
     if (!editedContent) return;
@@ -34,7 +50,12 @@ const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditD
       const success = await onSave(editedContent);
       if (success) {
         onOpenChange(false);
+      } else {
+        setError("Fehler beim Speichern der Datei");
       }
+    } catch (err) {
+      console.error("Error saving file:", err);
+      setError(`Fehler beim Speichern: ${err instanceof Error ? err.message : 'Unbekannter Fehler'}`);
     } finally {
       setSaving(false);
     }
@@ -60,60 +81,43 @@ const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditD
 
   // Handle editor mounting and configuration
   const handleEditorDidMount = (editor: any, monaco: any) => {
-    // Wenn die Sprache Lua ist, können wir spezielle Einstellungen vornehmen
+    console.log("Editor mounted successfully");
+    setEditorReady(true);
+    
+    // If the language is Lua, set up Lua-specific settings
     if (getLanguage() === "lua") {
-      // Lua-spezifische Diagnoseeinstellungen
-      monaco.languages.registerDiagnosticsAdapter({
-        dispose: () => {},
-        onModelAdd: (model: any) => {
-          const validateModel = () => {
-            // Einfache Validierung für Lua-Code
-            const content = model.getValue();
-            const errors = [];
-            
-            // Überprüfen auf unvollständige Blöcke (fehlende end-Statements)
-            const startBlocks = (content.match(/\b(function|if|for|while|do)\b/g) || []).length;
-            const endBlocks = (content.match(/\bend\b/g) || []).length;
-            
-            if (startBlocks > endBlocks) {
-              errors.push({
-                startLineNumber: 1,
-                startColumn: 1,
-                endLineNumber: model.getLineCount(),
-                endColumn: model.getLineMaxColumn(model.getLineCount()),
-                message: `Unvollständiger Block: Es fehlen ${startBlocks - endBlocks} 'end' Statement(s)`,
-                severity: monaco.MarkerSeverity.Error
-              });
-            }
-
-            // Überprüfen auf unbalancierte Klammern
-            const openParens = (content.match(/\(/g) || []).length;
-            const closeParens = (content.match(/\)/g) || []).length;
-            
-            if (openParens !== closeParens) {
-              errors.push({
-                startLineNumber: 1,
-                startColumn: 1,
-                endLineNumber: model.getLineCount(),
-                endColumn: model.getLineMaxColumn(model.getLineCount()),
-                message: `Unbalancierte Klammern: ${openParens} öffnende vs. ${closeParens} schließende`,
-                severity: monaco.MarkerSeverity.Error
-              });
-            }
-
-            // Set markers for the model
-            monaco.editor.setModelMarkers(model, 'lua-validator', errors);
-            
-            // Update error state for save button
-            setHasErrors(errors.length > 0);
-          };
-
-          // Initial validation
-          validateModel();
-          
-          // Validate on content change
-          model.onDidChangeContent(() => validateModel());
+      // Simple Lua validation (without using registerDiagnosticsAdapter which causes errors)
+      const validateModel = () => {
+        const content = editor.getValue();
+        const errors = [];
+        
+        // Check for incomplete blocks (missing end statements)
+        const startBlocks = (content.match(/\b(function|if|for|while|do)\b/g) || []).length;
+        const endBlocks = (content.match(/\bend\b/g) || []).length;
+        
+        if (startBlocks > endBlocks) {
+          monaco.editor.setModelMarkers(editor.getModel(), 'lua-validator', [{
+            startLineNumber: 1,
+            startColumn: 1,
+            endLineNumber: editor.getModel().getLineCount(),
+            endColumn: editor.getModel().getLineMaxColumn(editor.getModel().getLineCount()),
+            message: `Unvollständiger Block: Es fehlen ${startBlocks - endBlocks} 'end' Statement(s)`,
+            severity: monaco.MarkerSeverity.Error
+          }]);
+          setHasErrors(true);
+        } else {
+          // Clear markers if no errors
+          monaco.editor.setModelMarkers(editor.getModel(), 'lua-validator', []);
+          setHasErrors(false);
         }
+      };
+
+      // Initial validation
+      validateModel();
+      
+      // Add content change listener
+      editor.onDidChangeModelContent(() => {
+        validateModel();
       });
     }
   };
@@ -127,7 +131,21 @@ const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditD
           </DialogTitle>
         </DialogHeader>
         
+        {error && (
+          <Alert variant="destructive" className="my-2">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        
         <div className="mt-4 h-[60vh] border rounded-md overflow-hidden">
+          {!editorReady && content === null && (
+            <div className="flex items-center justify-center h-full text-muted-foreground">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mr-2"></div>
+              Inhalt wird geladen...
+            </div>
+          )}
+          
           {content !== null && (
             <Editor
               height="100%"
@@ -136,6 +154,9 @@ const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditD
               value={editedContent}
               onChange={(value) => setEditedContent(value || "")}
               onMount={handleEditorDidMount}
+              beforeMount={(monaco) => {
+                console.log("Monaco before mount");
+              }}
               options={{
                 minimap: { enabled: false },
                 fontSize: 14,
@@ -145,26 +166,15 @@ const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditD
                 fontLigatures: true,
                 lineNumbers: "on",
                 renderLineHighlight: "all",
-                // Using proper guides configuration
                 guides: { indentation: true },
-                // Aktivieren von Linting-Hinweisen
                 formatOnType: true,
                 formatOnPaste: true,
-                // Verbesserte Fehlermarkierungen
-                renderValidationDecorations: "on",
-                // Aktivieren der Folding-Funktionalität
                 folding: true,
                 foldingHighlight: true,
-                // Bessere Sichtbarkeit für Fehlerlinien
                 glyphMargin: true
               }}
               theme="vs-dark"
             />
-          )}
-          {content === null && (
-            <div className="flex items-center justify-center h-full text-muted-foreground">
-              Inhalt wird geladen...
-            </div>
           )}
         </div>
         
