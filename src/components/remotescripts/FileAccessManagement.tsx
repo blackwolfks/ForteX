@@ -1,11 +1,13 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useFileAccess } from "./hooks/useFileAccess";
 import FileAccessSearch from "./FileAccessSearch";
 import FileAccessList from "./FileAccessList";
 import FileEditDialog from "./FileEditDialog";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 
 interface FileAccessProps {
   licenseId: string;
@@ -30,10 +32,23 @@ const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
     setEditDialogOpen
   } = useFileAccess(licenseId);
 
-  // Filter files based on search query
-  const filteredFiles = files.filter(file => 
-    file.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Advanced search functionality
+  const [searchResults, setSearchResults] = useState(files);
+  
+  // Update search results whenever files or searchQuery changes
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults(files);
+      return;
+    }
+    
+    const query = searchQuery.toLowerCase();
+    const results = files.filter(file => 
+      file.name.toLowerCase().includes(query)
+    );
+    
+    setSearchResults(results);
+  }, [files, searchQuery]);
 
   return (
     <Card>
@@ -53,6 +68,16 @@ const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
             </AlertDescription>
           </Alert>
 
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Dateien durchsuchen..."
+              className="pl-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
           <FileAccessSearch 
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
@@ -64,7 +89,7 @@ const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
             <div className="text-center py-4">Lade Dateien...</div>
           ) : (
             <FileAccessList 
-              files={filteredFiles}
+              files={searchResults}
               formatFileSize={formatFileSize}
               toggleFileVisibility={toggleFileVisibility}
               onDownloadFile={downloadFile}
