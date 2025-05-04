@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { FileItem } from "./hooks/useFileAccess";
+import { FileItem } from "./types";
 import Editor from "@monaco-editor/react";
 
 interface FileEditDialogProps {
@@ -20,15 +20,18 @@ const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditD
   useEffect(() => {
     if (content !== null) {
       // Bereinige WebKit-Formgrenzen und andere unerwünschte Teile
-      const cleanedContent = cleanWebKitFormBoundaries(content);
+      const cleanedContent = cleanFileContent(content);
       setEditedContent(cleanedContent);
     }
   }, [content]);
 
-  // Funktion zum Bereinigen von WebKit-Formgrenzen
-  const cleanWebKitFormBoundaries = (text: string): string => {
+  // Verbesserte Funktion zum Bereinigen von Dateiinhalten
+  const cleanFileContent = (text: string): string => {
     // Entfernt WebKit-Formgrenzen und MIME-Multipart-Teile
     let cleaned = text;
+    
+    // Entferne numerischen Code am Anfang (wie "3600")
+    cleaned = cleaned.replace(/^\d+\s*/, "");
     
     // Entferne alle WebKit-Formgrenzlinien (beginnt mit ------WebKit...)
     cleaned = cleaned.replace(/^------WebKit[^\r\n]*(\r?\n)?/gm, "");
