@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { callRPC, supabase, checkStorageBucket } from "@/lib/supabase";
-import { Dialog } from "@/components/ui/dialog";
 
 export interface FileItem {
   name: string;
@@ -180,6 +179,29 @@ export const useFileAccess = (licenseId: string) => {
     }
   };
   
+  const cleanFileContent = (content: string): string => {
+    // Function to clean WebKit form boundaries from file content
+    if (!content) return "";
+    
+    // Remove WebKit form boundaries and headers
+    let cleaned = content;
+    
+    // Remove WebKit form boundaries and related content
+    cleaned = cleaned.replace(/^------WebKit[^\r\n]*(\r?\n)?/gm, "");
+    cleaned = cleaned.replace(/^Content-(Type|Disposition)[^\r\n]*(\r?\n)?/gm, "");
+    
+    // If we see a numeric prefix (like "3600"), remove it
+    cleaned = cleaned.replace(/^\d+\s*/, "");
+    
+    // If we still have text/plain or other content type indicators, try to extract just the code
+    const contentMatch = cleaned.match(/Content-Type: [^\r\n]*\r?\n\r?\n([\s\S]*?)(?:\r?\n------)/i);
+    if (contentMatch && contentMatch[1]) {
+      return contentMatch[1].trim();
+    }
+    
+    return cleaned.trim();
+  };
+  
   const fetchFileContent = async (file: FileItem) => {
     try {
       console.log(`Fetching content for file: ${file.fullPath}`);
@@ -195,7 +217,14 @@ export const useFileAccess = (licenseId: string) => {
       }
       
       // Convert to text
-      const content = await data.text();
+      let content = await data.text();
+      
+      // Clean the content if it contains WebKit form boundaries
+      if (content.includes("------WebKit")) {
+        console.log("Found WebKit boundaries, cleaning content");
+        content = cleanFileContent(content);
+      }
+      
       return content;
     } catch (error) {
       console.error("Error in fetchFileContent:", error);

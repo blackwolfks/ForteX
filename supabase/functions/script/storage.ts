@@ -39,7 +39,15 @@ export async function getAllScriptFiles(supabase: any, licenseId: string): Promi
           continue;
         }
         
-        const text = await fileData.text();
+        // Clean the content if necessary
+        let text = await fileData.text();
+        
+        // Clean WebKit form boundaries if present
+        if (text.includes("------WebKit")) {
+          console.log(`Cleaning WebKit boundaries from ${fileInfo.name}`);
+          text = cleanFileContent(text);
+        }
+        
         content[fileInfo.name] = text;
         
         console.log(`File '${fileInfo.name}' successfully loaded`);
@@ -52,4 +60,27 @@ export async function getAllScriptFiles(supabase: any, licenseId: string): Promi
     console.error("Error fetching script files:", error);
     return { error: `Failed to fetch script files: ${(error as Error).message}` };
   }
+}
+
+// Helper function to clean WebKit form boundaries from file content
+function cleanFileContent(content: string): string {
+  if (!content) return "";
+  
+  // Remove WebKit form boundaries and headers
+  let cleaned = content;
+  
+  // Remove WebKit form boundaries and related content
+  cleaned = cleaned.replace(/^------WebKit[^\r\n]*(\r?\n)?/gm, "");
+  cleaned = cleaned.replace(/^Content-(Type|Disposition)[^\r\n]*(\r?\n)?/gm, "");
+  
+  // If we see a numeric prefix (like "3600"), remove it
+  cleaned = cleaned.replace(/^\d+\s*/, "");
+  
+  // If we still have text/plain or other content type indicators, try to extract just the code
+  const contentMatch = cleaned.match(/Content-Type: [^\r\n]*\r?\n\r?\n([\s\S]*?)(?:\r?\n------)/i);
+  if (contentMatch && contentMatch[1]) {
+    return contentMatch[1].trim();
+  }
+  
+  return cleaned.trim();
 }
