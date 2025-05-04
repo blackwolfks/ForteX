@@ -101,7 +101,11 @@ const LogsView = () => {
     try {
       console.log("Fetching logs with filters:", filters);
       
-      // Create a query object for the RPC call
+      // IMPORTANT FIX: Make absolutely sure we never send 'all' as a license_id parameter
+      const licenseIdParam = filters.licenseId && filters.licenseId !== 'all' ? filters.licenseId : undefined;
+      console.log("License ID parameter being sent to RPC:", licenseIdParam);
+      
+      // Create a query object for the RPC call making sure to never send 'all' as p_license_id
       const { data, error } = await supabase.rpc('get_script_logs', {
         p_level: filters.level !== 'all' ? filters.level : undefined,
         p_source: filters.source !== 'all' ? filters.source : undefined,
@@ -109,7 +113,7 @@ const LogsView = () => {
         p_start_date: filters.startDate?.toISOString(),
         p_end_date: filters.endDate?.toISOString(),
         p_limit: 100,
-        p_license_id: filters.licenseId && filters.licenseId !== 'all' ? filters.licenseId : undefined
+        p_license_id: licenseIdParam // Using the explicitly checked parameter
       });
 
       if (error) {
@@ -240,10 +244,13 @@ const LogsView = () => {
             
             <div>
               <Select 
-                value={filters.licenseId || 'all'}
+                value={filters.licenseId === null ? 'all' : filters.licenseId}
                 onValueChange={(value) => {
                   console.log("License selection changed to:", value);
-                  setFilters({...filters, licenseId: value === 'all' ? null : value});
+                  // CRITICAL FIX: Ensure we store null, not 'all' string in the state
+                  const licenseIdValue = value === 'all' ? null : value;
+                  console.log("Setting licenseId filter to:", licenseIdValue);
+                  setFilters({...filters, licenseId: licenseIdValue});
                 }}
               >
                 <SelectTrigger>
@@ -294,7 +301,7 @@ const LogsView = () => {
                     level: 'all', 
                     search: '',
                     source: undefined,
-                    licenseId: null, // Use null to properly reset
+                    licenseId: null, // CRITICAL FIX: Use null, not 'all' 
                     startDate: undefined,
                     endDate: undefined
                   });
