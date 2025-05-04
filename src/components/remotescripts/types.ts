@@ -31,3 +31,25 @@ export interface FileItem {
   };
   updated_at?: string;
 }
+
+export interface LogEntry {
+  id: string;
+  licenseId: string;
+  timestamp: string;
+  level: 'info' | 'warning' | 'error' | 'debug';
+  message: string;
+  source: string;
+  details?: string;
+  errorCode?: string;
+  clientIp?: string;
+  fileName?: string;
+}
+
+export interface LogsFilter {
+  level?: 'info' | 'warning' | 'error' | 'debug' | 'all';
+  source?: string;
+  licenseId?: string;
+  search?: string;
+  startDate?: Date;
+  endDate?: Date;
+}
