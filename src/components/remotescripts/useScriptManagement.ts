@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { License, NewScriptFormData } from "./types";
 import { callRPC, supabase } from "@/lib/supabase";
@@ -43,16 +44,14 @@ export function useScriptManagement() {
     try {
       console.log("Creating license with parameters:", {
         p_script_name: newScript.name,
-        p_server_ip: newScript.serverIp || null,
-        p_description: newScript.description || null
+        p_server_ip: newScript.serverIp || null
       });
       
       // Create the license first with explicit parameter names
       const { data, error } = await callRPC('create_license', {
         p_script_name: newScript.name,
         p_script_file: null,
-        p_server_ip: newScript.serverIp || null,
-        p_description: newScript.description || null
+        p_server_ip: newScript.serverIp || null
       });
       
       if (error) {
@@ -92,15 +91,14 @@ export function useScriptManagement() {
     }
   };
 
-  const handleUpdateScript = async (licenseId: string, scriptName: string, scriptCode: string | null, serverIp: string | null, isActive: boolean, description?: string) => {
+  const handleUpdateScript = async (licenseId: string, scriptName: string, scriptCode: string | null, serverIp: string | null, isActive: boolean) => {
     try {
       const { error } = await callRPC('update_license', {
         p_license_id: licenseId,
         p_script_name: scriptName,
         p_script_file: scriptCode,
         p_server_ip: serverIp,
-        p_aktiv: isActive,
-        p_description: description
+        p_aktiv: isActive
       });
       
       if (error) {
