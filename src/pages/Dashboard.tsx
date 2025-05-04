@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,15 +23,13 @@ import {
   BarChart,
   PlusCircle,
   Globe,
-  Code,
-  AlertCircle
+  Code
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useLocation } from "react-router-dom";
 import ProductsView from "@/components/products/ProductsView";
 import WebsiteBuilderView from "@/components/website/WebsiteBuilderView";
 import RemoteScriptsView from "@/components/remotescripts/RemoteScriptsView";
-import LogsView from "@/components/logs/LogsView";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -111,14 +110,6 @@ const Dashboard = () => {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Logs" isActive={activeTab === "logs"}>
-                  <a onClick={() => navigateTo("logs")}>
-                    <AlertCircle />
-                    <span>Logs</span>
-                  </a>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Einstellungen" isActive={activeTab === "settings"}>
                   <a onClick={() => navigateTo("settings")}>
                     <Settings />
@@ -149,7 +140,6 @@ const Dashboard = () => {
                     {activeTab === "payments" && "Zahlungen"}
                     {activeTab === "customers" && "Kunden"}
                     {activeTab === "analytics" && "Statistiken"}
-                    {activeTab === "logs" && "Logs"}
                     {activeTab === "settings" && "Einstellungen"}
                   </h1>
                 </div>
@@ -175,7 +165,6 @@ const Dashboard = () => {
               {activeTab === "products" && <ProductsView />}
               {activeTab === "website-builder" && <WebsiteBuilderView />}
               {activeTab === "remote-scripts" && <RemoteScriptsView />}
-              {activeTab === "logs" && <LogsView />}
               {activeTab === "payments" && <PaymentsView />}
               {activeTab === "customers" && <CustomersView />}
               {activeTab === "analytics" && <AnalyticsView />}
