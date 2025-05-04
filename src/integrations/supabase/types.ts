@@ -867,11 +867,15 @@ export type Database = {
         Returns: undefined
       }
       update_file_access: {
-        Args: {
-          p_license_id: string
-          p_file_path: string
-          p_is_public: boolean
-        }
+        Args:
+          | { p_license_id: string; p_file_path: string; p_is_public: boolean }
+          | {
+              p_license_id: string
+              p_file_path: string
+              p_is_public: boolean
+              p_description?: string
+              p_delete?: boolean
+            }
         Returns: boolean
       }
       update_license: {
