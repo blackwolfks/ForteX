@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { 
   Card, 
   CardContent, 
@@ -30,13 +30,22 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Info, Database, Search, Filter, Calendar, Clock, FileText, X, Check } from "lucide-react";
+import { AlertTriangle, Info, Database, Search, Filter, Calendar, Clock, FileText, X, Check, Code } from "lucide-react";
 import { LogEntry, LogsFilter } from "./types";
 import { supabase } from "@/lib/supabase";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { DatePicker } from "@/components/ui/datepicker";
 import { toast } from 'sonner';
+
+// Helper function to apply filter logic for license IDs
+function applyLicenseFilter(query: any, licenseId: string | null | undefined): any {
+  // Only apply the filter if licenseId exists and is not "all"
+  if (licenseId && licenseId !== "all") {
+    return query.eq("license_id", licenseId);
+  }
+  return query;
+}
 
 const LogsView = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -213,6 +222,24 @@ const LogsView = () => {
     }
   };
 
+  // Render file information badge
+  const renderFileInfo = (log: LogEntry) => {
+    if (log.fileName) {
+      return (
+        <div className="flex items-center gap-1">
+          <FileText className="h-3.5 w-3.5 text-blue-700" />
+          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+            <span className="font-mono text-xs truncate max-w-[160px]">{log.fileName}</span>
+          </Badge>
+        </div>
+      );
+    } else if (log.clientIp) {
+      return <span className="font-mono text-xs">{log.clientIp}</span>;
+    } else {
+      return '—';
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -379,12 +406,19 @@ const LogsView = () => {
                     <TableHead>Nachricht</TableHead>
                     <TableHead>Script Name</TableHead>
                     <TableHead>Quelle</TableHead>
-                    <TableHead>IP/Datei</TableHead>
+                    <TableHead>Datei/IP</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {logs.map((log) => (
-                    <TableRow key={log.id}>
+                    <TableRow 
+                      key={log.id}
+                      className={
+                        log.level === 'error' ? 'bg-red-50' : 
+                        log.level === 'warning' ? 'bg-amber-50' : 
+                        ''
+                      }
+                    >
                       <TableCell className="font-mono text-xs">
                         {formatTimestamp(log.timestamp)}
                       </TableCell>
@@ -397,29 +431,28 @@ const LogsView = () => {
                       <TableCell>
                         <div className="font-medium">{log.message}</div>
                         {log.details && (
-                          <div className="text-sm text-muted-foreground mt-1">
+                          <div className="text-sm mt-1 p-2 bg-gray-100 rounded font-mono whitespace-pre-wrap overflow-auto max-h-32 text-slate-700">
                             {log.details}
                           </div>
                         )}
                         {log.errorCode && (
                           <div className="mt-1">
-                            <span className="font-mono bg-red-50 text-red-700 px-2 py-1 rounded text-xs">
+                            <Badge variant="outline" className="font-mono bg-red-50 text-red-700 border-red-200">
                               {log.errorCode}
-                            </span>
+                            </Badge>
                           </div>
                         )}
                       </TableCell>
                       <TableCell>{log.scriptName}</TableCell>
-                      <TableCell>{log.source || '—'}</TableCell>
                       <TableCell>
-                        {log.clientIp ? (
-                          <span className="font-mono text-xs">{log.clientIp}</span>
-                        ) : log.fileName ? (
-                          <div className="flex items-center gap-1">
-                            <FileText className="h-3 w-3 text-muted-foreground" />
-                            <span className="font-mono text-xs">{log.fileName}</span>
-                          </div>
+                        {log.source ? (
+                          <Badge variant="outline" className="bg-gray-100">
+                            {log.source}
+                          </Badge>
                         ) : '—'}
+                      </TableCell>
+                      <TableCell>
+                        {renderFileInfo(log)}
                       </TableCell>
                     </TableRow>
                   ))}
