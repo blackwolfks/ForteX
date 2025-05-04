@@ -18,9 +18,11 @@ const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditD
   const [saving, setSaving] = useState(false);
   const [hasErrors, setHasErrors] = useState(false);
 
+  // Aktualisiere editedContent, wenn sich content ändert und nicht null ist
   useEffect(() => {
     if (content !== null) {
       setEditedContent(content);
+      console.log("Content loaded in dialog:", content.substring(0, 50));
     }
   }, [content]);
 
@@ -126,38 +128,44 @@ const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditD
         </DialogHeader>
         
         <div className="mt-4 h-[60vh] border rounded-md overflow-hidden">
-          <Editor
-            height="100%"
-            defaultLanguage={getLanguage()}
-            language={getLanguage()}
-            value={editedContent}
-            onChange={(value) => setEditedContent(value || "")}
-            onMount={handleEditorDidMount}
-            options={{
-              minimap: { enabled: false },
-              fontSize: 14,
-              wordWrap: "on",
-              automaticLayout: true,
-              scrollBeyondLastLine: false,
-              fontLigatures: true,
-              lineNumbers: "on",
-              renderLineHighlight: "all",
-              // Removed the invalid properties
-              // Using proper guides configuration
-              guides: { indentation: true },
-              // Aktivieren von Linting-Hinweisen
-              formatOnType: true,
-              formatOnPaste: true,
-              // Verbesserte Fehlermarkierungen
-              renderValidationDecorations: "on",
-              // Aktivieren der Folding-Funktionalität
-              folding: true,
-              foldingHighlight: true,
-              // Bessere Sichtbarkeit für Fehlerlinien
-              glyphMargin: true
-            }}
-            theme="vs-dark"
-          />
+          {content !== null && (
+            <Editor
+              height="100%"
+              defaultLanguage={getLanguage()}
+              language={getLanguage()}
+              value={editedContent}
+              onChange={(value) => setEditedContent(value || "")}
+              onMount={handleEditorDidMount}
+              options={{
+                minimap: { enabled: false },
+                fontSize: 14,
+                wordWrap: "on",
+                automaticLayout: true,
+                scrollBeyondLastLine: false,
+                fontLigatures: true,
+                lineNumbers: "on",
+                renderLineHighlight: "all",
+                // Using proper guides configuration
+                guides: { indentation: true },
+                // Aktivieren von Linting-Hinweisen
+                formatOnType: true,
+                formatOnPaste: true,
+                // Verbesserte Fehlermarkierungen
+                renderValidationDecorations: "on",
+                // Aktivieren der Folding-Funktionalität
+                folding: true,
+                foldingHighlight: true,
+                // Bessere Sichtbarkeit für Fehlerlinien
+                glyphMargin: true
+              }}
+              theme="vs-dark"
+            />
+          )}
+          {content === null && (
+            <div className="flex items-center justify-center h-full text-muted-foreground">
+              Inhalt wird geladen...
+            </div>
+          )}
         </div>
         
         <DialogFooter className="mt-4">
@@ -166,7 +174,7 @@ const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditD
           </Button>
           <Button 
             onClick={handleSave}
-            disabled={saving || hasErrors}
+            disabled={saving || hasErrors || content === null}
             className={hasErrors ? "bg-red-500 hover:bg-red-600" : ""}
           >
             {hasErrors 

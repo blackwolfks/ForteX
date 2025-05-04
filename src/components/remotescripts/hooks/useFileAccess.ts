@@ -2,7 +2,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { callRPC, supabase, checkStorageBucket } from "@/lib/supabase";
-import { Dialog } from "@/components/ui/dialog";
 
 export interface FileItem {
   name: string;
@@ -187,6 +186,7 @@ export function useFileAccess(licenseId: string) {
       
       // Convert to text
       const content = await data.text();
+      console.log(`File content loaded, length: ${content.length}`);
       return content;
     } catch (error) {
       console.error("Error in fetchFileContent:", error);
@@ -197,11 +197,16 @@ export function useFileAccess(licenseId: string) {
   
   const editFile = async (file: FileItem) => {
     try {
+      console.log(`Preparing to edit file: ${file.name}`);
       setCurrentFile(file);
+      // Erst Dialog öffnen
+      setEditDialogOpen(true);
+      // Dann Inhalt laden
+      setFileContent(null); // Reset content first
       const content = await fetchFileContent(file);
       if (content !== null) {
+        console.log(`Setting file content for editing, length: ${content.length}`);
         setFileContent(content);
-        setEditDialogOpen(true);
       }
     } catch (error) {
       console.error("Error preparing file for edit:", error);
