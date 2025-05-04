@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { FileItem } from "./hooks/useFileAccess";
@@ -21,12 +21,14 @@ const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditD
   const [hasErrors, setHasErrors] = useState(false);
   const [editorReady, setEditorReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const editorRef = useRef<any>(null);
 
   // Reset state when dialog opens or closes
   useEffect(() => {
     if (!open) {
       setEditorReady(false);
       setError(null);
+      setHasErrors(false);
     }
   }, [open]);
 
@@ -47,15 +49,20 @@ const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditD
     
     setSaving(true);
     try {
+      console.log("Saving file content:", editedContent.substring(0, 50) + "...");
       const success = await onSave(editedContent);
+      console.log("Save result:", success);
       if (success) {
+        toast.success("Datei erfolgreich gespeichert");
         onOpenChange(false);
       } else {
         setError("Fehler beim Speichern der Datei");
+        toast.error("Fehler beim Speichern der Datei");
       }
     } catch (err) {
       console.error("Error saving file:", err);
       setError(`Fehler beim Speichern: ${err instanceof Error ? err.message : 'Unbekannter Fehler'}`);
+      toast.error(`Fehler beim Speichern: ${err instanceof Error ? err.message : 'Unbekannter Fehler'}`);
     } finally {
       setSaving(false);
     }
@@ -82,42 +89,44 @@ const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditD
   // Handle editor mounting and configuration
   const handleEditorDidMount = (editor: any, monaco: any) => {
     console.log("Editor mounted successfully");
+    editorRef.current = editor;
     setEditorReady(true);
     
     // If the language is Lua, set up Lua-specific settings
     if (getLanguage() === "lua") {
-      // Simple Lua validation (without using registerDiagnosticsAdapter which causes errors)
-      const validateModel = () => {
+      // Simple Lua validation
+      const validateLua = () => {
         const content = editor.getValue();
-        const errors = [];
+        let hasError = false;
+        const markers = [];
         
         // Check for incomplete blocks (missing end statements)
         const startBlocks = (content.match(/\b(function|if|for|while|do)\b/g) || []).length;
         const endBlocks = (content.match(/\bend\b/g) || []).length;
         
         if (startBlocks > endBlocks) {
-          monaco.editor.setModelMarkers(editor.getModel(), 'lua-validator', [{
+          markers.push({
             startLineNumber: 1,
             startColumn: 1,
             endLineNumber: editor.getModel().getLineCount(),
             endColumn: editor.getModel().getLineMaxColumn(editor.getModel().getLineCount()),
             message: `Unvollständiger Block: Es fehlen ${startBlocks - endBlocks} 'end' Statement(s)`,
             severity: monaco.MarkerSeverity.Error
-          }]);
-          setHasErrors(true);
-        } else {
-          // Clear markers if no errors
-          monaco.editor.setModelMarkers(editor.getModel(), 'lua-validator', []);
-          setHasErrors(false);
+          });
+          hasError = true;
         }
+        
+        // Set markers for all detected errors
+        monaco.editor.setModelMarkers(editor.getModel(), 'lua-validator', markers);
+        setHasErrors(hasError);
       };
 
       // Initial validation
-      validateModel();
+      setTimeout(() => validateLua(), 500); // Delay to ensure content is loaded
       
       // Add content change listener
       editor.onDidChangeModelContent(() => {
-        validateModel();
+        validateLua();
       });
     }
   };
@@ -154,9 +163,6 @@ const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditD
               value={editedContent}
               onChange={(value) => setEditedContent(value || "")}
               onMount={handleEditorDidMount}
-              beforeMount={(monaco) => {
-                console.log("Monaco before mount");
-              }}
               options={{
                 minimap: { enabled: false },
                 fontSize: 14,
@@ -196,5 +202,8 @@ const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditD
     </Dialog>
   );
 };
+
+// Import toast for notifications
+import { toast } from "sonner";
 
 export default FileEditDialog;
