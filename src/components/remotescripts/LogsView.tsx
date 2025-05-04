@@ -24,12 +24,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { FileWarning, AlertTriangle, Info, Bug } from "lucide-react";
+import { FileWarning, AlertTriangle, Info, Bug, Calendar } from "lucide-react";
 import { LogEntry, LogsFilter } from "./types";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+import { DatePicker } from "@/components/ui/datepicker";
+import { useToast } from "@/hooks/use-toast";
 
 const LogsView = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -39,122 +46,112 @@ const LogsView = () => {
     search: '',
   });
   const [licenses, setLicenses] = useState<{id: string, name: string}[]>([]);
+  const [sources, setSources] = useState<string[]>([]);
+  const { toast } = useToast();
 
-  // Mock data for now - will be replaced with actual data
+  // Fetch licenses and logs
   useEffect(() => {
     // Fetch licenses for the dropdown
     const fetchLicenses = async () => {
       try {
-        const { data, error } = await supabase
-          .from('server_licenses')
-          .select('id, script_name')
-          .order('script_name', { ascending: true });
+        const { data, error } = await supabase.rpc('get_user_licenses');
 
         if (error) throw error;
-        setLicenses(data.map(license => ({
+        setLicenses(data.map((license: any) => ({
           id: license.id,
           name: license.script_name
         })));
+
+        // After fetching licenses, fetch logs
+        await fetchLogs();
       } catch (error) {
         console.error('Error fetching licenses:', error);
+        toast({
+          title: "Fehler",
+          description: "Lizenzen konnten nicht geladen werden.",
+          variant: "destructive",
+        });
+        setLoading(false);
       }
     };
 
-    // Mock data for logs
-    // In a real implementation, this would fetch from the database
-    const mockLogs: LogEntry[] = [
-      {
-        id: '1',
-        licenseId: 'license-1',
-        timestamp: new Date().toISOString(),
-        level: 'error',
-        message: 'Failed to load script configuration',
-        source: 'script-loader',
-        errorCode: 'E1001',
-        clientIp: '192.168.1.1',
-        fileName: 'config.lua'
-      },
-      {
-        id: '2',
-        licenseId: 'license-1',
-        timestamp: new Date(Date.now() - 3600000).toISOString(),
-        level: 'warning',
-        message: 'Performance degradation detected',
-        source: 'resource-monitor',
-        details: 'High CPU usage in script execution'
-      },
-      {
-        id: '3',
-        licenseId: 'license-2',
-        timestamp: new Date(Date.now() - 7200000).toISOString(),
-        level: 'info',
-        message: 'Script started successfully',
-        source: 'script-loader'
-      },
-      {
-        id: '4',
-        licenseId: 'license-2',
-        timestamp: new Date(Date.now() - 86400000).toISOString(),
-        level: 'debug',
-        message: 'Processing file operations',
-        source: 'file-handler',
-        fileName: 'client.lua'
-      },
-      {
-        id: '5',
-        licenseId: 'license-1',
-        timestamp: new Date(Date.now() - 172800000).toISOString(),
-        level: 'error',
-        message: 'Invalid syntax in script file',
-        source: 'compiler',
-        errorCode: 'E2003',
-        fileName: 'server.lua',
-        details: 'Unexpected end of file at line 45'
-      }
-    ];
-
-    setLogs(mockLogs);
     fetchLicenses();
-    setLoading(false);
   }, []);
 
-  // Filter logs based on current filters
-  const filteredLogs = logs.filter(log => {
-    // Filter by level
-    if (filters.level && filters.level !== 'all' && log.level !== filters.level) {
-      return false;
+  // Handle date range selection
+  const handleDateChange = (date: Date | null, type: 'start' | 'end') => {
+    if (type === 'start') {
+      setFilters(prev => ({ 
+        ...prev, 
+        startDate: date 
+      }));
+    } else {
+      setFilters(prev => ({ 
+        ...prev, 
+        endDate: date 
+      }));
     }
+  };
 
-    // Filter by license
-    if (filters.licenseId && log.licenseId !== filters.licenseId) {
-      return false;
-    }
+  // Fetch logs based on current filters
+  const fetchLogs = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.rpc('get_script_logs', {
+        p_license_id: filters.licenseId || null,
+        p_level: filters.level !== 'all' ? filters.level : null,
+        p_source: filters.source !== 'all' ? filters.source : null,
+        p_search: filters.search || null,
+        p_start_date: filters.startDate ? filters.startDate.toISOString() : null,
+        p_end_date: filters.endDate ? filters.endDate.toISOString() : null,
+        p_limit: 100
+      });
 
-    // Filter by source
-    if (filters.source && log.source !== filters.source) {
-      return false;
-    }
-
-    // Filter by search term (in message, details, or filename)
-    if (filters.search) {
-      const searchTerm = filters.search.toLowerCase();
-      const message = log.message?.toLowerCase() || '';
-      const details = log.details?.toLowerCase() || '';
-      const fileName = log.fileName?.toLowerCase() || '';
+      if (error) throw error;
       
-      if (!message.includes(searchTerm) && 
-          !details.includes(searchTerm) && 
-          !fileName.includes(searchTerm) &&
-          !log.errorCode?.toLowerCase().includes(searchTerm)) {
-        return false;
-      }
+      const formattedLogs: LogEntry[] = data.map((log: any) => ({
+        id: log.id,
+        licenseId: log.license_id,
+        timestamp: log.log_timestamp,
+        level: log.level,
+        message: log.message,
+        source: log.source,
+        details: log.details,
+        errorCode: log.error_code,
+        clientIp: log.client_ip,
+        fileName: log.file_name,
+      }));
+      
+      setLogs(formattedLogs);
+      
+      // Extract unique sources for filter dropdown
+      const uniqueSources = Array.from(
+        new Set(data.map((log: any) => log.source).filter(Boolean))
+      ) as string[];
+      setSources(uniqueSources);
+      
+    } catch (error) {
+      console.error('Error fetching logs:', error);
+      toast({
+        title: "Fehler",
+        description: "Logs konnten nicht geladen werden.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
+  };
 
-    return true;
-  });
-
-  // Get unique sources for filter dropdown
-  const sources = Array.from(new Set(logs.map(log => log.source)));
+  // Apply filters when they change
+  useEffect(() => {
+    fetchLogs();
+  }, [
+    filters.licenseId, 
+    filters.level, 
+    filters.source, 
+    filters.startDate, 
+    filters.endDate
+  ]);
 
   // Get level icon
   const getLevelIcon = (level: string) => {
@@ -197,6 +194,13 @@ const LogsView = () => {
     }
   };
 
+  // Handle search input
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      fetchLogs();
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -229,8 +233,8 @@ const LogsView = () => {
             
             <div>
               <Select 
-                value={filters.licenseId || ''}
-                onValueChange={(value) => setFilters({...filters, licenseId: value})}
+                value={filters.licenseId || 'all'}
+                onValueChange={(value) => setFilters({...filters, licenseId: value === 'all' ? undefined : value})}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Script auswählen" />
@@ -248,8 +252,8 @@ const LogsView = () => {
             
             <div>
               <Select 
-                value={filters.source || ''}
-                onValueChange={(value) => setFilters({...filters, source: value})}
+                value={filters.source || 'all'}
+                onValueChange={(value) => setFilters({...filters, source: value === 'all' ? undefined : value})}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Quelle auswählen" />
@@ -257,7 +261,7 @@ const LogsView = () => {
                 <SelectContent>
                   <SelectItem value="all">Alle Quellen</SelectItem>
                   {sources.map((source) => (
-                    <SelectItem key={source} value={source || 'unknown'}>
+                    <SelectItem key={source} value={source}>
                       {source || 'Unbekannt'}
                     </SelectItem>
                   ))}
@@ -270,21 +274,78 @@ const LogsView = () => {
                 placeholder="Suche nach Fehlercodes, Nachrichten..."
                 value={filters.search || ''}
                 onChange={(e) => setFilters({...filters, search: e.target.value})}
+                onKeyDown={handleSearch}
                 className="flex-grow"
               />
               <Button 
                 variant="outline"
-                onClick={() => setFilters({ level: 'all', search: '' })}
+                onClick={() => {
+                  setFilters({ 
+                    level: 'all', 
+                    search: '',
+                    source: undefined,
+                    licenseId: undefined,
+                    startDate: undefined,
+                    endDate: undefined
+                  })
+                  fetchLogs();
+                }}
               >
                 Zurücksetzen
               </Button>
             </div>
           </div>
           
+          <div className="flex flex-col md:flex-row gap-4 items-center">
+            <div className="flex gap-2 items-center">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Zeitraum:</span>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1">
+                    <Calendar className="h-4 w-4" />
+                    <span>{filters.startDate ? format(filters.startDate, 'dd.MM.yyyy') : 'Von'}</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <DatePicker
+                    selected={filters.startDate || undefined}
+                    onChange={(date) => handleDateChange(date, 'start')}
+                    locale={de}
+                  />
+                </PopoverContent>
+              </Popover>
+              
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1">
+                    <Calendar className="h-4 w-4" />
+                    <span>{filters.endDate ? format(filters.endDate, 'dd.MM.yyyy') : 'Bis'}</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <DatePicker
+                    selected={filters.endDate || undefined}
+                    onChange={(date) => handleDateChange(date, 'end')}
+                    locale={de}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={fetchLogs}
+              disabled={loading}
+            >
+              Aktualisieren
+            </Button>
+          </div>
+          
           {/* Logs table */}
           {loading ? (
             <div className="text-center py-8">Logs werden geladen...</div>
-          ) : filteredLogs.length === 0 ? (
+          ) : logs.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               Keine Logs gefunden, die den Filterkriterien entsprechen.
             </div>
@@ -302,7 +363,7 @@ const LogsView = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredLogs.map((log) => (
+                  {logs.map((log) => (
                     <TableRow key={log.id}>
                       <TableCell className="font-mono text-xs">
                         {formatTimestamp(log.timestamp)}

@@ -40,7 +40,7 @@ export async function verifyLicense(supabase: any, licenseKey: string, serverKey
     
     if (error) {
       console.error("RPC Fehler:", error);
-      return { valid: false, error: error.message };
+      return { valid: false, error: error.message, id: null };
     }
 
     // Prüfen ob ein Array zurückkommt
@@ -48,7 +48,7 @@ export async function verifyLicense(supabase: any, licenseKey: string, serverKey
     
     if (!licenseData || !licenseData.valid) {
       console.warn("Lizenz ungültig laut RPC:", licenseData);
-      return { valid: false };
+      return { valid: false, id: null };
     }
     
     // If we get here, the license is valid and we have data
@@ -57,7 +57,57 @@ export async function verifyLicense(supabase: any, licenseKey: string, serverKey
     
   } catch (error) {
     console.error("License verification error:", error);
-    return { valid: false, error: "License verification failed: " + (error as Error).message };
+    return { valid: false, error: "License verification failed: " + (error as Error).message, id: null };
+  }
+}
+
+// Log events to the script_logs table
+export async function addScriptLog(
+  supabase: any,
+  licenseId: string | null,
+  level: 'info' | 'warning' | 'error' | 'debug',
+  message: string,
+  source: string,
+  details?: string,
+  errorCode?: string,
+  clientIp?: string,
+  fileName?: string
+): Promise<boolean> {
+  if (!supabase) {
+    console.error("Cannot log: supabase client is null");
+    return false;
+  }
+  
+  try {
+    // If there's no license ID, we can't log to the database
+    if (!licenseId) {
+      console.warn("Cannot log to database without license ID");
+      return false;
+    }
+    
+    console.log(`Logging to database: [${level}] ${message}`);
+    
+    const { data, error } = await supabase.rpc("add_script_log", {
+      p_license_id: licenseId,
+      p_level: level,
+      p_message: message,
+      p_source: source,
+      p_details: details,
+      p_error_code: errorCode,
+      p_client_ip: clientIp,
+      p_file_name: fileName
+    });
+    
+    if (error) {
+      console.error("Error writing log to database:", error);
+      return false;
+    }
+    
+    console.log("Log written to database successfully");
+    return true;
+  } catch (error) {
+    console.error("Exception while logging to database:", error);
+    return false;
   }
 }
 
