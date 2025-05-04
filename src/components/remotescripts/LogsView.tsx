@@ -44,6 +44,7 @@ const LogsView = () => {
   const [filters, setFilters] = useState<LogsFilter>({
     level: 'all',
     search: '',
+    licenseId: null, // Initialize as null to avoid UUID type errors
   });
   const [licenses, setLicenses] = useState<{id: string, name: string}[]>([]);
   const [sources, setSources] = useState<string[]>([]);
@@ -94,20 +95,20 @@ const LogsView = () => {
     try {
       console.log("Fetching logs with filters:", filters);
       
-      // Create parameters object with proper handling of 'all' values
+      // Create parameters object with proper handling
       const params: Record<string, any> = {};
       
-      // Handle the level filter
+      // Handle level filter
       if (filters.level && filters.level !== 'all') {
         params.p_level = filters.level;
       }
       
-      // Handle the source filter
+      // Handle source filter
       if (filters.source && filters.source !== 'all') {
         params.p_source = filters.source;
       }
       
-      // Handle the search filter
+      // Handle search filter
       if (filters.search) {
         params.p_search = filters.search;
       }
@@ -123,7 +124,8 @@ const LogsView = () => {
       
       params.p_limit = 100;
       
-      // Handle the license filter - only pass licenseId if it's not 'all'
+      // CRITICAL FIX: Handle licenseId properly
+      // Only pass licenseId if it's a valid UUID (not 'all' and not null/undefined)
       if (filters.licenseId && filters.licenseId !== 'all') {
         params.p_license_id = filters.licenseId;
       }
@@ -132,7 +134,12 @@ const LogsView = () => {
       
       const { data, error } = await supabase.rpc('get_script_logs', params);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error from get_script_logs:', error);
+        throw error;
+      }
+      
+      console.log("Successfully retrieved logs:", data ? data.length : 0);
       
       const formattedLogs: LogEntry[] = data.map((log: any) => ({
         id: log.id,
@@ -256,7 +263,11 @@ const LogsView = () => {
             <div>
               <Select 
                 value={filters.licenseId || 'all'}
-                onValueChange={(value) => setFilters({...filters, licenseId: value})}
+                onValueChange={(value) => {
+                  // IMPORTANT: Convert 'all' to null for proper handling
+                  const licenseId = value === 'all' ? null : value;
+                  setFilters({...filters, licenseId});
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Script auswählen" />
@@ -306,10 +317,11 @@ const LogsView = () => {
                     level: 'all', 
                     search: '',
                     source: undefined,
-                    licenseId: null, // Use null instead of undefined to properly reset
+                    licenseId: null, // Use null to properly reset
                     startDate: undefined,
                     endDate: undefined
                   });
+                  fetchLogs(); // Explicitly fetch logs after resetting filters
                 }}
               >
                 <X className="h-4 w-4" />
