@@ -37,6 +37,8 @@ const LogsView = () => {
   const [filters, setFilters] = useState<LogsFilter>({
     level: 'all',
     search: '',
+    licenseId: 'all',
+    source: 'all',
   });
   const [licenses, setLicenses] = useState<{id: string, name: string}[]>([]);
   const [sources, setSources] = useState<string[]>([]);
@@ -51,6 +53,9 @@ const LogsView = () => {
           .order('script_name', { ascending: true });
 
         if (error) throw error;
+        
+        console.log("Fetched licenses:", data);
+        
         setLicenses(data.map(license => ({
           id: license.id,
           name: license.script_name
@@ -64,6 +69,8 @@ const LogsView = () => {
     const fetchLogs = async () => {
       setLoading(true);
       try {
+        console.log("Fetching logs with filters:", filters);
+        
         // Convert Date objects to ISO strings if they exist
         const startDateParam = filters.startDate instanceof Date 
           ? filters.startDate.toISOString() 
@@ -84,7 +91,12 @@ const LogsView = () => {
           p_limit: 100
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error("Error from get_script_logs:", error);
+          throw error;
+        }
+
+        console.log("Logs response data:", data);
 
         if (data) {
           // Transform the returned data to match our LogEntry type
@@ -98,7 +110,8 @@ const LogsView = () => {
             details: log.details || undefined,
             errorCode: log.error_code || undefined,
             clientIp: log.client_ip || undefined,
-            fileName: log.file_name || undefined
+            fileName: log.file_name || undefined,
+            script_name: log.script_name || undefined // Add script name to logs
           }));
           
           setLogs(formattedLogs);
@@ -259,6 +272,7 @@ const LogsView = () => {
                   <TableRow>
                     <TableHead className="w-[180px]">Zeitstempel</TableHead>
                     <TableHead className="w-[100px]">Level</TableHead>
+                    <TableHead className="w-[150px]">Script</TableHead>
                     <TableHead>Nachricht</TableHead>
                     <TableHead>Quelle</TableHead>
                     <TableHead>Fehlercode</TableHead>
@@ -277,6 +291,7 @@ const LogsView = () => {
                           {getLevelBadge(log.level)}
                         </div>
                       </TableCell>
+                      <TableCell>{log.script_name || 'Unbekannt'}</TableCell>
                       <TableCell>
                         <div className="font-medium">{log.message}</div>
                         {log.details && (

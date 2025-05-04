@@ -38,11 +38,12 @@ export interface LogEntry {
   timestamp: string;
   level: 'info' | 'warning' | 'error' | 'debug';
   message: string;
-  source: string;
+  source?: string;
   details?: string;
   errorCode?: string;
   clientIp?: string;
   fileName?: string;
+  script_name?: string; // Added to show script name in logs
 }
 
 export interface LogsFilter {
