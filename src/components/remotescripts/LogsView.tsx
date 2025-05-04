@@ -248,7 +248,7 @@ const LogsView = () => {
                 value={filters.licenseId === null ? 'all' : filters.licenseId}
                 onValueChange={(value) => {
                   console.log("License selection changed to:", value);
-                  // CRITICAL FIX: Ensure we store null, not 'all' string in the state
+                  // CRITICAL FIX: Set to null when 'all' is selected, not the string 'all'
                   const licenseIdValue = value === 'all' ? null : value;
                   console.log("Setting licenseId filter to:", licenseIdValue);
                   setFilters({...filters, licenseId: licenseIdValue});
@@ -302,7 +302,7 @@ const LogsView = () => {
                     level: 'all', 
                     search: '',
                     source: undefined,
-                    licenseId: null, // CRITICAL FIX: Use null, not 'all' 
+                    licenseId: null, // Using null, not 'all' or undefined 
                     startDate: undefined,
                     endDate: undefined
                   });
