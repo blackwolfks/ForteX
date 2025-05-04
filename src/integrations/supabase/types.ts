@@ -262,7 +262,6 @@ export type Database = {
           log_timestamp: string
           message: string
           source: string | null
-          user_id: string | null
         }
         Insert: {
           client_ip?: string | null
@@ -275,7 +274,6 @@ export type Database = {
           log_timestamp?: string
           message: string
           source?: string | null
-          user_id?: string | null
         }
         Update: {
           client_ip?: string | null
@@ -288,7 +286,6 @@ export type Database = {
           log_timestamp?: string
           message?: string
           source?: string | null
-          user_id?: string | null
         }
         Relationships: [
           {
@@ -759,7 +756,6 @@ export type Database = {
           client_ip: string
           file_name: string
           script_name: string
-          user_id: string
         }[]
       }
       get_template_by_id: {
