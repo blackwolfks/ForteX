@@ -36,10 +36,12 @@ const RemoteScriptsView = () => {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         onCreateScript={async (newScript, files) => {
+          console.log("Creating script with data:", newScript);
           const success = await handleCreateScript(newScript, files);
           if (success) {
             setDialogOpen(false);
           }
+          return Promise.resolve();
         }}
       />
 

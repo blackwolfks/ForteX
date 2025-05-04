@@ -28,6 +28,7 @@ const CreateScriptDialog = ({ open, onOpenChange, onCreateScript }: CreateScript
     
     try {
       setSubmitting(true);
+      console.log("Submitting script creation with data:", newScript);
       // Pass empty files array as files are no longer required
       await onCreateScript(newScript, []);
       // Reset form

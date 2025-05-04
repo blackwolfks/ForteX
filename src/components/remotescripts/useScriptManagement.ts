@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { License, NewScriptFormData } from "./types";
 import { callRPC, supabase } from "@/lib/supabase";
@@ -41,7 +42,12 @@ export function useScriptManagement() {
     }
 
     try {
-      // Create the license first with explicit parameter names in the correct order
+      console.log("Creating license with parameters:", {
+        p_script_name: newScript.name,
+        p_server_ip: newScript.serverIp || null
+      });
+      
+      // Create the license first with explicit parameter names
       const { data, error } = await callRPC('create_license', {
         p_script_name: newScript.name,
         p_script_file: null,
@@ -54,13 +60,28 @@ export function useScriptManagement() {
         return false;
       }
       
-      if (!data || !data.id) {
+      console.log("License creation response:", data);
+      
+      if (!data || data.length === 0) {
         console.error("No license data returned from create_license");
-        toast.error("Fehler beim Erstellen des Scripts: Keine Lizenz-ID erhalten");
+        toast.error("Fehler beim Erstellen des Scripts: Keine Daten erhalten");
         return false;
       }
       
+      // Extract the license ID properly from the returned data
+      // The response format might be an array with the first element containing the data
+      const licenseData = Array.isArray(data) ? data[0] : data;
+      
+      if (!licenseData || !licenseData.id) {
+        console.error("Invalid license data structure:", licenseData);
+        toast.error("Fehler beim Erstellen des Scripts: Ungültiges Datenformat");
+        return false;
+      }
+      
+      console.log("License created successfully with ID:", licenseData.id);
       toast.success("Script erfolgreich erstellt");
+      
+      // Refresh the license list to show the new one
       await fetchLicenses();
       return true;
     } catch (error) {
