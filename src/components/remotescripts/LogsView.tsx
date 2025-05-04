@@ -97,8 +97,15 @@ const LogsView = () => {
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      // Fix: Ensure licenseId is null when 'all' is selected, not the string "all"
-      const licenseIdParam = filters.licenseId === 'all' ? null : filters.licenseId;
+      console.log("Fetching logs with filters:", filters);
+      
+      // Properly handle the license ID parameter
+      let licenseIdParam = null;
+      if (filters.licenseId && filters.licenseId !== 'all') {
+        licenseIdParam = filters.licenseId;
+      }
+      
+      console.log("License ID parameter:", licenseIdParam);
       
       const { data, error } = await supabase.rpc('get_script_logs', {
         p_license_id: licenseIdParam,
@@ -109,6 +116,8 @@ const LogsView = () => {
         p_end_date: filters.endDate ? filters.endDate.toISOString() : null,
         p_limit: 100
       });
+
+      console.log("Response from get_script_logs:", { data, error });
 
       if (error) throw error;
       
@@ -290,7 +299,7 @@ const LogsView = () => {
                     licenseId: undefined,
                     startDate: undefined,
                     endDate: undefined
-                  })
+                  });
                   fetchLogs();
                 }}
               >

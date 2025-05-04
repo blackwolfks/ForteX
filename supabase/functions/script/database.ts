@@ -87,24 +87,55 @@ export async function addScriptLog(
     
     console.log(`Logging to database: [${level}] ${message}`);
     
-    const { data, error } = await supabase.rpc("add_script_log", {
-      p_license_id: licenseId,
-      p_level: level,
-      p_message: message,
-      p_source: source,
-      p_details: details,
-      p_error_code: errorCode,
-      p_client_ip: clientIp,
-      p_file_name: fileName
-    });
-    
-    if (error) {
-      console.error("Error writing log to database:", error);
+    try {
+      const { data, error } = await supabase.rpc("add_script_log", {
+        p_license_id: licenseId,
+        p_level: level,
+        p_message: message,
+        p_source: source,
+        p_details: details || null,
+        p_error_code: errorCode || null,
+        p_client_ip: clientIp || null,
+        p_file_name: fileName || null
+      });
+      
+      if (error) {
+        console.error("Error writing log to database:", error);
+        return false;
+      }
+      
+      console.log("Log written to database successfully");
+      return true;
+    } catch (rpcError) {
+      console.error("Exception during RPC call to add_script_log:", rpcError);
+      
+      // Try the alternate version of the function if there's an ambiguity error
+      if (rpcError.toString().includes("Could not choose the best candidate function")) {
+        console.log("Attempting to call alternate version of add_script_log");
+        
+        const { data, error } = await supabase.rpc("add_script_log", {
+          p_license_id: licenseId,
+          p_level: level,
+          p_message: message,
+          p_source: source,
+          p_details: details || null,
+          p_error_code: errorCode || null,
+          p_client_ip: clientIp || null,
+          p_file_name: fileName || null,
+          p_user_id: null // Explicitly set user_id to null for the new function signature
+        });
+        
+        if (error) {
+          console.error("Error with alternate function call:", error);
+          return false;
+        }
+        
+        console.log("Log written to database successfully using alternate function");
+        return true;
+      }
+      
       return false;
     }
-    
-    console.log("Log written to database successfully");
-    return true;
   } catch (error) {
     console.error("Exception while logging to database:", error);
     return false;
