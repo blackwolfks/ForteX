@@ -211,7 +211,6 @@ export type Database = {
       script_file_access: {
         Row: {
           created_at: string
-          description: string | null
           file_path: string
           id: string
           is_public: boolean
@@ -220,7 +219,6 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          description?: string | null
           file_path: string
           id?: string
           is_public?: boolean
@@ -229,7 +227,6 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          description?: string | null
           file_path?: string
           id?: string
           is_public?: boolean
@@ -867,15 +864,11 @@ export type Database = {
         Returns: undefined
       }
       update_file_access: {
-        Args:
-          | { p_license_id: string; p_file_path: string; p_is_public: boolean }
-          | {
-              p_license_id: string
-              p_file_path: string
-              p_is_public: boolean
-              p_description?: string
-              p_delete?: boolean
-            }
+        Args: {
+          p_license_id: string
+          p_file_path: string
+          p_is_public: boolean
+        }
         Returns: boolean
       }
       update_license: {

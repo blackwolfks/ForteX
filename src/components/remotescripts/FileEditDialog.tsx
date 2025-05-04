@@ -1,107 +1,79 @@
 
-import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { FileItem } from "./types";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import Editor from '@monaco-editor/react';
+import { useState, useEffect } from "react";
+import { FileItem } from "./types";
 
 interface FileEditDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   file: FileItem | null;
   content: string | null;
-  onSave: (content: string, description?: string) => Promise<boolean>;
+  onSave: (content: string) => Promise<boolean>;
 }
 
 const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditDialogProps) => {
   const [editedContent, setEditedContent] = useState<string>("");
-  const [editedDescription, setEditedDescription] = useState<string>("");
-  const [saving, setSaving] = useState(false);
-  const [isZipFile, setIsZipFile] = useState(false);
-
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  
+  // Update the local state when the content prop changes
   useEffect(() => {
-    if (open && content !== null) {
+    if (content !== null) {
       setEditedContent(content);
     }
-    
-    if (open && file) {
-      setEditedDescription(file.description || "");
-      setIsZipFile(file.name.toLowerCase().endsWith('.zip'));
-    }
-  }, [open, content, file]);
-
+  }, [content]);
+  
   const handleSave = async () => {
-    if (!editedContent && !isZipFile) return;
+    if (!editedContent) return;
     
-    setSaving(true);
+    setIsSaving(true);
     try {
-      // For ZIP files, we're only updating the description
-      if (isZipFile) {
-        await onSave("", editedDescription);
-      } else {
-        await onSave(editedContent, editedDescription);
+      const success = await onSave(editedContent);
+      if (success) {
+        onOpenChange(false);
       }
+    } catch (error) {
+      console.error("Error saving file:", error);
     } finally {
-      setSaving(false);
+      setIsSaving(false);
     }
   };
-
+  
   return (
-    <Dialog open={open} onOpenChange={(newOpen) => {
-      if (!saving) onOpenChange(newOpen);
-    }}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] flex flex-col">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl h-[80vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>
-            {isZipFile ? 'Beschreibung bearbeiten' : 'Datei bearbeiten'}
-            {file && <span className="ml-2 text-muted-foreground text-sm font-normal">({file.name})</span>}
-          </DialogTitle>
+          <DialogTitle>Datei bearbeiten: {file?.name}</DialogTitle>
         </DialogHeader>
         
-        <div className="flex flex-col gap-4 flex-grow overflow-hidden">
-          {/* Description Field */}
-          <div className="space-y-2">
-            <Label htmlFor="description">Beschreibung</Label>
-            <Textarea
-              id="description"
-              placeholder="Beschreibung der Datei..."
-              value={editedDescription}
-              onChange={(e) => setEditedDescription(e.target.value)}
-              rows={3}
-            />
-          </div>
-
-          {/* Only show the editor for non-ZIP files */}
-          {!isZipFile && (
-            <div className="flex-grow min-h-[300px] overflow-hidden border rounded-md">
-              <Editor
-                height="100%"
-                defaultLanguage="lua"
-                value={editedContent}
-                onChange={(value) => setEditedContent(value || "")}
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: 14,
-                  wordWrap: "on",
-                  scrollBeyondLastLine: false,
-                }}
-              />
-            </div>
-          )}
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <Textarea
+            className="w-full h-full font-mono text-sm"
+            value={editedContent}
+            onChange={(e) => setEditedContent(e.target.value)}
+            style={{ 
+              height: "calc(100% - 4rem)",
+              resize: "none",
+              fontFamily: "monospace"
+            }}
+          />
         </div>
         
-        <DialogFooter>
-          <Button
-            variant="outline"
+        <DialogFooter className="mt-4">
+          <Button 
+            variant="outline" 
             onClick={() => onOpenChange(false)}
-            disabled={saving}
+            disabled={isSaving}
           >
             Abbrechen
           </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? "Speichern..." : "Speichern"}
+          <Button 
+            type="submit"
+            onClick={handleSave}
+            disabled={isSaving}
+          >
+            {isSaving ? "Wird gespeichert..." : "Speichern"}
           </Button>
         </DialogFooter>
       </DialogContent>

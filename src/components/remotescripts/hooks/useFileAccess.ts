@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { callRPC, supabase, checkStorageBucket } from "@/lib/supabase";
@@ -77,13 +78,11 @@ export const useFileAccess = (licenseId: string) => {
           access.file_path === file.name
         );
         
-        const isZipFile = file.name.toLowerCase().endsWith('.zip');
-        
         return {
           name: file.name,
           id: file.id || "",
           size: file.metadata?.size || 0,
-          isPublic: isZipFile ? true : (accessEntry ? accessEntry.is_public : false), // ZIP files are always public
+          isPublic: accessEntry ? accessEntry.is_public : false,
           fullPath: `${licenseId}/${file.name}`,
           lastModified: file.metadata?.lastModified || new Date().toISOString(),
           type: file.metadata?.mimetype || "application/octet-stream",
@@ -93,8 +92,7 @@ export const useFileAccess = (licenseId: string) => {
             cacheControl: file.metadata?.cacheControl,
             lastModified: file.metadata?.lastModified
           },
-          updated_at: file.metadata?.lastModified || new Date().toISOString(),
-          description: accessEntry?.description || ""
+          updated_at: file.metadata?.lastModified || new Date().toISOString()
         };
       });
       
@@ -137,8 +135,7 @@ export const useFileAccess = (licenseId: string) => {
         callRPC('update_file_access', {
           p_license_id: licenseId,
           p_file_path: file.name,
-          p_is_public: file.isPublic,
-          p_description: file.description
+          p_is_public: file.isPublic
         })
       );
       
@@ -310,7 +307,7 @@ export const useFileAccess = (licenseId: string) => {
     }
   };
   
-  const saveEditedFile = async (newContent: string, description?: string) => {
+  const saveEditedFile = async (newContent: string) => {
     if (!currentFile) return false;
     
     try {
@@ -332,16 +329,6 @@ export const useFileAccess = (licenseId: string) => {
         });
         toast.error(`Fehler beim Speichern der Datei: ${error.message}`);
         return false;
-      }
-      
-      // Update description if provided
-      if (description !== undefined) {
-        await callRPC('update_file_access', {
-          p_license_id: licenseId,
-          p_file_path: currentFile.name,
-          p_is_public: currentFile.isPublic,
-          p_description: description
-        });
       }
       
       toast.success(`Datei "${currentFile.name}" erfolgreich gespeichert`);

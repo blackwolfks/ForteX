@@ -127,7 +127,6 @@ export type RpcParams = {
     p_license_id: string;
     p_file_path: string;
     p_is_public: boolean;
-    p_description?: string;
     p_delete?: boolean;
   };
   'check_license_by_keys': {

@@ -55,5 +55,4 @@ export interface FileItem {
   };
   updated_at?: string;
   id: string;
-  description?: string;
 }
