@@ -106,7 +106,7 @@ async function handleRequest(req: Request): Promise<Response> {
     }
     
     // Extract optional parameters
-    const { details, error_code, client_ip, file_name, user_id } = body;
+    const { details, error_code, client_ip, file_name } = body;
     
     // Call the RPC function to add the log
     const params = {
@@ -117,13 +117,13 @@ async function handleRequest(req: Request): Promise<Response> {
       p_details: details || null,
       p_error_code: error_code || null,
       p_client_ip: client_ip || null,
-      p_file_name: file_name || null,
-      p_user_id: user_id || null
+      p_file_name: file_name || null
     };
     
     console.log("Calling add_script_log with parameters:", params);
     
     try {
+      // MODIFIED: Using the simpler version of add_script_log without user_id parameter
       const { data: logId, error: rpcError } = await supabase.rpc("add_script_log", params);
       
       if (rpcError) {

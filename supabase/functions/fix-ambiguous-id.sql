@@ -1,134 +1,69 @@
 
--- Fix ambiguous id reference in create_license function
-CREATE OR REPLACE FUNCTION public.create_license(
-  p_script_name text,
-  p_script_file text DEFAULT NULL,
-  p_server_ip text DEFAULT NULL
+-- 1. Update the add_script_log function to use a single parameter signature
+CREATE OR REPLACE FUNCTION public.add_script_log(
+  p_license_id uuid, 
+  p_level text, 
+  p_message text, 
+  p_source text DEFAULT NULL::text, 
+  p_details text DEFAULT NULL::text, 
+  p_error_code text DEFAULT NULL::text, 
+  p_client_ip text DEFAULT NULL::text, 
+  p_file_name text DEFAULT NULL::text
 )
-RETURNS TABLE(id uuid, license_key text, server_key text)
+RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path TO 'public'
 AS $$
 DECLARE
-  v_license_key TEXT;
-  v_server_key TEXT;
-  v_license_id UUID;
+  v_log_id UUID;
 BEGIN
-  -- Generiere einen eindeutigen Schlüssel
-  LOOP
-    v_license_key := public.generate_license_key();
-    EXIT WHEN NOT EXISTS (
-      SELECT 1 FROM public.server_licenses AS sl 
-      WHERE sl.license_key = v_license_key
-    );
-  END LOOP;
+  -- Verify license exists and is active
+  IF NOT EXISTS (
+    SELECT 1 FROM public.server_licenses 
+    WHERE id = p_license_id AND aktiv = true
+  ) THEN
+    RAISE EXCEPTION 'Invalid or inactive license';
+  END IF;
   
-  -- Generiere einen Server-Key
-  v_server_key := substring(md5(random()::text) from 1 for 12);
-  
-  -- Erstelle den Lizenzeintrag
-  INSERT INTO public.server_licenses (
-    license_key,
-    user_id,
-    script_name,
-    script_file,
-    server_ip,
-    server_key
+  -- Insert the log
+  INSERT INTO public.script_logs (
+    license_id,
+    level,
+    message,
+    source,
+    details,
+    error_code,
+    client_ip,
+    file_name
   ) VALUES (
-    v_license_key,
-    auth.uid(),
-    p_script_name,
-    p_script_file,
-    p_server_ip,
-    v_server_key
-  ) RETURNING public.server_licenses.id INTO v_license_id;
+    p_license_id,
+    p_level,
+    p_message,
+    p_source,
+    p_details,
+    p_error_code,
+    p_client_ip,
+    p_file_name
+  ) RETURNING id INTO v_log_id;
   
-  RETURN QUERY 
-  SELECT 
-    v_license_id AS id, 
-    v_license_key AS license_key, 
-    v_server_key AS server_key;
+  RETURN v_log_id;
 END;
 $$;
 
--- Fix check_license_by_keys function to use qualified column names
-DROP FUNCTION IF EXISTS public.check_license_by_keys(text, text);
-CREATE OR REPLACE FUNCTION public.check_license_by_keys(
-  p_license_key text, 
-  p_server_key text
-)
-RETURNS TABLE(
-  valid boolean,
-  license_key text,
-  script_name text,
-  script_file text,
-  server_ip text,
-  aktiv boolean,
-  id uuid,
-  has_file_upload boolean
-)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
+-- Remove the overloaded version with user_id parameter if it exists
+DROP FUNCTION IF EXISTS public.add_script_log(uuid, text, text, text, text, text, text, text, uuid);
+
+-- 2. Check if user_id column exists and drop it if it does
+DO $$
 BEGIN
-  RETURN QUERY
-  SELECT 
-    TRUE as valid,
-    sl.license_key,
-    sl.script_name,
-    sl.script_file,
-    sl.server_ip,
-    sl.aktiv,
-    sl.id,
-    sl.has_file_upload
-  FROM public.server_licenses sl
-  WHERE sl.license_key = p_license_key 
-    AND sl.server_key = p_server_key
-  LIMIT 1;
-  
-  IF NOT FOUND THEN
-    RETURN QUERY SELECT 
-      FALSE as valid,
-      NULL::TEXT as license_key,
-      NULL::TEXT as script_name,
-      NULL::TEXT as script_file,
-      NULL::TEXT as server_ip,
-      FALSE as aktiv,
-      NULL::UUID as id,
-      FALSE as has_file_upload;
+  IF EXISTS (
+    SELECT FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'script_logs'
+    AND column_name = 'user_id'
+  ) THEN
+    ALTER TABLE public.script_logs DROP COLUMN user_id;
   END IF;
 END;
 $$;
-
--- Create public storage bucket for script files if it doesn't exist
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('script', 'script', true)
-ON CONFLICT (id) DO UPDATE SET public = true;
-
--- Make sure all policies for the bucket allow proper access
-BEGIN;
-  -- Policy for public access to read files
-  CREATE POLICY IF NOT EXISTS "Public access to script files"
-  ON storage.objects FOR SELECT
-  USING (bucket_id = 'script');
-  
-  -- Policy for authenticated users to upload files
-  CREATE POLICY IF NOT EXISTS "Users can upload to script bucket"
-  ON storage.objects FOR INSERT
-  TO authenticated
-  WITH CHECK (bucket_id = 'script');
-  
-  -- Policy for authenticated users to update their files
-  CREATE POLICY IF NOT EXISTS "Users can update files in script bucket"
-  ON storage.objects FOR UPDATE
-  TO authenticated
-  USING (bucket_id = 'script');
-  
-  -- Policy for authenticated users to delete their files
-  CREATE POLICY IF NOT EXISTS "Users can delete files in script bucket"
-  ON storage.objects FOR DELETE
-  TO authenticated
-  USING (bucket_id = 'script');
-COMMIT;
