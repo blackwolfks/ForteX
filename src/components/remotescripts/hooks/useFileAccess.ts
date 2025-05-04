@@ -9,6 +9,13 @@ export interface FileItem {
   size?: number;
   isPublic: boolean;
   fullPath: string;
+  metadata?: {
+    size: number;
+    mimetype?: string;
+    cacheControl?: string;
+    lastModified?: string;
+  };
+  updated_at?: string;
 }
 
 export const useFileAccess = (licenseId: string) => {
@@ -317,7 +324,7 @@ export const useFileAccess = (licenseId: string) => {
       });
     }
     
-    // Sort the filtered files
+    // Sort the filtered files with null/undefined checks
     return filteredFiles.sort((a, b) => {
       switch (sortOrder) {
         case "name_asc":
@@ -325,13 +332,21 @@ export const useFileAccess = (licenseId: string) => {
         case "name_desc":
           return b.name.localeCompare(a.name);
         case "size_asc":
-          return a.metadata.size - b.metadata.size;
+          const sizeA = a.metadata?.size || a.size || 0;
+          const sizeB = b.metadata?.size || b.size || 0;
+          return sizeA - sizeB;
         case "size_desc":
-          return b.metadata.size - a.metadata.size;
+          const sizeBDesc = b.metadata?.size || b.size || 0;
+          const sizeADesc = a.metadata?.size || a.size || 0;
+          return sizeBDesc - sizeADesc;
         case "updated_asc":
-          return new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
+          const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+          const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+          return dateA - dateB;
         case "updated_desc":
-          return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+          const dateBDesc = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+          const dateADesc = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+          return dateBDesc - dateADesc;
         default:
           return 0;
       }

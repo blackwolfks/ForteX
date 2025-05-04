@@ -23,4 +23,11 @@ export interface FileItem {
   size?: number;
   isPublic: boolean;
   fullPath: string;
+  metadata?: {
+    size: number;
+    mimetype?: string;
+    cacheControl?: string;
+    lastModified?: string;
+  };
+  updated_at?: string;
 }
