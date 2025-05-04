@@ -236,7 +236,7 @@ const LogsView = () => {
                   <SelectValue placeholder="Script auswählen" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Alle Scripts</SelectItem>
+                  <SelectItem value="all">Alle Scripts</SelectItem>
                   {licenses.map((license) => (
                     <SelectItem key={license.id} value={license.id}>
                       {license.name}
@@ -248,17 +248,17 @@ const LogsView = () => {
             
             <div>
               <Select 
-                value={filters.source || ''} 
+                value={filters.source || ''}
                 onValueChange={(value) => setFilters({...filters, source: value})}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Quelle auswählen" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Alle Quellen</SelectItem>
+                  <SelectItem value="all">Alle Quellen</SelectItem>
                   {sources.map((source) => (
-                    <SelectItem key={source} value={source}>
-                      {source}
+                    <SelectItem key={source} value={source || 'unknown'}>
+                      {source || 'Unbekannt'}
                     </SelectItem>
                   ))}
                 </SelectContent>
