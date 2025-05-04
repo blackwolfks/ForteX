@@ -1,8 +1,9 @@
 
 // Import required modules
 import { verifyLicense, checkIpRestriction, initSupabaseClient, addScriptLog } from "./database.ts";
-import { getRequest, createSuccessResponse, createErrorResponse } from "./handlers.ts";
+import { getRequest, createSuccessResponse, createErrorResponse } from "./response.ts";
 import { corsHeaders } from "./cors.ts";
+import { getScriptFile, getAllScriptFiles } from "./storage.ts";
 
 // Function to get client IP address from request headers
 function getClientIp(req: Request): string | undefined {
@@ -145,6 +146,104 @@ Deno.serve(async (req) => {
           id: logResult.id
         });
       
+      case "get_script":
+        // For get_script requests, retrieve the script file from storage
+        if (!licenseData.has_file_upload) {
+          await addScriptLog(
+            supabase,
+            licenseData.id,
+            'warning',
+            'Script file requested but not enabled for this license',
+            'file-access',
+            undefined,
+            'E2001',
+            clientIp
+          );
+          
+          return createErrorResponse("File upload not enabled for this license", 403);
+        }
+        
+        const { content, error: scriptError } = await getScriptFile(supabase, licenseData.id);
+        
+        if (scriptError || !content) {
+          await addScriptLog(
+            supabase,
+            licenseData.id,
+            'error',
+            'Failed to retrieve script file',
+            'file-access',
+            scriptError || "No content found",
+            'E2002',
+            clientIp
+          );
+          
+          return createErrorResponse(scriptError || "Failed to retrieve script file", 500);
+        }
+        
+        await addScriptLog(
+          supabase,
+          licenseData.id,
+          'info',
+          'Script file successfully retrieved',
+          'file-access',
+          undefined,
+          undefined,
+          clientIp
+        );
+        
+        return createSuccessResponse({
+          content
+        });
+        
+      case "get_all_scripts":
+        // For get_all_scripts requests, retrieve all script files from storage
+        if (!licenseData.has_file_upload) {
+          await addScriptLog(
+            supabase,
+            licenseData.id,
+            'warning',
+            'Script files requested but not enabled for this license',
+            'file-access',
+            undefined,
+            'E2003',
+            clientIp
+          );
+          
+          return createErrorResponse("File upload not enabled for this license", 403);
+        }
+        
+        const { content: allScripts, error: allScriptsError } = await getAllScriptFiles(supabase, licenseData.id);
+        
+        if (allScriptsError || !allScripts) {
+          await addScriptLog(
+            supabase,
+            licenseData.id,
+            'error',
+            'Failed to retrieve script files',
+            'file-access',
+            allScriptsError || "No content found",
+            'E2004',
+            clientIp
+          );
+          
+          return createErrorResponse(allScriptsError || "Failed to retrieve script files", 500);
+        }
+        
+        await addScriptLog(
+          supabase,
+          licenseData.id,
+          'info',
+          'All script files successfully retrieved',
+          'file-access',
+          undefined,
+          undefined,
+          clientIp
+        );
+        
+        return createSuccessResponse({
+          files: allScripts
+        });
+      
       // Handle other request types here...
       
       default:
@@ -163,6 +262,6 @@ Deno.serve(async (req) => {
     }
   } catch (error) {
     console.error("Unhandled error:", error);
-    return createErrorResponse("Internal server error: " + (error as Error).message, 500);
+    return createErrorResponse("Internal server error: " + (error instanceof Error ? error.message : "Unknown error"), 500);
   }
 });
