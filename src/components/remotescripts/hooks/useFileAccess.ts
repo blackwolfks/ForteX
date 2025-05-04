@@ -190,8 +190,12 @@ export const useFileAccess = (licenseId: string) => {
     cleaned = cleaned.replace(/^------WebKit[^\r\n]*(\r?\n)?/gm, "");
     cleaned = cleaned.replace(/^Content-(Type|Disposition)[^\r\n]*(\r?\n)?/gm, "");
     
-    // If we see a numeric prefix (like "3600"), remove it
-    cleaned = cleaned.replace(/^\d+\s*/, "");
+    // If we see a numeric prefix (like "3600"), remove it more aggressively
+    cleaned = cleaned.replace(/^[\s\d]+/, "");  // More aggressive regex to remove numeric prefixes
+    cleaned = cleaned.replace(/^3600[\s\r\n]*/, ""); // Specifically target "3600" at the beginning
+    
+    // Handle the case where there's "[string "3600..."]" in the content
+    cleaned = cleaned.replace(/\[string\s+["']3600[^"']*["']\]:\d+:\s*/, "");
     
     // If we still have text/plain or other content type indicators, try to extract just the code
     const contentMatch = cleaned.match(/Content-Type: [^\r\n]*\r?\n\r?\n([\s\S]*?)(?:\r?\n------)/i);
@@ -219,9 +223,9 @@ export const useFileAccess = (licenseId: string) => {
       // Convert to text
       let content = await data.text();
       
-      // Clean the content if it contains WebKit form boundaries
-      if (content.includes("------WebKit")) {
-        console.log("Found WebKit boundaries, cleaning content");
+      // Clean the content if it contains WebKit form boundaries or numeric prefixes
+      if (content.includes("------WebKit") || content.includes("3600")) {
+        console.log("Found WebKit boundaries or numeric prefix, cleaning content");
         content = cleanFileContent(content);
       }
       
