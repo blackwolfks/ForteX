@@ -1,82 +1,338 @@
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createErrorResponse } from "./response.ts";
+import { corsHeaders } from "./cors.ts";
+import { addScriptLog } from "./database.ts";
 
-// Create a Supabase client
-const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const supabase = createClient(supabaseUrl, serviceRoleKey);
-
-export async function getScriptFiles(licenseId: string): Promise<Record<string, string>> {
-  const files: Record<string, string> = {};
-  
+export async function getScriptFile(supabase: any, licenseId: string) {
   try {
-    // First get a list of all files in the license folder
-    const { data: fileList, error: listError } = await supabase
-      .storage
+    if (!licenseId) {
+      console.error("No license ID provided");
+      return { content: null, error: "License ID is required" };
+    }
+
+    console.log(`Searching for script in storage folder: ${licenseId}/`);
+    
+    // List all files in the license folder
+    const { data: files, error: listError } = await supabase.storage
       .from('script')
-      .list(`${licenseId}`);
-      
+      .list(licenseId);
+    
     if (listError) {
-      console.error(`Error listing files for license ${licenseId}:`, listError);
-      throw new Error(`Could not list files: ${listError.message}`);
+      console.error("Error listing files:", listError);
+      await addScriptLog(
+        supabase,
+        licenseId,
+        'error',
+        'Error accessing storage',
+        'storage',
+        JSON.stringify(listError),
+        'E3001'
+      );
+      return { content: null, error: "Error accessing storage" };
     }
     
-    if (!fileList || fileList.length === 0) {
-      console.log(`No files found for license ${licenseId}`);
-      return files;
+    if (!files || files.length === 0) {
+      console.warn("No files found in folder:", licenseId);
+      await addScriptLog(
+        supabase,
+        licenseId,
+        'warning',
+        'No files found in storage',
+        'storage',
+        `No files found in folder ${licenseId}`,
+        'W3001'
+      );
+      return { content: null, error: "No files found" };
     }
     
-    // Process each file
-    for (const file of fileList) {
-      if (file.name.endsWith('.lua')) {
-        console.log(`Processing file: ${licenseId}/${file.name}`);
-        
-        const { data, error } = await supabase
-          .storage
-          .from('script')
-          .download(`${licenseId}/${file.name}`);
-          
-        if (error) {
-          console.error(`Error downloading file ${file.name}:`, error);
-          continue;
-        }
-        
-        if (!data) {
-          console.error(`No data returned for file ${file.name}`);
-          continue;
-        }
-        
-        const content = await data.text();
-        files[file.name] = content;
-        console.log(`File '${file.name}' successfully loaded`);
-        
-        // Log file loading
-        try {
-          await fetch(`${supabaseUrl}/functions/v1/log`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${serviceRoleKey}`,
-              "apikey": serviceRoleKey,
-            },
-            body: JSON.stringify({
-              license_id: licenseId,
-              level: "info",
-              message: `File loaded successfully: ${file.name}`,
-              source: "storage",
-              details: `Size: ${content.length} bytes`,
-              file_name: file.name
-            })
-          });
-        } catch (logError) {
-          console.error("Error writing log to database:", logError);
+    // Find the first .lua file
+    const luaFile = files.find(file => file.name.endsWith('.lua'));
+    
+    if (!luaFile) {
+      console.warn(`No .lua file found in folder ${licenseId}`);
+      await addScriptLog(
+        supabase,
+        licenseId,
+        'warning',
+        'No .lua file found',
+        'storage',
+        `No .lua file found in folder ${licenseId}`,
+        'W3002'
+      );
+      return { content: null, error: "No .lua file found" };
+    }
+    
+    const downloadPath = `${licenseId}/${luaFile.name}`;
+    console.log(`Found file: ${downloadPath}`);
+    
+    // Download the file
+    const { data: fileData, error: downloadError } = await supabase.storage
+      .from('script')
+      .download(downloadPath);
+    
+    if (downloadError) {
+      console.error("Error downloading file:", downloadError);
+      await addScriptLog(
+        supabase,
+        licenseId,
+        'error',
+        'Error downloading file',
+        'storage',
+        JSON.stringify(downloadError),
+        'E3002',
+        null,
+        luaFile.name
+      );
+      return { content: null, error: "Error downloading file" };
+    }
+    
+    // Convert blob to text
+    const rawText = await fileData.text();
+    
+    // Clean the text to remove any HTTP headers or boundary markers
+    let content = rawText;
+    
+    // Remove WebKit form boundaries and other HTTP headers if present
+    const luaContentMatch = rawText.match(/Content-Type: text\/x-lua\r?\n\r?\n([\s\S]*?)(?:\r?\n-{4,}WebKit|$)/i);
+    if (luaContentMatch && luaContentMatch[1]) {
+      content = luaContentMatch[1];
+    } else {
+      // Try another pattern that might match
+      const altMatch = rawText.match(/Content-Type: text\/.*?\r?\n\r?\n([\s\S]*?)(?:\r?\n-{4,}|$)/i);
+      if (altMatch && altMatch[1]) {
+        content = altMatch[1];
+      } else {
+        // If still can't match specific pattern, just try to remove obvious headers
+        const lines = rawText.split('\n');
+        const contentStartIndex = lines.findIndex(line => line.trim() === '');
+        if (contentStartIndex !== -1 && contentStartIndex < lines.length - 1) {
+          content = lines.slice(contentStartIndex + 1).join('\n');
         }
       }
     }
     
-    return files;
+    console.log(`Script file '${luaFile.name}' successfully loaded`);
+    await addScriptLog(
+      supabase,
+      licenseId,
+      'info',
+      `Script file loaded successfully`,
+      'storage',
+      `File: ${luaFile.name}`,
+      null,
+      null,
+      luaFile.name
+    );
+    
+    return { content, error: null };
+    
   } catch (error) {
-    console.error(`Error fetching script files:`, error);
-    throw error;
+    console.error(`Exception in getScriptFile: ${error}`);
+    await addScriptLog(
+      supabase,
+      licenseId,
+      'error',
+      'Unexpected error getting file',
+      'storage',
+      String(error),
+      'E3099'
+    );
+    return { content: null, error: "Unexpected error getting file" };
+  }
+}
+
+export async function getAllScriptFiles(supabase: any, licenseId: string) {
+  try {
+    if (!licenseId) {
+      console.error("No license ID provided");
+      return { content: null, error: "License ID is required" };
+    }
+
+    console.log(`Fetching script files for license ID: ${licenseId}`);
+    
+    // First we need to check which files are publicly accessible
+    try {
+      const { data: fileAccess, error: accessError } = await supabase
+        .from('script_file_access')
+        .select('*')
+        .eq('license_id', licenseId);
+        
+      if (accessError) {
+        console.error("Error fetching file access settings:", accessError);
+        await addScriptLog(
+          supabase,
+          licenseId,
+          'error',
+          'Failed to fetch file access settings',
+          'storage',
+          JSON.stringify(accessError),
+          'E3003'
+        );
+        return { content: null, error: "Failed to fetch file access settings" };
+      }
+      
+      // List all files in the license folder
+      const { data: files, error: listError } = await supabase.storage
+        .from('script')
+        .list(licenseId);
+      
+      if (listError) {
+        console.error("Error listing files:", listError);
+        await addScriptLog(
+          supabase,
+          licenseId,
+          'error',
+          'Error listing files in storage',
+          'storage',
+          JSON.stringify(listError),
+          'E3004'
+        );
+        return { content: null, error: "Error accessing storage" };
+      }
+      
+      if (!files || files.length === 0) {
+        console.warn("No files found in folder:", licenseId);
+        await addScriptLog(
+          supabase,
+          licenseId,
+          'warning',
+          'No files found in storage folder',
+          'storage',
+          `No files found in folder ${licenseId}`,
+          'W3003'
+        );
+        return { content: null, error: "No files found" };
+      }
+      
+      // Find both .lua and .json files
+      const validFiles = files.filter(file => 
+        file.name.endsWith('.lua') || file.name.endsWith('.json')
+      );
+      
+      if (validFiles.length === 0) {
+        console.warn(`No .lua or .json files found in folder ${licenseId}`);
+        await addScriptLog(
+          supabase,
+          licenseId,
+          'warning',
+          'No .lua or .json files found',
+          'storage',
+          `No .lua or .json files found in folder ${licenseId}`,
+          'W3004'
+        );
+        return { content: null, error: "No .lua or .json files found" };
+      }
+      
+      const scripts: Record<string, string> = {};
+      
+      // Download each valid file
+      for (const file of validFiles) {
+        const downloadPath = `${licenseId}/${file.name}`;
+        console.log(`Processing file: ${downloadPath}`);
+        
+        const { data: fileData, error: downloadError } = await supabase.storage
+          .from('script')
+          .download(downloadPath);
+        
+        if (downloadError) {
+          console.error(`Error downloading file ${file.name}:`, downloadError);
+          await addScriptLog(
+            supabase,
+            licenseId,
+            'error',
+            `Error downloading file: ${file.name}`,
+            'storage',
+            JSON.stringify(downloadError),
+            'E3005',
+            null,
+            file.name
+          );
+          continue;
+        }
+        
+        // Convert blob to text and clean it
+        const rawText = await fileData.text();
+        
+        // Clean the text depending on file type
+        let content = rawText;
+        
+        if (file.name.endsWith('.lua')) {
+          // Remove WebKit form boundaries and other HTTP headers if present for Lua files
+          const luaContentMatch = rawText.match(/Content-Type: text\/x-lua\r?\n\r?\n([\s\S]*?)(?:\r?\n-{4,}WebKit|$)/i);
+          if (luaContentMatch && luaContentMatch[1]) {
+            content = luaContentMatch[1];
+          } else {
+            // Try another pattern that might match
+            const altMatch = rawText.match(/Content-Type: text\/.*?\r?\n\r?\n([\s\S]*?)(?:\r?\n-{4,}|$)/i);
+            if (altMatch && altMatch[1]) {
+              content = altMatch[1];
+            }
+          }
+        } else if (file.name.endsWith('.json')) {
+          try {
+            // Just to validate JSON format, we parse it and don't modify the content
+            JSON.parse(content);
+            console.log(`JSON file '${file.name}' validated successfully`);
+          } catch (e) {
+            console.error(`Invalid JSON format in file ${file.name}:`, e);
+            console.error(`JSON content preview: ${content.substring(0, 100)}...`);
+            await addScriptLog(
+              supabase,
+              licenseId,
+              'warning',
+              `Invalid JSON format in file: ${file.name}`,
+              'storage',
+              String(e),
+              'W3005',
+              null,
+              file.name
+            );
+            // We still include the file even if it's invalid JSON
+            // so that proper error messages can be shown on the client
+          }
+        }
+        
+        scripts[file.name] = content;
+        console.log(`File '${file.name}' successfully loaded`);
+        await addScriptLog(
+          supabase,
+          licenseId,
+          'info',
+          `File loaded successfully: ${file.name}`,
+          'storage',
+          `Size: ${content.length} bytes`,
+          null,
+          null,
+          file.name
+        );
+      }
+      
+      return { content: scripts, error: null };
+    } catch (accessError) {
+      console.error(`Error fetching file access settings: ${accessError}`);
+      await addScriptLog(
+        supabase,
+        licenseId,
+        'error',
+        'Failed to fetch file access settings',
+        'storage',
+        String(accessError),
+        'E3006'
+      );
+      return { content: null, error: "Failed to fetch file access settings" };
+    }
+    
+  } catch (error) {
+    console.error(`Exception in getAllScriptFiles: ${error}`);
+    await addScriptLog(
+      supabase,
+      licenseId,
+      'error',
+      'Unexpected error getting files',
+      'storage',
+      String(error),
+      'E3099'
+    );
+    return { content: null, error: "Unexpected error getting files" };
   }
 }

@@ -35,6 +35,3 @@ verify_jwt = false
 
 [functions.create-bucket]
 verify_jwt = false
-
-[functions.log]
-verify_jwt = false
