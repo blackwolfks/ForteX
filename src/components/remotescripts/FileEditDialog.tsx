@@ -142,9 +142,9 @@ const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditD
               fontLigatures: true,
               lineNumbers: "on",
               renderLineHighlight: "all",
-              // Removed the invalid property highlightActiveIndentGuide
-              // Added alternative properties that are valid
-              renderIndentGuides: true,
+              // Removed the invalid properties
+              // Using proper guides configuration
+              guides: { indentation: true },
               // Aktivieren von Linting-Hinweisen
               formatOnType: true,
               formatOnPaste: true,
@@ -180,4 +180,3 @@ const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditD
 };
 
 export default FileEditDialog;
-
