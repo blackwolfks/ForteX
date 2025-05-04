@@ -23,7 +23,4 @@ export interface FileItem {
   size?: number;
   isPublic: boolean;
   fullPath: string;
-  path?: string;
-  created_at?: string;
-  updated_at?: string | null;
 }

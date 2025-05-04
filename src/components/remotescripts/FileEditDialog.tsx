@@ -1,11 +1,9 @@
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { FileItem } from "./hooks/useFileAccess";
 import Editor from "@monaco-editor/react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
 
 interface FileEditDialogProps {
   open: boolean;
@@ -19,50 +17,22 @@ const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditD
   const [editedContent, setEditedContent] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [hasErrors, setHasErrors] = useState(false);
-  const [editorReady, setEditorReady] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const editorRef = useRef<any>(null);
 
-  // Reset state when dialog opens or closes
-  useEffect(() => {
-    if (!open) {
-      setEditorReady(false);
-      setError(null);
-      setHasErrors(false);
-    }
-  }, [open]);
-
-  // Update editedContent when content changes
   useEffect(() => {
     if (content !== null) {
       setEditedContent(content);
-      console.log("Content loaded in dialog:", content.substring(0, 50));
-      setError(null);
-    } else if (open && file) {
-      // If dialog is open, file exists, but content is null
-      setError("Konnte Dateiinhalt nicht laden. Bitte versuchen Sie es erneut.");
     }
-  }, [content, open, file]);
+  }, [content]);
 
   const handleSave = async () => {
     if (!editedContent) return;
     
     setSaving(true);
     try {
-      console.log("Saving file content:", editedContent.substring(0, 50) + "...");
       const success = await onSave(editedContent);
-      console.log("Save result:", success);
       if (success) {
-        toast.success("Datei erfolgreich gespeichert");
         onOpenChange(false);
-      } else {
-        setError("Fehler beim Speichern der Datei");
-        toast.error("Fehler beim Speichern der Datei");
       }
-    } catch (err) {
-      console.error("Error saving file:", err);
-      setError(`Fehler beim Speichern: ${err instanceof Error ? err.message : 'Unbekannter Fehler'}`);
-      toast.error(`Fehler beim Speichern: ${err instanceof Error ? err.message : 'Unbekannter Fehler'}`);
     } finally {
       setSaving(false);
     }
@@ -88,45 +58,60 @@ const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditD
 
   // Handle editor mounting and configuration
   const handleEditorDidMount = (editor: any, monaco: any) => {
-    console.log("Editor mounted successfully");
-    editorRef.current = editor;
-    setEditorReady(true);
-    
-    // If the language is Lua, set up Lua-specific settings
+    // Wenn die Sprache Lua ist, können wir spezielle Einstellungen vornehmen
     if (getLanguage() === "lua") {
-      // Simple Lua validation
-      const validateLua = () => {
-        const content = editor.getValue();
-        let hasError = false;
-        const markers = [];
-        
-        // Check for incomplete blocks (missing end statements)
-        const startBlocks = (content.match(/\b(function|if|for|while|do)\b/g) || []).length;
-        const endBlocks = (content.match(/\bend\b/g) || []).length;
-        
-        if (startBlocks > endBlocks) {
-          markers.push({
-            startLineNumber: 1,
-            startColumn: 1,
-            endLineNumber: editor.getModel().getLineCount(),
-            endColumn: editor.getModel().getLineMaxColumn(editor.getModel().getLineCount()),
-            message: `Unvollständiger Block: Es fehlen ${startBlocks - endBlocks} 'end' Statement(s)`,
-            severity: monaco.MarkerSeverity.Error
-          });
-          hasError = true;
-        }
-        
-        // Set markers for all detected errors
-        monaco.editor.setModelMarkers(editor.getModel(), 'lua-validator', markers);
-        setHasErrors(hasError);
-      };
+      // Lua-spezifische Diagnoseeinstellungen
+      monaco.languages.registerDiagnosticsAdapter({
+        dispose: () => {},
+        onModelAdd: (model: any) => {
+          const validateModel = () => {
+            // Einfache Validierung für Lua-Code
+            const content = model.getValue();
+            const errors = [];
+            
+            // Überprüfen auf unvollständige Blöcke (fehlende end-Statements)
+            const startBlocks = (content.match(/\b(function|if|for|while|do)\b/g) || []).length;
+            const endBlocks = (content.match(/\bend\b/g) || []).length;
+            
+            if (startBlocks > endBlocks) {
+              errors.push({
+                startLineNumber: 1,
+                startColumn: 1,
+                endLineNumber: model.getLineCount(),
+                endColumn: model.getLineMaxColumn(model.getLineCount()),
+                message: `Unvollständiger Block: Es fehlen ${startBlocks - endBlocks} 'end' Statement(s)`,
+                severity: monaco.MarkerSeverity.Error
+              });
+            }
 
-      // Initial validation
-      setTimeout(() => validateLua(), 500); // Delay to ensure content is loaded
-      
-      // Add content change listener
-      editor.onDidChangeModelContent(() => {
-        validateLua();
+            // Überprüfen auf unbalancierte Klammern
+            const openParens = (content.match(/\(/g) || []).length;
+            const closeParens = (content.match(/\)/g) || []).length;
+            
+            if (openParens !== closeParens) {
+              errors.push({
+                startLineNumber: 1,
+                startColumn: 1,
+                endLineNumber: model.getLineCount(),
+                endColumn: model.getLineMaxColumn(model.getLineCount()),
+                message: `Unbalancierte Klammern: ${openParens} öffnende vs. ${closeParens} schließende`,
+                severity: monaco.MarkerSeverity.Error
+              });
+            }
+
+            // Set markers for the model
+            monaco.editor.setModelMarkers(model, 'lua-validator', errors);
+            
+            // Update error state for save button
+            setHasErrors(errors.length > 0);
+          };
+
+          // Initial validation
+          validateModel();
+          
+          // Validate on content change
+          model.onDidChangeContent(() => validateModel());
+        }
       });
     }
   };
@@ -140,48 +125,37 @@ const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditD
           </DialogTitle>
         </DialogHeader>
         
-        {error && (
-          <Alert variant="destructive" className="my-2">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        
         <div className="mt-4 h-[60vh] border rounded-md overflow-hidden">
-          {!editorReady && content === null && (
-            <div className="flex items-center justify-center h-full text-muted-foreground">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mr-2"></div>
-              Inhalt wird geladen...
-            </div>
-          )}
-          
-          {content !== null && (
-            <Editor
-              height="100%"
-              defaultLanguage={getLanguage()}
-              language={getLanguage()}
-              value={editedContent}
-              onChange={(value) => setEditedContent(value || "")}
-              onMount={handleEditorDidMount}
-              options={{
-                minimap: { enabled: false },
-                fontSize: 14,
-                wordWrap: "on",
-                automaticLayout: true,
-                scrollBeyondLastLine: false,
-                fontLigatures: true,
-                lineNumbers: "on",
-                renderLineHighlight: "all",
-                guides: { indentation: true },
-                formatOnType: true,
-                formatOnPaste: true,
-                folding: true,
-                foldingHighlight: true,
-                glyphMargin: true
-              }}
-              theme="vs-dark"
-            />
-          )}
+          <Editor
+            height="100%"
+            defaultLanguage={getLanguage()}
+            language={getLanguage()}
+            value={editedContent}
+            onChange={(value) => setEditedContent(value || "")}
+            onMount={handleEditorDidMount}
+            options={{
+              minimap: { enabled: false },
+              fontSize: 14,
+              wordWrap: "on",
+              automaticLayout: true,
+              scrollBeyondLastLine: false,
+              fontLigatures: true,
+              lineNumbers: "on",
+              renderLineHighlight: "all",
+              highlightActiveIndentGuide: true,
+              // Aktivieren von Linting-Hinweisen
+              formatOnType: true,
+              formatOnPaste: true,
+              // Verbesserte Fehlermarkierungen
+              renderValidationDecorations: "on",
+              // Aktivieren der Folding-Funktionalität
+              folding: true,
+              foldingHighlight: true,
+              // Bessere Sichtbarkeit für Fehlerlinien
+              glyphMargin: true
+            }}
+            theme="vs-dark"
+          />
         </div>
         
         <DialogFooter className="mt-4">
@@ -190,7 +164,7 @@ const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditD
           </Button>
           <Button 
             onClick={handleSave}
-            disabled={saving || hasErrors || content === null}
+            disabled={saving || hasErrors}
             className={hasErrors ? "bg-red-500 hover:bg-red-600" : ""}
           >
             {hasErrors 
@@ -202,8 +176,5 @@ const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditD
     </Dialog>
   );
 };
-
-// Import toast for notifications
-import { toast } from "sonner";
 
 export default FileEditDialog;
