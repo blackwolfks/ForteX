@@ -1,38 +1,70 @@
 
-// Import the required modules
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// Import necessary modules
+import { join } from "https://deno.land/std@0.131.0/path/mod.ts";
 
+// Interface for script file content
+interface ScriptFile {
+  name: string;
+  content: string;
+  isPublic?: boolean;
+}
+
+// Interface for script retrieval result
 interface ScriptResult {
-  content?: any;
-  error?: Error | null;
+  content?: ScriptFile[];
+  error?: Error;
 }
 
 // Get all script files for a license
 export async function getAllScriptFiles(supabase: any, licenseId: string): Promise<ScriptResult> {
   try {
-    console.log(`Fetching files for license ID: ${licenseId}`);
-
-    // Log the start of file fetching
-    try {
-      await supabase.rpc("add_script_log", {
-        p_license_id: licenseId,
-        p_level: "info",
-        p_message: "Starting file retrieval",
-        p_source: "storage",
-        p_details: `Fetching files for license: ${licenseId}`
-      });
-    } catch (logError) {
-      console.error("Error logging file fetch start:", logError);
+    console.log(`Fetching script files for license ID: ${licenseId}`);
+    
+    // Get file access settings
+    const { data: accessSettings, error: accessError } = await supabase.rpc("get_file_access_for_license", {
+      p_license_id: licenseId
+    });
+    
+    if (accessError) {
+      console.error("Error fetching file access settings:", accessError);
+      
+      // Log error
+      try {
+        await supabase.rpc("add_script_log", {
+          p_license_id: licenseId,
+          p_level: "error",
+          p_message: "Failed to fetch file access settings",
+          p_source: "storage",
+          p_details: accessError.message,
+          p_error_code: accessError.code || null
+        });
+      } catch (logError) {
+        console.error("Failed to log file access error:", logError);
+      }
+      
+      return { error: new Error("Failed to fetch file access settings") };
     }
-
-    // First, check if there are any files in storage
+    
+    console.log(`Found ${accessSettings?.length || 0} file access settings`);
+    
+    // Create a map of file paths to their access settings
+    const accessMap = new Map();
+    if (accessSettings && accessSettings.length > 0) {
+      for (const setting of accessSettings) {
+        accessMap.set(setting.file_path, setting.is_public);
+      }
+    }
+    
+    // Get the list of files from storage
+    const folderPrefix = licenseId;
     const { data: files, error: listError } = await supabase.storage
-      .from("script")
-      .list(`${licenseId}`);
-
+      .from('remot-script')
+      .list(folderPrefix);
+    
     if (listError) {
       console.error("Error listing files:", listError);
       
+      // Log error
       try {
         await supabase.rpc("add_script_log", {
           p_license_id: licenseId,
@@ -43,203 +75,109 @@ export async function getAllScriptFiles(supabase: any, licenseId: string): Promi
           p_error_code: listError.code || null
         });
       } catch (logError) {
-        console.error("Error logging file list error:", logError);
+        console.error("Failed to log file listing error:", logError);
       }
       
       return { error: listError };
     }
-
+    
     if (!files || files.length === 0) {
-      console.log("No files found for this license");
+      console.warn("No files found for license", licenseId);
       
-      try {
-        await supabase.rpc("add_script_log", {
-          p_license_id: licenseId,
-          p_level: "info",
-          p_message: "No files found for this license",
-          p_source: "storage",
-          p_details: "The storage bucket is empty for this license"
-        });
-      } catch (logError) {
-        console.error("Failed to log no files found:", logError);
-      }
-      
-      return { content: [] };
-    }
-
-    console.log(`Found ${files.length} files for license ID ${licenseId}`);
-
-    // Get file access settings to determine which files should be included
-    const { data: fileAccessData, error: accessError } = await supabase.rpc("get_file_access_for_license", {
-      p_license_id: licenseId,
-    });
-
-    if (accessError) {
-      console.error("Error getting file access settings:", accessError);
-      
-      try {
-        await supabase.rpc("add_script_log", {
-          p_license_id: licenseId,
-          p_level: "error",
-          p_message: "Failed to get file access settings",
-          p_source: "storage",
-          p_details: accessError.message,
-          p_error_code: accessError.code || null
-        });
-      } catch (logError) {
-        console.error("Failed to log access error:", logError);
-      }
-    }
-
-    // Create a map of file paths to access settings
-    const fileAccessMap = new Map();
-    if (fileAccessData && Array.isArray(fileAccessData)) {
-      fileAccessData.forEach(access => {
-        fileAccessMap.set(access.file_path, access.is_public);
-      });
-      
-      try {
-        await supabase.rpc("add_script_log", {
-          p_license_id: licenseId,
-          p_level: "debug",
-          p_message: "File access settings loaded",
-          p_source: "storage",
-          p_details: `Loaded ${fileAccessData.length} access entries`
-        });
-      } catch (logError) {
-        console.error("Failed to log access settings load:", logError);
-      }
-    }
-
-    // Filter files to include only public ones
-    const publicFiles = files.filter(file => {
-      const filePath = `${licenseId}/${file.name}`;
-      const isPublic = fileAccessMap.get(filePath) || false;
-      return isPublic;
-    });
-
-    if (publicFiles.length === 0) {
-      console.log("No public files available for this license");
-      
+      // Log warning
       try {
         await supabase.rpc("add_script_log", {
           p_license_id: licenseId,
           p_level: "warning",
-          p_message: "No public files available",
+          p_message: "No script files found",
           p_source: "storage",
-          p_details: `Found ${files.length} files, but none are set to public`
+          p_details: "The license has no associated script files"
         });
       } catch (logError) {
-        console.error("Failed to log no public files:", logError);
+        console.error("Failed to log no files warning:", logError);
       }
       
       return { content: [] };
     }
-
-    // Log about public files found
-    try {
-      await supabase.rpc("add_script_log", {
-        p_license_id: licenseId,
-        p_level: "info",
-        p_message: "Public files found",
-        p_source: "storage",
-        p_details: `Found ${publicFiles.length} public files out of ${files.length} total files`
-      });
-    } catch (logError) {
-      console.error("Failed to log public files found:", logError);
-    }
-
-    // Fetch all public files
-    const scriptFiles = [];
-    for (const file of publicFiles) {
-      const filePath = `${licenseId}/${file.name}`;
-      
-      // Log file download attempt
+    
+    console.log(`Found ${files.length} files in storage`);
+    
+    // Filter only files (not folders)
+    const fileNames = files.filter(file => !file.id.endsWith('/')).map(file => file.name);
+    
+    // Download and process each file
+    const scriptFiles: ScriptFile[] = [];
+    
+    for (const fileName of fileNames) {
       try {
-        await supabase.rpc("add_script_log", {
-          p_license_id: licenseId,
-          p_level: "debug",
-          p_message: `Downloading file: ${file.name}`,
-          p_source: "storage",
-          p_file_name: file.name
-        });
-      } catch (logError) {
-        console.error("Failed to log file download attempt:", logError);
-      }
-      
-      // Download file
-      const { data, error: downloadError } = await supabase.storage
-        .from("script")
-        .download(filePath);
-
-      if (downloadError) {
-        console.error(`Error downloading file ${file.name}:`, downloadError);
+        const filePath = join(folderPrefix, fileName);
+        const { data, error: downloadError } = await supabase.storage
+          .from('remot-script')
+          .download(filePath);
         
+        if (downloadError) {
+          console.error(`Error downloading file ${fileName}:`, downloadError);
+          continue;
+        }
+        
+        // Convert blob to text
+        const content = await data.text();
+        const isPublic = accessMap.get(fileName) || false;
+        
+        scriptFiles.push({
+          name: fileName,
+          content,
+          isPublic
+        });
+        
+        console.log(`Successfully processed file: ${fileName}`);
+      } catch (fileError) {
+        console.error(`Error processing file ${fileName}:`, fileError);
+        
+        // Log file error
         try {
           await supabase.rpc("add_script_log", {
             p_license_id: licenseId,
             p_level: "error",
-            p_message: `Failed to download file: ${file.name}`,
+            p_message: `Failed to process file: ${fileName}`,
             p_source: "storage",
-            p_details: downloadError.message,
-            p_error_code: downloadError.code || null,
-            p_file_name: file.name
+            p_details: fileError instanceof Error ? fileError.message : String(fileError),
+            p_file_name: fileName
           });
         } catch (logError) {
-          console.error("Failed to log download error:", logError);
+          console.error("Failed to log file processing error:", logError);
         }
-        
-        continue;
-      }
-
-      // Convert file to text
-      const text = await data.text();
-      scriptFiles.push({
-        name: file.name,
-        content: text,
-      });
-      
-      try {
-        await supabase.rpc("add_script_log", {
-          p_license_id: licenseId,
-          p_level: "info",
-          p_message: `File accessed: ${file.name}`,
-          p_source: "storage",
-          p_file_name: file.name
-        });
-      } catch (logError) {
-        console.error("Failed to log file access:", logError);
       }
     }
-
-    // Log overall success
+    
+    // Log success
     try {
       await supabase.rpc("add_script_log", {
         p_license_id: licenseId,
         p_level: "info",
-        p_message: "Files successfully retrieved",
+        p_message: "Script files retrieved successfully",
         p_source: "storage",
-        p_details: `Retrieved ${scriptFiles.length} files successfully`
+        p_details: `Retrieved ${scriptFiles.length} files`
       });
     } catch (logError) {
-      console.error("Failed to log retrieval success:", logError);
+      console.error("Failed to log successful file retrieval:", logError);
     }
     
-    console.log(`Successfully processed ${scriptFiles.length} public files`);
     return { content: scriptFiles };
   } catch (error) {
     console.error("Error in getAllScriptFiles:", error);
     
+    // Log the unexpected error
     try {
       await supabase.rpc("add_script_log", {
         p_license_id: licenseId,
         p_level: "error",
-        p_message: "General error accessing script files",
+        p_message: "Unexpected error retrieving script files",
         p_source: "storage",
         p_details: error instanceof Error ? error.message : String(error)
       });
     } catch (logError) {
-      console.error("Failed to log error:", logError);
+      console.error("Failed to log unexpected error:", logError);
     }
     
     return { error: error instanceof Error ? error : new Error(String(error)) };
