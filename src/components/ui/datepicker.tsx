@@ -2,7 +2,7 @@
 import * as React from "react";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
-import { de } from "date-fns/locale";
+import { de, Locale } from "date-fns/locale";
 
 interface DatePickerProps {
   selected?: Date;
