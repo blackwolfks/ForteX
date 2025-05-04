@@ -641,12 +641,6 @@ export type Database = {
               p_script_file?: string
               p_server_ip?: string
             }
-          | {
-              p_script_name: string
-              p_script_file?: string
-              p_server_ip?: string
-              p_description?: string
-            }
           | { p_script_name: string; p_server_ip?: string }
         Returns: {
           id: string
