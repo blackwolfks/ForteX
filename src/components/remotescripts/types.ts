@@ -49,7 +49,7 @@ export interface LogEntry {
 export interface LogsFilter {
   level?: 'info' | 'warning' | 'error' | 'debug' | 'all';
   source?: string;
-  licenseId?: string | null | undefined; // Explicitly define all possible values
+  licenseId?: string | null; // Only string or null, not undefined
   search?: string;
   startDate?: string | Date | null;
   endDate?: string | Date | null;

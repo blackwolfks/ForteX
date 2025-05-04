@@ -94,11 +94,11 @@ export async function addScriptLog(
       p_license_id: licenseId,
       p_level: level,
       p_message: message,
-      p_source: source,
-      p_details: details,
-      p_error_code: errorCode,
-      p_client_ip: clientIp,
-      p_file_name: fileName
+      p_source: source || null,
+      p_details: details || null,
+      p_error_code: errorCode || null,
+      p_client_ip: clientIp || null,
+      p_file_name: fileName || null
     });
 
     if (error) {

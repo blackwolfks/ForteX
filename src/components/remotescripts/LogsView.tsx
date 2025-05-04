@@ -37,7 +37,7 @@ const LogsView = () => {
   const [filters, setFilters] = useState<LogsFilter>({
     level: 'all',
     search: '',
-    licenseId: undefined, // Null oder undefined um alle zu selektieren
+    licenseId: null, // Explicitly set as null to select all logs initially
     source: 'all',
   });
   const [licenses, setLicenses] = useState<{id: string, name: string}[]>([]);
@@ -80,13 +80,12 @@ const LogsView = () => {
           ? filters.endDate.toISOString() 
           : filters.endDate;
         
-        // Call the get_script_logs RPC function
-        // Wichtig: Nur null an die DB übergeben, wenn 'all' oder undefined
+        // Important: For the license_id parameter, pass null if 'all' is selected (not 'all' string)
         const licenseIdParam = filters.licenseId === 'all' || filters.licenseId === undefined 
           ? null 
           : filters.licenseId;
         
-        console.log("License ID param being sent:", licenseIdParam);
+        console.log("License ID param being sent to database:", licenseIdParam);
         
         const { data, error } = await supabase.rpc('get_script_logs', {
           p_license_id: licenseIdParam,
@@ -262,7 +261,7 @@ const LogsView = () => {
                 onClick={() => setFilters({ 
                   level: 'all', 
                   search: '', 
-                  licenseId: 'all',  // Hier auf 'all' setzen für konsistentes Verhalten in der UI
+                  licenseId: null,  // Reset to null, not 'all' string
                   source: 'all' 
                 })}
               >
