@@ -211,6 +211,7 @@ export type Database = {
       script_file_access: {
         Row: {
           created_at: string
+          description: string | null
           file_path: string
           id: string
           is_public: boolean
@@ -219,6 +220,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          description?: string | null
           file_path: string
           id?: string
           is_public?: boolean
@@ -227,6 +229,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          description?: string | null
           file_path?: string
           id?: string
           is_public?: boolean

@@ -25,32 +25,52 @@ const FileAccessItem = ({
   onEdit,
   onDelete
 }: FileAccessItemProps) => {
+  const isZipFile = file.name.toLowerCase().endsWith('.zip');
+  const fileExtension = file.name.split('.').pop()?.toLowerCase();
+  
   return (
     <TableRow>
       <TableCell>
-        <div className="font-medium">{file.name}</div>
+        <div className="space-y-1">
+          <div className="font-medium">{file.name}</div>
+          {file.description && (
+            <div className="text-xs text-muted-foreground line-clamp-2">
+              {file.description}
+            </div>
+          )}
+        </div>
       </TableCell>
       <TableCell>{formatFileSize(file.size || 0)}</TableCell>
       <TableCell>
         <div className="flex items-center space-x-3">
-          <Switch
-            checked={file.isPublic}
-            onCheckedChange={() => toggleFileVisibility(index)}
-            id={`file-visibility-${index}`}
-          />
-          <Label htmlFor={`file-visibility-${index}`} className="flex items-center">
-            {file.isPublic ? (
-              <>
-                <Eye className="mr-2 h-4 w-4 text-green-500" />
-                <span>Öffentlich</span>
-              </>
-            ) : (
-              <>
-                <EyeOff className="mr-2 h-4 w-4 text-red-500" />
-                <span>Privat</span>
-              </>
-            )}
-          </Label>
+          {isZipFile ? (
+            <div className="flex items-center">
+              <Eye className="mr-2 h-4 w-4 text-green-500" />
+              <span>Immer öffentlich</span>
+            </div>
+          ) : (
+            <Switch
+              checked={file.isPublic}
+              onCheckedChange={() => toggleFileVisibility(index)}
+              id={`file-visibility-${index}`}
+              disabled={isZipFile}
+            />
+          )}
+          {!isZipFile && (
+            <Label htmlFor={`file-visibility-${index}`} className="flex items-center">
+              {file.isPublic ? (
+                <>
+                  <Eye className="mr-2 h-4 w-4 text-green-500" />
+                  <span>Öffentlich</span>
+                </>
+              ) : (
+                <>
+                  <EyeOff className="mr-2 h-4 w-4 text-red-500" />
+                  <span>Privat</span>
+                </>
+              )}
+            </Label>
+          )}
         </div>
       </TableCell>
       <TableCell>
