@@ -19,7 +19,7 @@ const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditD
 
   useEffect(() => {
     if (content !== null) {
-      // Use the raw content directly without cleaning
+      // The content should already be cleaned by the useFileAccess hook
       setEditedContent(content);
     }
   }, [content]);

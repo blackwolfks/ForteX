@@ -39,14 +39,12 @@ export async function getAllScriptFiles(supabase: any, licenseId: string): Promi
           continue;
         }
         
-        // Clean the content if necessary
+        // Clean the content
         let text = await fileData.text();
         
-        // Clean WebKit form boundaries if present
-        if (text.includes("------WebKit") || text.includes("3600")) {
-          console.log(`Cleaning WebKit boundaries and numeric prefixes from ${fileInfo.name}`);
-          text = cleanFileContent(text);
-        }
+        // Always clean Lua files to remove any potential prefixes or boundaries
+        console.log(`Cleaning content for file: ${fileInfo.name}`);
+        text = cleanFileContent(text);
         
         content[fileInfo.name] = text;
         
@@ -62,9 +60,11 @@ export async function getAllScriptFiles(supabase: any, licenseId: string): Promi
   }
 }
 
-// Helper function to clean WebKit form boundaries from file content
+// Enhanced helper function to clean content from file
 function cleanFileContent(content: string): string {
   if (!content) return "";
+  
+  console.log("Original content first 50 chars:", content.substring(0, 50));
   
   // Remove WebKit form boundaries and headers
   let cleaned = content;
@@ -73,18 +73,31 @@ function cleanFileContent(content: string): string {
   cleaned = cleaned.replace(/^------WebKit[^\r\n]*(\r?\n)?/gm, "");
   cleaned = cleaned.replace(/^Content-(Type|Disposition)[^\r\n]*(\r?\n)?/gm, "");
   
-  // If we see a numeric prefix (like "3600"), remove it more aggressively
-  cleaned = cleaned.replace(/^[\s\d]+/, "");  // More aggressive regex to remove numeric prefixes
-  cleaned = cleaned.replace(/^3600[\s\r\n]*/, ""); // Specifically target "3600" at the beginning
+  // Handle numeric prefixes like "3600" that appear in FiveM Lua files
+  // First, check if the content starts with a number
+  if (/^\s*\d+/.test(cleaned)) {
+    console.log("Found numeric prefix, removing it");
+    cleaned = cleaned.replace(/^\s*\d+\s*/m, ""); // Remove leading numbers with whitespace
+  }
   
-  // Handle the case where there's "[string "3600..."]" in the content
-  cleaned = cleaned.replace(/\[string\s+["']3600[^"']*["']\]:\d+:\s*/, "");
+  // Specifically target "3600" at the beginning of the file or lines
+  if (cleaned.includes("3600")) {
+    console.log("Found '3600' in content, cleaning specifically");
+    cleaned = cleaned.replace(/^3600[\s\r\n]*/m, ""); // Remove "3600" at beginning
+    cleaned = cleaned.replace(/\n3600[\s\r\n]*/g, "\n"); // Remove "3600" at line starts
+  }
   
-  // If we still have text/plain or other content type indicators, try to extract just the code
+  // Handle FiveM Lua error formats like [string "3600..."] that might be added
+  cleaned = cleaned.replace(/\[string\s+["']3600[^"']*["']\]:\d+:\s*/g, "");
+  
+  // Try to extract content from multipart form data if present
   const contentMatch = cleaned.match(/Content-Type: [^\r\n]*\r?\n\r?\n([\s\S]*?)(?:\r?\n------)/i);
   if (contentMatch && contentMatch[1]) {
-    return contentMatch[1].trim();
+    console.log("Extracted content from multipart form");
+    cleaned = contentMatch[1].trim();
   }
+  
+  console.log("Cleaned content first 50 chars:", cleaned.substring(0, 50));
   
   return cleaned.trim();
 }
