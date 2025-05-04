@@ -37,7 +37,7 @@ const LogsView = () => {
   const [filters, setFilters] = useState<LogsFilter>({
     level: 'all',
     search: '',
-    licenseId: 'all',
+    licenseId: undefined, // Change from 'all' to undefined
     source: 'all',
   });
   const [licenses, setLicenses] = useState<{id: string, name: string}[]>([]);
@@ -81,6 +81,7 @@ const LogsView = () => {
           : filters.endDate;
         
         // Call the get_script_logs RPC function
+        // Fix: Don't pass 'all' for license_id, pass null instead when 'all' is selected
         const { data, error } = await supabase.rpc('get_script_logs', {
           p_license_id: filters.licenseId === 'all' ? null : filters.licenseId,
           p_level: filters.level === 'all' ? null : filters.level,
@@ -124,6 +125,7 @@ const LogsView = () => {
         }
       } catch (error) {
         console.error('Error fetching logs:', error);
+        setLogs([]); // Make sure we set empty logs on error
       } finally {
         setLoading(false);
       }
@@ -251,7 +253,12 @@ const LogsView = () => {
               />
               <Button 
                 variant="outline"
-                onClick={() => setFilters({ level: 'all', search: '', licenseId: 'all', source: 'all' })}
+                onClick={() => setFilters({ 
+                  level: 'all', 
+                  search: '', 
+                  licenseId: undefined, // Changed from 'all' to undefined
+                  source: 'all' 
+                })}
               >
                 Zurücksetzen
               </Button>
