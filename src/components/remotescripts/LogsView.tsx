@@ -64,14 +64,23 @@ const LogsView = () => {
     const fetchLogs = async () => {
       setLoading(true);
       try {
+        // Convert Date objects to ISO strings if they exist
+        const startDateParam = filters.startDate instanceof Date 
+          ? filters.startDate.toISOString() 
+          : filters.startDate;
+        
+        const endDateParam = filters.endDate instanceof Date 
+          ? filters.endDate.toISOString() 
+          : filters.endDate;
+        
         // Call the get_script_logs RPC function
         const { data, error } = await supabase.rpc('get_script_logs', {
           p_license_id: filters.licenseId === 'all' ? null : filters.licenseId,
           p_level: filters.level === 'all' ? null : filters.level,
           p_source: filters.source === 'all' ? null : filters.source,
           p_search: filters.search || null,
-          p_start_date: filters.startDate || null,
-          p_end_date: filters.endDate || null,
+          p_start_date: startDateParam || null,
+          p_end_date: endDateParam || null,
           p_limit: 100
         });
 
