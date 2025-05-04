@@ -119,6 +119,11 @@ Deno.serve(async (req) => {
           return createErrorResponse("level and message are required for log requests", 400);
         }
         
+        // Validate log level
+        if (!['info', 'warning', 'error', 'debug'].includes(level)) {
+          return createErrorResponse(`Invalid log level: ${level}`, 400);
+        }
+        
         const logResult = await addScriptLog(
           supabase,
           licenseData.id,

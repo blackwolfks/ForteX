@@ -89,6 +89,21 @@ export async function addScriptLog(
   fileName?: string
 ): Promise<{ success: boolean, id?: string, error?: string }> {
   try {
+    // Validate license ID is a valid UUID before sending to database
+    if (licenseId && !isValidUUID(licenseId)) {
+      console.error("Invalid license ID format:", licenseId);
+      return { 
+        success: false, 
+        error: "Invalid license ID format" 
+      };
+    }
+
+    console.log("Adding script log with params:", { 
+      licenseId, level, message, source, 
+      details: details?.substring(0, 20) + "...", // Truncate for logging
+      errorCode, clientIp, fileName 
+    });
+
     // Call the add_script_log RPC function
     const { data, error } = await supabase.rpc("add_script_log", {
       p_license_id: licenseId,
@@ -120,4 +135,10 @@ export async function addScriptLog(
       error: (error as Error).message
     };
   }
+}
+
+// Helper function to validate UUID format
+function isValidUUID(id: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(id);
 }

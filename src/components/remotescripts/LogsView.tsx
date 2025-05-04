@@ -30,14 +30,16 @@ import { LogEntry, LogsFilter } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+import { useToast } from "@/hooks/use-toast";
 
 const LogsView = () => {
+  const { toast } = useToast();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<LogsFilter>({
     level: 'all',
     search: '',
-    licenseId: null, // Explicitly set as null to select all logs initially
+    licenseId: null, // Use null to select all logs initially (not undefined or 'all')
     source: 'all',
   });
   const [licenses, setLicenses] = useState<{id: string, name: string}[]>([]);
@@ -62,6 +64,11 @@ const LogsView = () => {
         })));
       } catch (error) {
         console.error('Error fetching licenses:', error);
+        toast({
+          title: "Fehler",
+          description: "Lizenzen konnten nicht geladen werden",
+          variant: "destructive"
+        });
       }
     };
 
@@ -69,7 +76,7 @@ const LogsView = () => {
     const fetchLogs = async () => {
       setLoading(true);
       try {
-        console.log("Fetching logs with filters:", filters);
+        console.log("Fetching logs with filters:", JSON.stringify(filters));
         
         // Convert Date objects to ISO strings if they exist
         const startDateParam = filters.startDate instanceof Date 
@@ -80,10 +87,9 @@ const LogsView = () => {
           ? filters.endDate.toISOString() 
           : filters.endDate;
         
-        // Important: For the license_id parameter, pass null if 'all' is selected (not 'all' string)
-        const licenseIdParam = filters.licenseId === 'all' || filters.licenseId === undefined 
-          ? null 
-          : filters.licenseId;
+        // Pass null to query all logs, not a string value of 'all'
+        // This is a critical fix for the UUID validation error
+        const licenseIdParam = filters.licenseId;
         
         console.log("License ID param being sent to database:", licenseIdParam);
         
@@ -130,6 +136,11 @@ const LogsView = () => {
         }
       } catch (error) {
         console.error('Error fetching logs:', error);
+        toast({
+          title: "Fehler",
+          description: "Logs konnten nicht geladen werden: " + (error as Error).message,
+          variant: "destructive"
+        });
         setLogs([]); // Make sure we set empty logs on error
       } finally {
         setLoading(false);
@@ -138,7 +149,7 @@ const LogsView = () => {
 
     fetchLicenses();
     fetchLogs();
-  }, [filters]);
+  }, [filters, toast]);
 
   // Get level icon
   const getLevelIcon = (level: string) => {
@@ -181,6 +192,14 @@ const LogsView = () => {
     }
   };
 
+  // Handle license selection change
+  const handleLicenseChange = (value: string) => {
+    setFilters({
+      ...filters, 
+      licenseId: value === 'all' ? null : value
+    });
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -213,8 +232,8 @@ const LogsView = () => {
             
             <div>
               <Select 
-                value={filters.licenseId || 'all'}
-                onValueChange={(value) => setFilters({...filters, licenseId: value})}
+                value={filters.licenseId === null ? 'all' : filters.licenseId}
+                onValueChange={handleLicenseChange}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Script auswählen" />
@@ -261,7 +280,7 @@ const LogsView = () => {
                 onClick={() => setFilters({ 
                   level: 'all', 
                   search: '', 
-                  licenseId: null,  // Reset to null, not 'all' string
+                  licenseId: null,  // Reset to null to fetch all logs
                   source: 'all' 
                 })}
               >
