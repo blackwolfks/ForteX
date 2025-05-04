@@ -623,11 +623,14 @@ export type Database = {
         }[]
       }
       check_license_by_server_key: {
-        Args: { p_server_key: string }
+        Args:
+          | { p_license_key: string; p_server_key: string }
+          | { p_server_key: string }
         Returns: {
           valid: boolean
           license_key: string
           script_name: string
+          script_file: string
           server_ip: string
           aktiv: boolean
           id: string
