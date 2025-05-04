@@ -9,6 +9,7 @@ import { AlertTriangle } from "lucide-react";
 import { callRPC } from "@/lib/supabase";
 import { uploadFileWithProgress } from "@/services/file-uploader";
 import { toast } from "sonner";
+import { logError } from "@/lib/logService";
 
 interface FileUploadDialogProps {
   licenseId: string;
@@ -56,7 +57,13 @@ export default function FileUploadDialog({
       
       // Validate file size (10MB limit)
       if (selectedFile.size > 10 * 1024 * 1024) {
-        setUploadError("Die Datei ist zu groß. Die maximale Dateigröße beträgt 10MB.");
+        const errorMessage = "Die Datei ist zu groß. Die maximale Dateigröße beträgt 10MB.";
+        setUploadError(errorMessage);
+        await logError(licenseId, errorMessage, {
+          source: 'file-upload',
+          fileName: selectedFile.name,
+          details: `File size: ${selectedFile.size} bytes`
+        });
         setUploading(false);
         return;
       }
@@ -92,7 +99,14 @@ export default function FileUploadDialog({
       }
     } catch (error) {
       console.error("Error in upload process:", error);
-      setUploadError(error instanceof Error ? error.message : "Unbekannter Fehler beim Hochladen");
+      const errorMessage = error instanceof Error ? error.message : "Unbekannter Fehler beim Hochladen";
+      setUploadError(errorMessage);
+      
+      await logError(licenseId, `Error uploading file: ${errorMessage}`, {
+        source: 'file-upload',
+        fileName: selectedFile.name,
+        details: JSON.stringify(error)
+      });
     } finally {
       setUploading(false);
     }

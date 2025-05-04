@@ -1,7 +1,9 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { callRPC, supabase, checkStorageBucket } from "@/lib/supabase";
 import { FileItem } from "../types";
+import { logError } from "@/lib/logService";
 
 export const useFileAccess = (licenseId: string) => {
   const [files, setFiles] = useState<FileItem[]>([]);
@@ -40,6 +42,11 @@ export const useFileAccess = (licenseId: string) => {
 
       if (storageError) {
         console.error("Error listing files from storage:", storageError);
+        await logError(licenseId, `Error listing files: ${storageError.message}`, {
+          source: 'file-management',
+          details: JSON.stringify(storageError)
+        });
+        
         if (storageError.message.includes("bucket") && storageError.message.includes("not found")) {
           // No files yet, not necessarily an error to show to user
           console.log("No storage bucket or no files yet");
@@ -58,6 +65,10 @@ export const useFileAccess = (licenseId: string) => {
       
       if (accessError) {
         console.error("Error fetching file access permissions:", accessError);
+        await logError(licenseId, `Error fetching file access permissions: ${accessError.message}`, {
+          source: 'file-management',
+          details: JSON.stringify(accessError)
+        });
         toast.error("Fehler beim Laden der Dateizugriffsrechte");
       }
       
@@ -69,19 +80,29 @@ export const useFileAccess = (licenseId: string) => {
         
         return {
           name: file.name,
-          id: file.id,
-          size: file.metadata?.size,
+          id: file.id || "",
+          size: file.metadata?.size || 0,
           isPublic: accessEntry ? accessEntry.is_public : false,
           fullPath: `${licenseId}/${file.name}`,
           lastModified: file.metadata?.lastModified || new Date().toISOString(),
           type: file.metadata?.mimetype || "application/octet-stream",
-          metadata: file.metadata
+          metadata: {
+            size: file.metadata?.size || 0,
+            mimetype: file.metadata?.mimetype || "application/octet-stream",
+            cacheControl: file.metadata?.cacheControl,
+            lastModified: file.metadata?.lastModified
+          },
+          updated_at: file.metadata?.lastModified || new Date().toISOString()
         };
       });
       
       setFiles(filesList);
     } catch (error) {
       console.error("Exception in fetchFiles:", error);
+      await logError(licenseId, `Exception in fetchFiles: ${error instanceof Error ? error.message : String(error)}`, {
+        source: 'file-management',
+        details: JSON.stringify(error)
+      });
       toast.error("Fehler beim Laden der Dateien");
     } finally {
       setLoading(false);
@@ -123,12 +144,20 @@ export const useFileAccess = (licenseId: string) => {
       
       if (errors.length > 0) {
         console.error("Errors updating file access:", errors);
+        await logError(licenseId, `Errors saving file access rights: ${errors.length} failures`, {
+          source: 'file-management',
+          details: JSON.stringify(errors)
+        });
         toast.error(`Fehler beim Speichern von ${errors.length} Dateizugriffsrechten`);
       } else {
         toast.success("Dateizugriffsrechte erfolgreich gespeichert");
       }
     } catch (error) {
       console.error("Error saving file access:", error);
+      await logError(licenseId, `Error saving file access: ${error instanceof Error ? error.message : String(error)}`, {
+        source: 'file-management',
+        details: JSON.stringify(error)
+      });
       toast.error("Fehler beim Speichern der Dateizugriffsrechte");
     } finally {
       setSaving(false);
@@ -145,6 +174,11 @@ export const useFileAccess = (licenseId: string) => {
         
       if (error) {
         console.error("Error downloading file:", error);
+        await logError(licenseId, `Error downloading file ${file.name}: ${error.message}`, {
+          source: 'file-management',
+          fileName: file.name,
+          details: JSON.stringify(error)
+        });
         toast.error(`Fehler beim Herunterladen der Datei: ${error.message}`);
         return;
       }
@@ -164,6 +198,11 @@ export const useFileAccess = (licenseId: string) => {
       toast.success(`Datei "${file.name}" erfolgreich heruntergeladen`);
     } catch (error) {
       console.error("Error in downloadFile:", error);
+      await logError(licenseId, `Exception downloading file ${file.name}: ${error instanceof Error ? error.message : String(error)}`, {
+        source: 'file-management',
+        fileName: file.name,
+        details: JSON.stringify(error)
+      });
       toast.error("Fehler beim Herunterladen der Datei");
     }
   };
@@ -220,6 +259,11 @@ export const useFileAccess = (licenseId: string) => {
         
       if (error) {
         console.error("Error downloading file for editing:", error);
+        await logError(licenseId, `Error loading file ${file.name}: ${error.message}`, {
+          source: 'file-management',
+          fileName: file.name,
+          details: JSON.stringify(error)
+        });
         toast.error(`Fehler beim Laden der Datei: ${error.message}`);
         return null;
       }
@@ -234,6 +278,11 @@ export const useFileAccess = (licenseId: string) => {
       return content;
     } catch (error) {
       console.error("Error in fetchFileContent:", error);
+      await logError(licenseId, `Exception reading file ${file.name}: ${error instanceof Error ? error.message : String(error)}`, {
+        source: 'file-management',
+        fileName: file.name,
+        details: JSON.stringify(error)
+      });
       toast.error("Fehler beim Lesen der Datei");
       return null;
     }
@@ -249,6 +298,11 @@ export const useFileAccess = (licenseId: string) => {
       }
     } catch (error) {
       console.error("Error preparing file for edit:", error);
+      await logError(licenseId, `Error preparing file for editing ${file.name}: ${error instanceof Error ? error.message : String(error)}`, {
+        source: 'file-management',
+        fileName: file.name,
+        details: JSON.stringify(error)
+      });
       toast.error("Fehler beim Vorbereiten der Datei zum Bearbeiten");
     }
   };
@@ -268,6 +322,11 @@ export const useFileAccess = (licenseId: string) => {
         
       if (error) {
         console.error("Error updating file:", error);
+        await logError(licenseId, `Error saving file ${currentFile.name}: ${error.message}`, {
+          source: 'file-management',
+          fileName: currentFile.name,
+          details: JSON.stringify(error)
+        });
         toast.error(`Fehler beim Speichern der Datei: ${error.message}`);
         return false;
       }
@@ -278,6 +337,11 @@ export const useFileAccess = (licenseId: string) => {
       return true;
     } catch (error) {
       console.error("Error in saveEditedFile:", error);
+      await logError(licenseId, `Exception saving file ${currentFile.name}: ${error instanceof Error ? error.message : String(error)}`, {
+        source: 'file-management',
+        fileName: currentFile.name,
+        details: JSON.stringify(error)
+      });
       toast.error("Fehler beim Speichern der Datei");
       return false;
     }
@@ -297,6 +361,11 @@ export const useFileAccess = (licenseId: string) => {
         
       if (error) {
         console.error("Error deleting file:", error);
+        await logError(licenseId, `Error deleting file ${file.name}: ${error.message}`, {
+          source: 'file-management',
+          fileName: file.name,
+          details: JSON.stringify(error)
+        });
         toast.error(`Fehler beim Löschen der Datei: ${error.message}`);
         return;
       }
@@ -311,12 +380,22 @@ export const useFileAccess = (licenseId: string) => {
       
       if (accessError) {
         console.error("Error deleting file access record:", accessError);
+        await logError(licenseId, `Error deleting file access record for ${file.name}: ${accessError.message}`, {
+          source: 'file-management',
+          fileName: file.name,
+          details: JSON.stringify(accessError)
+        });
       }
       
       toast.success(`Datei "${file.name}" erfolgreich gelöscht`);
       fetchFiles(); // Refresh file list
     } catch (error) {
       console.error("Error in deleteFile:", error);
+      await logError(licenseId, `Exception deleting file ${file.name}: ${error instanceof Error ? error.message : String(error)}`, {
+        source: 'file-management',
+        fileName: file.name,
+        details: JSON.stringify(error)
+      });
       toast.error("Fehler beim Löschen der Datei");
     }
   };
