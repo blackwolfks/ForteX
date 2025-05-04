@@ -40,118 +40,59 @@ const LogsView = () => {
   });
   const [licenses, setLicenses] = useState<{id: string, name: string}[]>([]);
 
-  // Mock data for now - will be replaced with actual data
+  // Fetch logs and licenses
   useEffect(() => {
-    // Fetch licenses for the dropdown
-    const fetchLicenses = async () => {
+    const fetchData = async () => {
       try {
-        const { data, error } = await supabase
+        // Fetch licenses for the dropdown
+        const { data: licenseData, error: licenseError } = await supabase
           .from('server_licenses')
           .select('id, script_name')
           .order('script_name', { ascending: true });
 
-        if (error) throw error;
-        setLicenses(data.map(license => ({
+        if (licenseError) throw licenseError;
+        setLicenses(licenseData.map(license => ({
           id: license.id,
           name: license.script_name
         })));
+
+        // Fetch actual logs from the database
+        const { data: logsData, error: logsError } = await supabase.rpc('get_script_logs', {
+          p_license_id: filters.licenseId || null,
+          p_level: filters.level !== 'all' ? filters.level : null,
+          p_source: filters.source || null,
+          p_search: filters.search || null,
+          p_start_date: filters.startDate || null,
+          p_end_date: filters.endDate || null
+        });
+
+        if (logsError) throw logsError;
+        
+        // Map the database response to our LogEntry type
+        const mappedLogs: LogEntry[] = logsData.map((log: any) => ({
+          id: log.id,
+          licenseId: log.license_id,
+          timestamp: log.log_timestamp,
+          level: log.level,
+          message: log.message,
+          source: log.source,
+          details: log.details,
+          errorCode: log.error_code,
+          clientIp: log.client_ip,
+          fileName: log.file_name,
+          userId: log.user_id
+        }));
+        
+        setLogs(mappedLogs);
       } catch (error) {
-        console.error('Error fetching licenses:', error);
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    // Mock data for logs
-    // In a real implementation, this would fetch from the database
-    const mockLogs: LogEntry[] = [
-      {
-        id: '1',
-        licenseId: 'license-1',
-        timestamp: new Date().toISOString(),
-        level: 'error',
-        message: 'Failed to load script configuration',
-        source: 'script-loader',
-        errorCode: 'E1001',
-        clientIp: '192.168.1.1',
-        fileName: 'config.lua'
-      },
-      {
-        id: '2',
-        licenseId: 'license-1',
-        timestamp: new Date(Date.now() - 3600000).toISOString(),
-        level: 'warning',
-        message: 'Performance degradation detected',
-        source: 'resource-monitor',
-        details: 'High CPU usage in script execution'
-      },
-      {
-        id: '3',
-        licenseId: 'license-2',
-        timestamp: new Date(Date.now() - 7200000).toISOString(),
-        level: 'info',
-        message: 'Script started successfully',
-        source: 'script-loader'
-      },
-      {
-        id: '4',
-        licenseId: 'license-2',
-        timestamp: new Date(Date.now() - 86400000).toISOString(),
-        level: 'debug',
-        message: 'Processing file operations',
-        source: 'file-handler',
-        fileName: 'client.lua'
-      },
-      {
-        id: '5',
-        licenseId: 'license-1',
-        timestamp: new Date(Date.now() - 172800000).toISOString(),
-        level: 'error',
-        message: 'Invalid syntax in script file',
-        source: 'compiler',
-        errorCode: 'E2003',
-        fileName: 'server.lua',
-        details: 'Unexpected end of file at line 45'
-      }
-    ];
-
-    setLogs(mockLogs);
-    fetchLicenses();
-    setLoading(false);
-  }, []);
-
-  // Filter logs based on current filters
-  const filteredLogs = logs.filter(log => {
-    // Filter by level
-    if (filters.level && filters.level !== 'all' && log.level !== filters.level) {
-      return false;
-    }
-
-    // Filter by license
-    if (filters.licenseId && log.licenseId !== filters.licenseId) {
-      return false;
-    }
-
-    // Filter by source
-    if (filters.source && log.source !== filters.source) {
-      return false;
-    }
-
-    // Filter by search term (in message, details, or filename)
-    if (filters.search) {
-      const searchTerm = filters.search.toLowerCase();
-      const message = log.message?.toLowerCase() || '';
-      const details = log.details?.toLowerCase() || '';
-      const fileName = log.fileName?.toLowerCase() || '';
-      
-      if (!message.includes(searchTerm) && 
-          !details.includes(searchTerm) && 
-          !fileName.includes(searchTerm) &&
-          !log.errorCode?.toLowerCase().includes(searchTerm)) {
-        return false;
-      }
-    }
-
-    return true;
-  });
+    fetchData();
+  }, [filters.licenseId, filters.level, filters.source, filters.search, filters.startDate, filters.endDate]);
 
   // Get unique sources for filter dropdown
   const sources = Array.from(new Set(logs.map(log => log.source)));
@@ -229,8 +170,8 @@ const LogsView = () => {
             
             <div>
               <Select 
-                value={filters.licenseId || ''}
-                onValueChange={(value) => setFilters({...filters, licenseId: value})}
+                value={filters.licenseId || 'all'}
+                onValueChange={(value) => setFilters({...filters, licenseId: value === 'all' ? undefined : value})}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Script auswählen" />
@@ -248,8 +189,8 @@ const LogsView = () => {
             
             <div>
               <Select 
-                value={filters.source || ''}
-                onValueChange={(value) => setFilters({...filters, source: value})}
+                value={filters.source || 'all'}
+                onValueChange={(value) => setFilters({...filters, source: value === 'all' ? undefined : value})}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Quelle auswählen" />
@@ -284,7 +225,7 @@ const LogsView = () => {
           {/* Logs table */}
           {loading ? (
             <div className="text-center py-8">Logs werden geladen...</div>
-          ) : filteredLogs.length === 0 ? (
+          ) : logs.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               Keine Logs gefunden, die den Filterkriterien entsprechen.
             </div>
@@ -302,7 +243,7 @@ const LogsView = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredLogs.map((log) => (
+                  {logs.map((log) => (
                     <TableRow key={log.id}>
                       <TableCell className="font-mono text-xs">
                         {formatTimestamp(log.timestamp)}

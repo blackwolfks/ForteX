@@ -43,6 +43,7 @@ export interface LogEntry {
   errorCode?: string;
   clientIp?: string;
   fileName?: string;
+  userId?: string;
 }
 
 export interface LogsFilter {
