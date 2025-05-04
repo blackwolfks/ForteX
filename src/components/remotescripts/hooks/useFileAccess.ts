@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { callRPC, supabase, checkStorageBucket } from "@/lib/supabase";
@@ -12,13 +11,16 @@ export interface FileItem {
   fullPath: string;
 }
 
-export function useFileAccess(licenseId: string) {
+export const useFileAccess = (licenseId: string) => {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [fileContent, setFileContent] = useState<string | null>(null);
   const [currentFile, setCurrentFile] = useState<FileItem | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortOrder, setSortOrder] = useState("name_asc");
+  const [fileTypeFilter, setFileTypeFilter] = useState("all");
 
   const fetchFiles = useCallback(async () => {
     if (!licenseId) return;
@@ -284,6 +286,58 @@ export function useFileAccess(licenseId: string) {
     return `${Math.round(bytes / Math.pow(1024, i))} ${sizes[i]}`;
   };
 
+  // Filter and sort files based on searchQuery, sortOrder, and fileTypeFilter
+  const getFilteredAndSortedFiles = useCallback(() => {
+    // First, filter the files by search query and file type
+    let filteredFiles = [...files];
+    
+    // Apply search filter if query exists
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filteredFiles = filteredFiles.filter(file => 
+        file.name.toLowerCase().includes(query)
+      );
+    }
+    
+    // Apply file type filter if not "all"
+    if (fileTypeFilter !== "all") {
+      filteredFiles = filteredFiles.filter(file => {
+        switch (fileTypeFilter) {
+          case "lua":
+            return file.name.toLowerCase().endsWith(".lua");
+          case "js":
+            return file.name.toLowerCase().endsWith(".js");
+          case "json":
+            return file.name.toLowerCase().endsWith(".json");
+          case "config":
+            return file.name.toLowerCase().includes("config");
+          default:
+            return true;
+        }
+      });
+    }
+    
+    // Sort the filtered files
+    return filteredFiles.sort((a, b) => {
+      switch (sortOrder) {
+        case "name_asc":
+          return a.name.localeCompare(b.name);
+        case "name_desc":
+          return b.name.localeCompare(a.name);
+        case "size_asc":
+          return a.metadata.size - b.metadata.size;
+        case "size_desc":
+          return b.metadata.size - a.metadata.size;
+        case "updated_asc":
+          return new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
+        case "updated_desc":
+          return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+        default:
+          return 0;
+      }
+    });
+  }, [files, searchQuery, sortOrder, fileTypeFilter]);
+
   return {
     files,
     loading,
@@ -291,13 +345,20 @@ export function useFileAccess(licenseId: string) {
     editDialogOpen,
     fileContent,
     currentFile,
-    toggleFileVisibility,
-    saveFileAccess,
+    saveFileAccess, 
+    toggleFileVisibility, 
     downloadFile,
     editFile,
     saveEditedFile,
     deleteFile,
     formatFileSize,
-    setEditDialogOpen
+    setEditDialogOpen,
+    searchQuery,
+    setSearchQuery,
+    sortOrder,
+    setSortOrder,
+    fileTypeFilter,
+    setFileTypeFilter,
+    getFilteredAndSortedFiles
   };
-}
+};
