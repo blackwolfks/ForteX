@@ -78,6 +78,21 @@ export function useScriptManagement() {
         return false;
       }
       
+      // Log the script creation
+      try {
+        await supabase.rpc('add_script_log', {
+          p_license_id: licenseData.id,
+          p_level: 'info',
+          p_message: `Script "${newScript.name}" wurde erstellt`,
+          p_source: 'script-management',
+          p_details: `Server IP: ${newScript.serverIp || 'None'}`,
+          p_error_code: null
+        });
+      } catch (logError) {
+        console.error("Error logging script creation:", logError);
+        // Continue even if logging fails
+      }
+      
       console.log("License created successfully with ID:", licenseData.id);
       toast.success("Script erfolgreich erstellt");
       
@@ -107,6 +122,21 @@ export function useScriptManagement() {
         return false;
       }
       
+      // Log the script update
+      try {
+        await supabase.rpc('add_script_log', {
+          p_license_id: licenseId,
+          p_level: 'info',
+          p_message: `Script "${scriptName}" wurde aktualisiert`,
+          p_source: 'script-management',
+          p_details: `Aktiv: ${isActive ? 'Ja' : 'Nein'}, Server IP: ${serverIp || 'None'}`,
+          p_error_code: null
+        });
+      } catch (logError) {
+        console.error("Error logging script update:", logError);
+        // Continue even if logging fails
+      }
+      
       toast.success("Script erfolgreich aktualisiert");
       await fetchLicenses();
       return true;
@@ -130,6 +160,22 @@ export function useScriptManagement() {
         return false;
       }
       
+      // Log server key regeneration
+      try {
+        const license = licenses.find(l => l.id === licenseId);
+        await supabase.rpc('add_script_log', {
+          p_license_id: licenseId,
+          p_level: 'warning',
+          p_message: `Server-Key wurde regeneriert für Script "${license?.script_name || 'Unbekannt'}"`,
+          p_source: 'security',
+          p_details: null,
+          p_error_code: null
+        });
+      } catch (logError) {
+        console.error("Error logging server key regeneration:", logError);
+        // Continue even if logging fails
+      }
+      
       toast.success("Server-Key erfolgreich regeneriert");
       await fetchLicenses();
       return true;
@@ -142,6 +188,10 @@ export function useScriptManagement() {
 
   const handleDeleteScript = async (licenseId: string) => {
     try {
+      // Get script name before deletion for logging purposes
+      const scriptToDelete = licenses.find(license => license.id === licenseId);
+      const scriptName = scriptToDelete?.script_name || 'Unbekannt';
+      
       const { error } = await callRPC('delete_license', {
         p_license_id: licenseId,
       });
@@ -168,6 +218,9 @@ export function useScriptManagement() {
         console.error("Error removing storage files:", storageError);
         // Continue with success even if storage cleanup fails
       }
+      
+      // Can't log to the specific license anymore since it's deleted,
+      // but we could log to a system log or admin log in the future if needed
       
       toast.success("Script erfolgreich gelöscht");
       await fetchLicenses();

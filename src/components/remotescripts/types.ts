@@ -50,6 +50,6 @@ export interface LogsFilter {
   source?: string;
   licenseId?: string;
   search?: string;
-  startDate?: Date;
-  endDate?: Date;
+  startDate?: string | Date | null;
+  endDate?: string | Date | null;
 }

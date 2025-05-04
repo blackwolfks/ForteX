@@ -9,6 +9,7 @@ import { AlertTriangle } from "lucide-react";
 import { callRPC } from "@/lib/supabase";
 import { uploadFileWithProgress } from "@/services/file-uploader";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface FileUploadDialogProps {
   licenseId: string;
@@ -85,6 +86,17 @@ export default function FileUploadDialog({
           p_has_file_upload: true
         });
         
+        // Log the file upload
+        await supabase.rpc('add_script_log', {
+          p_license_id: licenseId,
+          p_level: 'info',
+          p_message: `Datei "${selectedFile.name}" wurde hochgeladen`,
+          p_source: 'file-upload',
+          p_details: `Größe: ${(selectedFile.size / 1024).toFixed(1)} KB`,
+          p_error_code: null,
+          p_file_name: selectedFile.name
+        });
+        
         toast.success("Datei erfolgreich hochgeladen");
         onOpenChange(false);
         setSelectedFile(null);
@@ -93,6 +105,21 @@ export default function FileUploadDialog({
     } catch (error) {
       console.error("Error in upload process:", error);
       setUploadError(error instanceof Error ? error.message : "Unbekannter Fehler beim Hochladen");
+      
+      // Log the upload error
+      try {
+        await supabase.rpc('add_script_log', {
+          p_license_id: licenseId,
+          p_level: 'error',
+          p_message: `Fehler beim Hochladen von Datei "${selectedFile?.name || 'Unbekannt'}"`,
+          p_source: 'file-upload',
+          p_details: error instanceof Error ? error.message : "Unbekannter Fehler",
+          p_error_code: 'E2001',
+          p_file_name: selectedFile?.name
+        });
+      } catch (logError) {
+        console.error("Error logging upload error:", logError);
+      }
     } finally {
       setUploading(false);
     }
