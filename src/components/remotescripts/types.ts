@@ -38,19 +38,18 @@ export interface LogEntry {
   timestamp: string;
   level: 'info' | 'warning' | 'error' | 'debug';
   message: string;
-  source?: string;
+  source: string;
   details?: string;
   errorCode?: string;
   clientIp?: string;
   fileName?: string;
-  script_name?: string; // Added to show script name in logs
 }
 
 export interface LogsFilter {
   level?: 'info' | 'warning' | 'error' | 'debug' | 'all';
   source?: string;
-  licenseId: string | null; // Always defined, null means "all" - explicitly using null not string "all"
+  licenseId?: string;
   search?: string;
-  startDate?: string | Date | null;
-  endDate?: string | Date | null;
+  startDate?: Date;
+  endDate?: Date;
 }

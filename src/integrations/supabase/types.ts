@@ -250,63 +250,6 @@ export type Database = {
           },
         ]
       }
-      script_logs: {
-        Row: {
-          client_ip: string | null
-          created_at: string
-          details: string | null
-          error_code: string | null
-          file_name: string | null
-          id: string
-          level: string
-          license_id: string | null
-          log_timestamp: string
-          message: string
-          source: string | null
-        }
-        Insert: {
-          client_ip?: string | null
-          created_at?: string
-          details?: string | null
-          error_code?: string | null
-          file_name?: string | null
-          id?: string
-          level: string
-          license_id?: string | null
-          log_timestamp?: string
-          message: string
-          source?: string | null
-        }
-        Update: {
-          client_ip?: string | null
-          created_at?: string
-          details?: string | null
-          error_code?: string | null
-          file_name?: string | null
-          id?: string
-          level?: string
-          license_id?: string | null
-          log_timestamp?: string
-          message?: string
-          source?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "script_logs_license_id_fkey"
-            columns: ["license_id"]
-            isOneToOne: false
-            referencedRelation: "script_files"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "script_logs_license_id_fkey"
-            columns: ["license_id"]
-            isOneToOne: false
-            referencedRelation: "server_licenses"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       server_licenses: {
         Row: {
           aktiv: boolean | null
@@ -591,19 +534,6 @@ export type Database = {
       }
     }
     Functions: {
-      add_script_log: {
-        Args: {
-          p_license_id: string
-          p_level: string
-          p_message: string
-          p_source?: string
-          p_details?: string
-          p_error_code?: string
-          p_client_ip?: string
-          p_file_name?: string
-        }
-        Returns: string
-      }
       add_website_change_history: {
         Args: {
           site_id: string
@@ -723,30 +653,6 @@ export type Database = {
           is_public: boolean
           created_at: string
           updated_at: string
-        }[]
-      }
-      get_script_logs: {
-        Args: {
-          p_license_id?: string
-          p_level?: string
-          p_source?: string
-          p_search?: string
-          p_start_date?: string
-          p_end_date?: string
-          p_limit?: number
-        }
-        Returns: {
-          id: string
-          license_id: string
-          log_timestamp: string
-          level: string
-          message: string
-          source: string
-          details: string
-          error_code: string
-          client_ip: string
-          file_name: string
-          script_name: string
         }[]
       }
       get_template_by_id: {
