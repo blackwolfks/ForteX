@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { FileItem } from "./types";
+import { FileItem } from "./hooks/useFileAccess";
 import Editor from "@monaco-editor/react";
 
 interface FileEditDialogProps {
@@ -16,49 +16,15 @@ interface FileEditDialogProps {
 const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditDialogProps) => {
   const [editedContent, setEditedContent] = useState<string>("");
   const [saving, setSaving] = useState(false);
+  const [hasErrors, setHasErrors] = useState(false);
 
+  // Aktualisiere editedContent, wenn sich content ändert und nicht null ist
   useEffect(() => {
     if (content !== null) {
-      // Bereinige WebKit-Formgrenzen und andere unerwünschte Teile
-      const cleanedContent = cleanFileContent(content);
-      setEditedContent(cleanedContent);
+      setEditedContent(content);
+      console.log("Content loaded in dialog:", content.substring(0, 50));
     }
   }, [content]);
-
-  // Verbesserte Funktion zum Bereinigen von Dateiinhalten
-  const cleanFileContent = (text: string): string => {
-    // Entfernt WebKit-Formgrenzen und MIME-Multipart-Teile
-    let cleaned = text;
-    
-    // Entferne numerischen Code am Anfang (wie "3600")
-    cleaned = cleaned.replace(/^\d+\s*/, "");
-    
-    // Entferne alle WebKit-Formgrenzlinien (beginnt mit ------WebKit...)
-    cleaned = cleaned.replace(/^------WebKit[^\r\n]*(\r?\n)?/gm, "");
-    
-    // Entferne Content-Type und Content-Disposition Header
-    cleaned = cleaned.replace(/^Content-(Type|Disposition)[^\r\n]*(\r?\n)?/gm, "");
-    
-    // Entferne leere Zeilen am Anfang des Textes
-    cleaned = cleaned.replace(/^\s+/, "");
-    
-    // Wenn der Text mit MIME-Header beginnt, versuche den eigentlichen Inhalt zu extrahieren
-    const contentMatchLua = cleaned.match(/Content-Type: text\/x-lua\r?\n\r?\n([\s\S]*?)(?:\r?\n-{4,}|$)/i);
-    if (contentMatchLua && contentMatchLua[1]) {
-      return contentMatchLua[1];
-    }
-    
-    // Alternative Muster für andere Content-Types
-    const contentMatchGeneral = cleaned.match(/Content-Type: [^\r\n]*\r?\n\r?\n([\s\S]*?)(?:\r?\n-{4,}|$)/i);
-    if (contentMatchGeneral && contentMatchGeneral[1]) {
-      return contentMatchGeneral[1];
-    }
-    
-    // Wenn kein spezifisches Muster erkannt wird, entferne doppelte Leerzeilen
-    cleaned = cleaned.replace(/\n\s*\n/g, "\n\n");
-    
-    return cleaned;
-  };
 
   const handleSave = async () => {
     if (!editedContent) return;
@@ -92,6 +58,66 @@ const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditD
     return "plaintext";
   };
 
+  // Handle editor mounting and configuration
+  const handleEditorDidMount = (editor: any, monaco: any) => {
+    // Wenn die Sprache Lua ist, können wir spezielle Einstellungen vornehmen
+    if (getLanguage() === "lua") {
+      // Lua-spezifische Diagnoseeinstellungen
+      monaco.languages.registerDiagnosticsAdapter({
+        dispose: () => {},
+        onModelAdd: (model: any) => {
+          const validateModel = () => {
+            // Einfache Validierung für Lua-Code
+            const content = model.getValue();
+            const errors = [];
+            
+            // Überprüfen auf unvollständige Blöcke (fehlende end-Statements)
+            const startBlocks = (content.match(/\b(function|if|for|while|do)\b/g) || []).length;
+            const endBlocks = (content.match(/\bend\b/g) || []).length;
+            
+            if (startBlocks > endBlocks) {
+              errors.push({
+                startLineNumber: 1,
+                startColumn: 1,
+                endLineNumber: model.getLineCount(),
+                endColumn: model.getLineMaxColumn(model.getLineCount()),
+                message: `Unvollständiger Block: Es fehlen ${startBlocks - endBlocks} 'end' Statement(s)`,
+                severity: monaco.MarkerSeverity.Error
+              });
+            }
+
+            // Überprüfen auf unbalancierte Klammern
+            const openParens = (content.match(/\(/g) || []).length;
+            const closeParens = (content.match(/\)/g) || []).length;
+            
+            if (openParens !== closeParens) {
+              errors.push({
+                startLineNumber: 1,
+                startColumn: 1,
+                endLineNumber: model.getLineCount(),
+                endColumn: model.getLineMaxColumn(model.getLineCount()),
+                message: `Unbalancierte Klammern: ${openParens} öffnende vs. ${closeParens} schließende`,
+                severity: monaco.MarkerSeverity.Error
+              });
+            }
+
+            // Set markers for the model
+            monaco.editor.setModelMarkers(model, 'lua-validator', errors);
+            
+            // Update error state for save button
+            setHasErrors(errors.length > 0);
+          };
+
+          // Initial validation
+          validateModel();
+          
+          // Validate on content change
+          model.onDidChangeContent(() => validateModel());
+        }
+      });
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-4xl max-h-[90vh]">
@@ -102,21 +128,44 @@ const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditD
         </DialogHeader>
         
         <div className="mt-4 h-[60vh] border rounded-md overflow-hidden">
-          <Editor
-            height="100%"
-            defaultLanguage={getLanguage()}
-            language={getLanguage()}
-            value={editedContent}
-            onChange={(value) => setEditedContent(value || "")}
-            options={{
-              minimap: { enabled: false },
-              fontSize: 14,
-              wordWrap: "on",
-              automaticLayout: true,
-              scrollBeyondLastLine: false
-            }}
-            theme="vs-dark"
-          />
+          {content !== null && (
+            <Editor
+              height="100%"
+              defaultLanguage={getLanguage()}
+              language={getLanguage()}
+              value={editedContent}
+              onChange={(value) => setEditedContent(value || "")}
+              onMount={handleEditorDidMount}
+              options={{
+                minimap: { enabled: false },
+                fontSize: 14,
+                wordWrap: "on",
+                automaticLayout: true,
+                scrollBeyondLastLine: false,
+                fontLigatures: true,
+                lineNumbers: "on",
+                renderLineHighlight: "all",
+                // Using proper guides configuration
+                guides: { indentation: true },
+                // Aktivieren von Linting-Hinweisen
+                formatOnType: true,
+                formatOnPaste: true,
+                // Verbesserte Fehlermarkierungen
+                renderValidationDecorations: "on",
+                // Aktivieren der Folding-Funktionalität
+                folding: true,
+                foldingHighlight: true,
+                // Bessere Sichtbarkeit für Fehlerlinien
+                glyphMargin: true
+              }}
+              theme="vs-dark"
+            />
+          )}
+          {content === null && (
+            <div className="flex items-center justify-center h-full text-muted-foreground">
+              Inhalt wird geladen...
+            </div>
+          )}
         </div>
         
         <DialogFooter className="mt-4">
@@ -125,9 +174,12 @@ const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditD
           </Button>
           <Button 
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || hasErrors || content === null}
+            className={hasErrors ? "bg-red-500 hover:bg-red-600" : ""}
           >
-            {saving ? "Wird gespeichert..." : "Speichern"}
+            {hasErrors 
+              ? "Fehler beheben" 
+              : (saving ? "Wird gespeichert..." : "Speichern")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,7 +1,7 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { callRPC, supabase, checkStorageBucket } from "@/lib/supabase";
-import { Dialog } from "@/components/ui/dialog";
 
 export interface FileItem {
   name: string;
@@ -9,25 +9,15 @@ export interface FileItem {
   size?: number;
   isPublic: boolean;
   fullPath: string;
-  metadata?: {
-    size: number;
-    mimetype?: string;
-    cacheControl?: string;
-    lastModified?: string;
-  };
-  updated_at?: string;
 }
 
-export const useFileAccess = (licenseId: string) => {
+export function useFileAccess(licenseId: string) {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [fileContent, setFileContent] = useState<string | null>(null);
   const [currentFile, setCurrentFile] = useState<FileItem | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortOrder, setSortOrder] = useState("name_asc");
-  const [fileTypeFilter, setFileTypeFilter] = useState("all");
 
   const fetchFiles = useCallback(async () => {
     if (!licenseId) return;
@@ -196,6 +186,7 @@ export const useFileAccess = (licenseId: string) => {
       
       // Convert to text
       const content = await data.text();
+      console.log(`File content loaded, length: ${content.length}`);
       return content;
     } catch (error) {
       console.error("Error in fetchFileContent:", error);
@@ -206,11 +197,16 @@ export const useFileAccess = (licenseId: string) => {
   
   const editFile = async (file: FileItem) => {
     try {
+      console.log(`Preparing to edit file: ${file.name}`);
       setCurrentFile(file);
+      // Erst Dialog öffnen
+      setEditDialogOpen(true);
+      // Dann Inhalt laden
+      setFileContent(null); // Reset content first
       const content = await fetchFileContent(file);
       if (content !== null) {
+        console.log(`Setting file content for editing, length: ${content.length}`);
         setFileContent(content);
-        setEditDialogOpen(true);
       }
     } catch (error) {
       console.error("Error preparing file for edit:", error);
@@ -293,66 +289,6 @@ export const useFileAccess = (licenseId: string) => {
     return `${Math.round(bytes / Math.pow(1024, i))} ${sizes[i]}`;
   };
 
-  // Filter and sort files based on searchQuery, sortOrder, and fileTypeFilter
-  const getFilteredAndSortedFiles = useCallback(() => {
-    // First, filter the files by search query and file type
-    let filteredFiles = [...files];
-    
-    // Apply search filter if query exists
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filteredFiles = filteredFiles.filter(file => 
-        file.name.toLowerCase().includes(query)
-      );
-    }
-    
-    // Apply file type filter if not "all"
-    if (fileTypeFilter !== "all") {
-      filteredFiles = filteredFiles.filter(file => {
-        switch (fileTypeFilter) {
-          case "lua":
-            return file.name.toLowerCase().endsWith(".lua");
-          case "js":
-            return file.name.toLowerCase().endsWith(".js");
-          case "json":
-            return file.name.toLowerCase().endsWith(".json");
-          case "config":
-            return file.name.toLowerCase().includes("config");
-          default:
-            return true;
-        }
-      });
-    }
-    
-    // Sort the filtered files with null/undefined checks
-    return filteredFiles.sort((a, b) => {
-      switch (sortOrder) {
-        case "name_asc":
-          return a.name.localeCompare(b.name);
-        case "name_desc":
-          return b.name.localeCompare(a.name);
-        case "size_asc":
-          const sizeA = a.metadata?.size || a.size || 0;
-          const sizeB = b.metadata?.size || b.size || 0;
-          return sizeA - sizeB;
-        case "size_desc":
-          const sizeBDesc = b.metadata?.size || b.size || 0;
-          const sizeADesc = a.metadata?.size || a.size || 0;
-          return sizeBDesc - sizeADesc;
-        case "updated_asc":
-          const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
-          const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
-          return dateA - dateB;
-        case "updated_desc":
-          const dateBDesc = b.updated_at ? new Date(b.updated_at).getTime() : 0;
-          const dateADesc = a.updated_at ? new Date(a.updated_at).getTime() : 0;
-          return dateBDesc - dateADesc;
-        default:
-          return 0;
-      }
-    });
-  }, [files, searchQuery, sortOrder, fileTypeFilter]);
-
   return {
     files,
     loading,
@@ -360,20 +296,13 @@ export const useFileAccess = (licenseId: string) => {
     editDialogOpen,
     fileContent,
     currentFile,
-    saveFileAccess, 
-    toggleFileVisibility, 
+    toggleFileVisibility,
+    saveFileAccess,
     downloadFile,
     editFile,
     saveEditedFile,
     deleteFile,
     formatFileSize,
-    setEditDialogOpen,
-    searchQuery,
-    setSearchQuery,
-    sortOrder,
-    setSortOrder,
-    fileTypeFilter,
-    setFileTypeFilter,
-    getFilteredAndSortedFiles
+    setEditDialogOpen
   };
-};
+}
