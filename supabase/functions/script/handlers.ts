@@ -27,7 +27,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         const { client: supabase, error: dbError } = initSupabaseClient();
         if (dbError) {
             console.error("Database connection error:", dbError);
-            await logScriptError(supabase, null, "error", "Database connection error", "server", dbError.message, null, clientIp);
+            // We cannot log this error to the database since we couldn't connect
             return createErrorResponse("Database connection error");
         }
 
@@ -36,12 +36,37 @@ export async function handleRequest(req: Request): Promise<Response> {
         
         if (!licenseData.valid) {
             console.warn("Invalid license data");
-            await logScriptError(supabase, null, "error", "Invalid license or server key", "auth", "License verification failed", null, clientIp);
+            // Log invalid license attempt (without a license ID)
+            try {
+                await supabase.rpc("add_script_log", {
+                    p_license_id: null,
+                    p_level: "error",
+                    p_message: "Invalid license or server key",
+                    p_source: "auth",
+                    p_details: `Access attempt with invalid credentials from IP: ${clientIp}`,
+                    p_client_ip: clientIp
+                });
+            } catch (logError) {
+                console.error("Failed to log invalid license attempt:", logError);
+            }
+            
             return createErrorResponse("Invalid license or server key");
         }
 
         // Log successful license verification
-        await logScriptAccess(supabase, licenseData.id, "info", "License verified successfully", "auth", clientIp);
+        try {
+            await supabase.rpc("add_script_log", {
+                p_license_id: licenseData.id,
+                p_level: "info",
+                p_message: "License verified successfully",
+                p_source: "auth",
+                p_details: `Access from IP: ${clientIp}`,
+                p_client_ip: clientIp
+            });
+        } catch (logError) {
+            console.error("Failed to log successful verification:", logError);
+            // Continue despite logging failure
+        }
 
         // Get scripts content directly from storage using license ID
         const scriptResult = await getAllScriptFiles(supabase, licenseData.id);
@@ -49,13 +74,41 @@ export async function handleRequest(req: Request): Promise<Response> {
         if (!scriptResult || scriptResult.error || !scriptResult.content) {
             const errorMsg = "No script files found for this license";
             console.warn(errorMsg, scriptResult?.error || "No content");
-            await logScriptError(supabase, licenseData.id, "warning", errorMsg, "storage", scriptResult?.error?.message, null, clientIp);
+            
+            // Log the error
+            try {
+                await supabase.rpc("add_script_log", {
+                    p_license_id: licenseData.id,
+                    p_level: "warning",
+                    p_message: errorMsg,
+                    p_source: "storage",
+                    p_details: scriptResult?.error?.message || "No files available",
+                    p_client_ip: clientIp
+                });
+            } catch (logError) {
+                console.error("Failed to log script retrieval error:", logError);
+            }
+            
             return createErrorResponse(errorMsg);
         }
 
         // Success: Return scripts as JSON
         console.log(`Scripts successfully delivered for license ${licenseData.id}`);
-        await logScriptAccess(supabase, licenseData.id, "info", "Scripts successfully delivered", "server", clientIp);
+        
+        // Log successful script delivery
+        try {
+            await supabase.rpc("add_script_log", {
+                p_license_id: licenseData.id,
+                p_level: "info",
+                p_message: "Scripts successfully delivered",
+                p_source: "server",
+                p_details: `Delivered ${scriptResult.content.length} files`,
+                p_client_ip: clientIp
+            });
+        } catch (logError) {
+            console.error("Failed to log successful delivery:", logError);
+            // Continue despite logging failure
+        }
         
         return new Response(JSON.stringify(scriptResult.content), {
             headers: {
@@ -70,64 +123,23 @@ export async function handleRequest(req: Request): Promise<Response> {
         const errorMsg = error instanceof Error ? error.message : "Unknown error";
         
         try {
+            // Try to initialize Supabase for error logging
             const { client: supabase } = initSupabaseClient();
-            await logScriptError(supabase, null, "error", "Internal server error", "server", errorMsg, "500", getClientIp(req));
+            
+            // Log the error without requiring a license ID
+            await supabase.rpc("add_script_log", {
+                p_license_id: null,
+                p_level: "error",
+                p_message: "Internal server error",
+                p_source: "server",
+                p_details: errorMsg,
+                p_error_code: "500",
+                p_client_ip: getClientIp(req)
+            });
         } catch (logError) {
             console.error("Failed to log error:", logError);
         }
         
         return createErrorResponse("Internal server error");
-    }
-}
-
-// Helper function to log script access
-async function logScriptAccess(supabase: any, licenseId: string | null, level: string, message: string, source: string, clientIp: string | null) {
-    try {
-        if (!licenseId) return; // Skip if no license ID available
-        
-        await supabase.rpc("add_script_log", {
-            p_license_id: licenseId,
-            p_level: level,
-            p_message: message,
-            p_source: source,
-            p_client_ip: clientIp,
-            p_details: `Access from IP: ${clientIp || "unknown"}`
-        });
-    } catch (error) {
-        console.error("Error logging script access:", error);
-    }
-}
-
-// Helper function to log script errors
-async function logScriptError(
-    supabase: any, 
-    licenseId: string | null, 
-    level: string, 
-    message: string, 
-    source: string,
-    details: string | null = null,
-    errorCode: string | null = null,
-    clientIp: string | null = null,
-    fileName: string | null = null
-) {
-    try {
-        // If we have a license ID, log with it
-        if (licenseId) {
-            await supabase.rpc("add_script_log", {
-                p_license_id: licenseId,
-                p_level: level,
-                p_message: message,
-                p_source: source,
-                p_details: details,
-                p_error_code: errorCode,
-                p_client_ip: clientIp,
-                p_file_name: fileName
-            });
-        } else {
-            // Without license ID, we can only log to console
-            console.error(`${level.toUpperCase()}: ${message}${details ? ` - ${details}` : ""}`);
-        }
-    } catch (error) {
-        console.error("Error logging to database:", error);
     }
 }
