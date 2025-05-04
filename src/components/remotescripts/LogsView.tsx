@@ -101,7 +101,8 @@ const LogsView = () => {
     try {
       console.log("Fetching logs with filters:", filters);
       
-      // IMPORTANT FIX: Make absolutely sure we never send 'all' as a license_id parameter
+      // Using our proper filter logic that matches the server implementation
+      // IMPORTANT: Never send 'all' as a license_id parameter
       const licenseIdParam = filters.licenseId && filters.licenseId !== 'all' ? filters.licenseId : undefined;
       console.log("License ID parameter being sent to RPC:", licenseIdParam);
       
