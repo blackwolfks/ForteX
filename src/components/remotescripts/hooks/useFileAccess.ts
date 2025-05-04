@@ -1,6 +1,8 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { callRPC, supabase, checkStorageBucket } from "@/lib/supabase";
+import { Dialog } from "@/components/ui/dialog";
 
 export interface FileItem {
   name: string;
@@ -14,6 +16,9 @@ export function useFileAccess(licenseId: string) {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [fileContent, setFileContent] = useState<string | null>(null);
+  const [currentFile, setCurrentFile] = useState<FileItem | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   const fetchFiles = useCallback(async () => {
     if (!licenseId) return;
@@ -132,6 +137,145 @@ export function useFileAccess(licenseId: string) {
       setSaving(false);
     }
   };
+  
+  const downloadFile = async (file: FileItem) => {
+    try {
+      console.log(`Downloading file: ${file.fullPath}`);
+      
+      const { data, error } = await supabase.storage
+        .from('script')
+        .download(file.fullPath);
+        
+      if (error) {
+        console.error("Error downloading file:", error);
+        toast.error(`Fehler beim Herunterladen der Datei: ${error.message}`);
+        return;
+      }
+      
+      // Create a download link
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.name;
+      document.body.appendChild(a);
+      a.click();
+      
+      // Clean up
+      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast.success(`Datei "${file.name}" erfolgreich heruntergeladen`);
+    } catch (error) {
+      console.error("Error in downloadFile:", error);
+      toast.error("Fehler beim Herunterladen der Datei");
+    }
+  };
+  
+  const fetchFileContent = async (file: FileItem) => {
+    try {
+      console.log(`Fetching content for file: ${file.fullPath}`);
+      
+      const { data, error } = await supabase.storage
+        .from('script')
+        .download(file.fullPath);
+        
+      if (error) {
+        console.error("Error downloading file for editing:", error);
+        toast.error(`Fehler beim Laden der Datei: ${error.message}`);
+        return null;
+      }
+      
+      // Convert to text
+      const content = await data.text();
+      return content;
+    } catch (error) {
+      console.error("Error in fetchFileContent:", error);
+      toast.error("Fehler beim Lesen der Datei");
+      return null;
+    }
+  };
+  
+  const editFile = async (file: FileItem) => {
+    try {
+      setCurrentFile(file);
+      const content = await fetchFileContent(file);
+      if (content !== null) {
+        setFileContent(content);
+        setEditDialogOpen(true);
+      }
+    } catch (error) {
+      console.error("Error preparing file for edit:", error);
+      toast.error("Fehler beim Vorbereiten der Datei zum Bearbeiten");
+    }
+  };
+  
+  const saveEditedFile = async (newContent: string) => {
+    if (!currentFile) return false;
+    
+    try {
+      console.log(`Saving edited file: ${currentFile.fullPath}`);
+      
+      // Convert string to blob
+      const blob = new Blob([newContent], { type: 'text/plain' });
+      
+      const { error } = await supabase.storage
+        .from('script')
+        .update(currentFile.fullPath, blob);
+        
+      if (error) {
+        console.error("Error updating file:", error);
+        toast.error(`Fehler beim Speichern der Datei: ${error.message}`);
+        return false;
+      }
+      
+      toast.success(`Datei "${currentFile.name}" erfolgreich gespeichert`);
+      setEditDialogOpen(false);
+      fetchFiles(); // Refresh file list
+      return true;
+    } catch (error) {
+      console.error("Error in saveEditedFile:", error);
+      toast.error("Fehler beim Speichern der Datei");
+      return false;
+    }
+  };
+  
+  const deleteFile = async (file: FileItem) => {
+    if (!window.confirm(`Möchten Sie die Datei "${file.name}" wirklich löschen?`)) {
+      return;
+    }
+    
+    try {
+      console.log(`Deleting file: ${file.fullPath}`);
+      
+      const { error } = await supabase.storage
+        .from('script')
+        .remove([file.fullPath]);
+        
+      if (error) {
+        console.error("Error deleting file:", error);
+        toast.error(`Fehler beim Löschen der Datei: ${error.message}`);
+        return;
+      }
+      
+      // Also delete file access records
+      const { error: accessError } = await callRPC('update_file_access', {
+        p_license_id: licenseId,
+        p_file_path: file.name,
+        p_is_public: false,
+        p_delete: true
+      });
+      
+      if (accessError) {
+        console.error("Error deleting file access record:", accessError);
+      }
+      
+      toast.success(`Datei "${file.name}" erfolgreich gelöscht`);
+      fetchFiles(); // Refresh file list
+    } catch (error) {
+      console.error("Error in deleteFile:", error);
+      toast.error("Fehler beim Löschen der Datei");
+    }
+  };
 
   const formatFileSize = (bytes: number) => {
     if (!bytes) return "n/a";
@@ -144,8 +288,16 @@ export function useFileAccess(licenseId: string) {
     files,
     loading,
     saving,
+    editDialogOpen,
+    fileContent,
+    currentFile,
     toggleFileVisibility,
     saveFileAccess,
-    formatFileSize
+    downloadFile,
+    editFile,
+    saveEditedFile,
+    deleteFile,
+    formatFileSize,
+    setEditDialogOpen
   };
 }

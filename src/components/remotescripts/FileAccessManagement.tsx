@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useFileAccess } from "./hooks/useFileAccess";
 import FileAccessSearch from "./FileAccessSearch";
 import FileAccessList from "./FileAccessList";
+import FileEditDialog from "./FileEditDialog";
 
 interface FileAccessProps {
   licenseId: string;
@@ -16,9 +17,17 @@ const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
     files, 
     loading, 
     saving, 
+    editDialogOpen,
+    fileContent,
+    currentFile,
     saveFileAccess, 
     toggleFileVisibility, 
-    formatFileSize 
+    downloadFile,
+    editFile,
+    saveEditedFile,
+    deleteFile,
+    formatFileSize,
+    setEditDialogOpen
   } = useFileAccess(licenseId);
 
   // Filter files based on search query
@@ -31,7 +40,7 @@ const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
       <CardHeader>
         <CardTitle>Dateizugriffsverwaltung</CardTitle>
         <CardDescription>
-          Bestimmen Sie, welche Dateien für Käufer sichtbar sein sollen.
+          Verwalten Sie Ihre Dateien und bestimmen Sie, welche für Käufer sichtbar sein sollen.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -40,6 +49,7 @@ const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
             <AlertDescription>
               Standardmäßig sind alle Dateien privat und für Käufer nicht zugänglich. 
               Sie können einzelne Dateien öffentlich machen, damit Käufer sie sehen können.
+              Verwenden Sie die Aktionsschaltflächen zum Herunterladen, Bearbeiten oder Löschen von Dateien.
             </AlertDescription>
           </Alert>
 
@@ -57,8 +67,19 @@ const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
               files={filteredFiles}
               formatFileSize={formatFileSize}
               toggleFileVisibility={toggleFileVisibility}
+              onDownloadFile={downloadFile}
+              onEditFile={editFile}
+              onDeleteFile={deleteFile}
             />
           )}
+          
+          <FileEditDialog
+            open={editDialogOpen}
+            onOpenChange={setEditDialogOpen}
+            file={currentFile}
+            content={fileContent}
+            onSave={saveEditedFile}
+          />
         </div>
       </CardContent>
     </Card>
