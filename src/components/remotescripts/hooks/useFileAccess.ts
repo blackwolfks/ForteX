@@ -10,9 +10,11 @@ export interface FileItem {
   created_at: string;
   updated_at: string | null;
   path: string;
+  isPublic?: boolean; // Added for compatibility
+  fullPath?: string; // Added for compatibility
 }
 
-interface UseFileAccessProps {
+export interface UseFileAccessProps {
   bucketName: string;
   path?: string;
   maxRetries?: number;
@@ -61,7 +63,9 @@ export const useFileAccess = ({
             size: item.metadata?.size || 0,
             created_at: item.created_at || new Date().toISOString(),
             updated_at: item.updated_at || null,
-            path: directoryPath ? `${directoryPath}/${item.name}` : item.name
+            path: directoryPath ? `${directoryPath}/${item.name}` : item.name,
+            isPublic: false, // Default to private visibility
+            fullPath: directoryPath ? `${directoryPath}/${item.name}` : item.name // Keep same as path for now
           }));
           
           setFiles(formattedFiles);

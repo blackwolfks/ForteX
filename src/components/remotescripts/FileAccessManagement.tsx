@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useFileAccess } from "./hooks/useFileAccess";
+import { useFileAccessAdapter } from "./hooks/useFileAccessAdapter";
 import FileAccessSearch from "./FileAccessSearch";
 import FileAccessList from "./FileAccessList";
 import FileEditDialog from "./FileEditDialog";
@@ -28,7 +28,7 @@ const FileAccessManagement = ({ licenseId }: FileAccessProps) => {
     deleteFile,
     formatFileSize,
     setEditDialogOpen
-  } = useFileAccess(licenseId);
+  } = useFileAccessAdapter(licenseId);
 
   // Filter files based on search query
   const filteredFiles = files.filter(file => 
