@@ -43,7 +43,6 @@ export interface LogEntry {
   errorCode?: string;
   clientIp?: string;
   fileName?: string;
-  userId?: string;
 }
 
 export interface LogsFilter {
@@ -51,6 +50,6 @@ export interface LogsFilter {
   source?: string;
   licenseId?: string;
   search?: string;
-  startDate?: Date | string;
-  endDate?: Date | string;
+  startDate?: string | Date | null;
+  endDate?: string | Date | null;
 }

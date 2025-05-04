@@ -263,7 +263,6 @@ export type Database = {
           log_timestamp: string
           message: string
           source: string | null
-          user_id: string | null
         }
         Insert: {
           client_ip?: string | null
@@ -277,7 +276,6 @@ export type Database = {
           log_timestamp?: string
           message: string
           source?: string | null
-          user_id?: string | null
         }
         Update: {
           client_ip?: string | null
@@ -291,7 +289,6 @@ export type Database = {
           log_timestamp?: string
           message?: string
           source?: string | null
-          user_id?: string | null
         }
         Relationships: [
           {
@@ -595,28 +592,16 @@ export type Database = {
     }
     Functions: {
       add_script_log: {
-        Args:
-          | {
-              p_license_id: string
-              p_level: string
-              p_message: string
-              p_source?: string
-              p_details?: string
-              p_error_code?: string
-              p_client_ip?: string
-              p_file_name?: string
-            }
-          | {
-              p_license_id: string
-              p_level: string
-              p_message: string
-              p_source?: string
-              p_details?: string
-              p_error_code?: string
-              p_client_ip?: string
-              p_file_name?: string
-              p_user_id?: string
-            }
+        Args: {
+          p_license_id: string
+          p_level: string
+          p_message: string
+          p_source?: string
+          p_details?: string
+          p_error_code?: string
+          p_client_ip?: string
+          p_file_name?: string
+        }
         Returns: string
       }
       add_website_change_history: {
@@ -762,7 +747,6 @@ export type Database = {
           client_ip: string
           file_name: string
           script_name: string
-          user_id: string
         }[]
       }
       get_template_by_id: {

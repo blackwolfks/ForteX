@@ -39,72 +39,86 @@ const LogsView = () => {
     search: '',
   });
   const [licenses, setLicenses] = useState<{id: string, name: string}[]>([]);
+  const [sources, setSources] = useState<string[]>([]);
 
-  // Fetch logs and licenses
   useEffect(() => {
-    const fetchData = async () => {
+    // Fetch licenses for the dropdown
+    const fetchLicenses = async () => {
       try {
-        // Fetch licenses for the dropdown
-        const { data: licenseData, error: licenseError } = await supabase
+        const { data, error } = await supabase
           .from('server_licenses')
           .select('id, script_name')
           .order('script_name', { ascending: true });
 
-        if (licenseError) throw licenseError;
-        setLicenses(licenseData.map(license => ({
+        if (error) throw error;
+        setLicenses(data.map(license => ({
           id: license.id,
           name: license.script_name
         })));
+      } catch (error) {
+        console.error('Error fetching licenses:', error);
+      }
+    };
 
-        // Format dates to ISO strings if they exist
-        const formattedStartDate = filters.startDate instanceof Date 
+    // Fetch logs from database
+    const fetchLogs = async () => {
+      setLoading(true);
+      try {
+        // Convert Date objects to ISO strings if they exist
+        const startDateParam = filters.startDate instanceof Date 
           ? filters.startDate.toISOString() 
           : filters.startDate;
-          
-        const formattedEndDate = filters.endDate instanceof Date 
+        
+        const endDateParam = filters.endDate instanceof Date 
           ? filters.endDate.toISOString() 
           : filters.endDate;
-
-        // Fetch actual logs from the database
-        const { data: logsData, error: logsError } = await supabase.rpc('get_script_logs', {
-          p_license_id: filters.licenseId || null,
-          p_level: filters.level !== 'all' ? filters.level : null,
-          p_source: filters.source || null,
+        
+        // Call the get_script_logs RPC function
+        const { data, error } = await supabase.rpc('get_script_logs', {
+          p_license_id: filters.licenseId === 'all' ? null : filters.licenseId,
+          p_level: filters.level === 'all' ? null : filters.level,
+          p_source: filters.source === 'all' ? null : filters.source,
           p_search: filters.search || null,
-          p_start_date: formattedStartDate || null,
-          p_end_date: formattedEndDate || null
+          p_start_date: startDateParam || null,
+          p_end_date: endDateParam || null,
+          p_limit: 100
         });
 
-        if (logsError) throw logsError;
-        
-        // Map the database response to our LogEntry type
-        const mappedLogs: LogEntry[] = logsData.map((log: any) => ({
-          id: log.id,
-          licenseId: log.license_id,
-          timestamp: log.log_timestamp,
-          level: log.level,
-          message: log.message,
-          source: log.source,
-          details: log.details,
-          errorCode: log.error_code,
-          clientIp: log.client_ip,
-          fileName: log.file_name,
-          userId: log.user_id
-        }));
-        
-        setLogs(mappedLogs);
+        if (error) throw error;
+
+        if (data) {
+          // Transform the returned data to match our LogEntry type
+          const formattedLogs: LogEntry[] = data.map(log => ({
+            id: log.id,
+            licenseId: log.license_id,
+            timestamp: log.log_timestamp,
+            level: log.level as 'info' | 'warning' | 'error' | 'debug',
+            message: log.message,
+            source: log.source || undefined,
+            details: log.details || undefined,
+            errorCode: log.error_code || undefined,
+            clientIp: log.client_ip || undefined,
+            fileName: log.file_name || undefined
+          }));
+          
+          setLogs(formattedLogs);
+          
+          // Extract unique sources for filter dropdown
+          const uniqueSources = Array.from(new Set(data
+            .map(log => log.source)
+            .filter(Boolean)));
+          setSources(uniqueSources as string[]);
+        }
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('Error fetching logs:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
-  }, [filters.licenseId, filters.level, filters.source, filters.search, filters.startDate, filters.endDate]);
-
-  // Get unique sources for filter dropdown
-  const sources = Array.from(new Set(logs.map(log => log.source)));
+    fetchLicenses();
+    fetchLogs();
+  }, [filters]);
 
   // Get level icon
   const getLevelIcon = (level: string) => {
@@ -180,7 +194,7 @@ const LogsView = () => {
             <div>
               <Select 
                 value={filters.licenseId || 'all'}
-                onValueChange={(value) => setFilters({...filters, licenseId: value === 'all' ? undefined : value})}
+                onValueChange={(value) => setFilters({...filters, licenseId: value})}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Script auswählen" />
@@ -199,7 +213,7 @@ const LogsView = () => {
             <div>
               <Select 
                 value={filters.source || 'all'}
-                onValueChange={(value) => setFilters({...filters, source: value === 'all' ? undefined : value})}
+                onValueChange={(value) => setFilters({...filters, source: value})}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Quelle auswählen" />
@@ -224,7 +238,7 @@ const LogsView = () => {
               />
               <Button 
                 variant="outline"
-                onClick={() => setFilters({ level: 'all', search: '' })}
+                onClick={() => setFilters({ level: 'all', search: '', licenseId: 'all', source: 'all' })}
               >
                 Zurücksetzen
               </Button>

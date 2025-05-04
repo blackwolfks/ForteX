@@ -1,145 +1,84 @@
 
-import { handleCors, corsHeaders } from "./cors.ts";
-import { extractKeys, getClientIp } from "./auth.ts";
-import { initSupabaseClient, verifyLicense } from "./database.ts";
-import { getAllScriptFiles } from "./storage.ts";
-import { createErrorResponse } from "./response.ts";
+import { corsHeaders } from "./cors.ts";
 
-export async function handleRequest(req: Request): Promise<Response> {
-    // Handle CORS preflight
-    const corsResponse = handleCors(req);
-    if (corsResponse) return corsResponse;
+// Define request types
+export type RequestMethod = "verify" | "getFile" | "uploadFile" | "log";
 
-    try {
-        const clientIp = getClientIp(req);
-        const requestPath = new URL(req.url).pathname;
-        console.log(`Received ${req.method} request to ${requestPath} from IP ${clientIp}`);
+export interface RequestData {
+  licenseKey: string;
+  serverKey: string;
+  requestMethod?: RequestMethod;
+  fileName?: string;
+  fileContent?: string;
+  level?: 'info' | 'warning' | 'error' | 'debug';
+  message?: string;
+  source?: string;
+  details?: string;
+  errorCode?: string;
+  [key: string]: any;
+}
 
-        // Extract license and server keys
-        const { licenseKey, serverKey } = await extractKeys(req);
-        
-        if (!licenseKey || !serverKey) {
-            console.error("Missing credentials");
-            return createErrorResponse("License key and server key are required");
-        }
+// Parse request and return required data
+export async function getRequest(req: Request) {
+  let requestData: RequestData | null = null;
+  let requestMethod: RequestMethod | null = null;
+  let requestError: string | null = null;
 
-        // Initialize Supabase client
-        const { client: supabase, error: dbError } = initSupabaseClient();
-        if (dbError) {
-            console.error("Database connection error:", dbError);
-            // We cannot log this error to the database since we couldn't connect
-            return createErrorResponse("Database connection error");
-        }
-
-        // Verify license
-        const licenseData = await verifyLicense(supabase, licenseKey, serverKey);
-        
-        if (!licenseData.valid) {
-            console.warn("Invalid license data");
-            // Log invalid license attempt (without a license ID)
-            try {
-                await supabase.rpc("add_script_log", {
-                    p_license_id: null,
-                    p_level: "error",
-                    p_message: "Invalid license or server key",
-                    p_source: "auth",
-                    p_details: `Access attempt with invalid credentials from IP: ${clientIp}`,
-                    p_client_ip: clientIp
-                });
-            } catch (logError) {
-                console.error("Failed to log invalid license attempt:", logError);
-            }
-            
-            return createErrorResponse("Invalid license or server key");
-        }
-
-        // Log successful license verification
-        try {
-            await supabase.rpc("add_script_log", {
-                p_license_id: licenseData.id,
-                p_level: "info",
-                p_message: "License verified successfully",
-                p_source: "auth",
-                p_details: `Access from IP: ${clientIp}`,
-                p_client_ip: clientIp
-            });
-        } catch (logError) {
-            console.error("Failed to log successful verification:", logError);
-            // Continue despite logging failure
-        }
-
-        // Get scripts content directly from storage using license ID
-        const scriptResult = await getAllScriptFiles(supabase, licenseData.id);
-        
-        if (!scriptResult || scriptResult.error || !scriptResult.content) {
-            const errorMsg = "No script files found for this license";
-            console.warn(errorMsg, scriptResult?.error || "No content");
-            
-            // Log the error
-            try {
-                await supabase.rpc("add_script_log", {
-                    p_license_id: licenseData.id,
-                    p_level: "warning",
-                    p_message: errorMsg,
-                    p_source: "storage",
-                    p_details: scriptResult?.error?.message || "No files available",
-                    p_client_ip: clientIp
-                });
-            } catch (logError) {
-                console.error("Failed to log script retrieval error:", logError);
-            }
-            
-            return createErrorResponse(errorMsg);
-        }
-
-        // Success: Return scripts as JSON
-        console.log(`Scripts successfully delivered for license ${licenseData.id}`);
-        
-        // Log successful script delivery
-        try {
-            await supabase.rpc("add_script_log", {
-                p_license_id: licenseData.id,
-                p_level: "info",
-                p_message: "Scripts successfully delivered",
-                p_source: "server",
-                p_details: `Delivered ${scriptResult.content.length} files`,
-                p_client_ip: clientIp
-            });
-        } catch (logError) {
-            console.error("Failed to log successful delivery:", logError);
-            // Continue despite logging failure
-        }
-        
-        return new Response(JSON.stringify(scriptResult.content), {
-            headers: {
-                ...corsHeaders,
-                "Content-Type": "application/json"
-            },
-            status: 200
-        });
-
-    } catch (error) {
-        console.error("Unexpected error:", error);
-        const errorMsg = error instanceof Error ? error.message : "Unknown error";
-        
-        try {
-            // Try to initialize Supabase for error logging
-            const { client: supabase } = initSupabaseClient();
-            
-            // Log the error without requiring a license ID
-            await supabase.rpc("add_script_log", {
-                p_license_id: null,
-                p_level: "error",
-                p_message: "Internal server error",
-                p_source: "server",
-                p_details: errorMsg,
-                p_error_code: "500",
-                p_client_ip: getClientIp(req)
-            });
-        } catch (logError) {
-            console.error("Failed to log error:", logError);
-        }
-        
-        return createErrorResponse("Internal server error");
+  try {
+    // Check if it's a POST request
+    if (req.method !== "POST") {
+      requestError = "Only POST requests are accepted";
+      return { requestData, requestMethod, requestError };
     }
+
+    // Try to parse JSON body
+    try {
+      requestData = await req.json();
+    } catch (e) {
+      requestError = "Invalid JSON format";
+      return { requestData, requestMethod, requestError };
+    }
+
+    // Extract request method - default to "verify" if not provided
+    requestMethod = requestData.requestMethod as RequestMethod || "verify";
+
+    return { requestData, requestMethod, requestError };
+  } catch (error) {
+    requestError = `Request parsing error: ${(error as Error).message}`;
+    return { requestData, requestMethod, requestError };
+  }
+}
+
+// Create standardized success response
+export function createSuccessResponse(data: any, status = 200): Response {
+  return new Response(
+    JSON.stringify({
+      success: true,
+      data
+    }),
+    {
+      headers: { 
+        ...corsHeaders,
+        "Content-Type": "application/json" 
+      },
+      status
+    }
+  );
+}
+
+// Create standardized error response
+export function createErrorResponse(message: string, status = 400): Response {
+  return new Response(
+    JSON.stringify({
+      success: false,
+      error: message
+    }),
+    {
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json"
+      },
+      status
+    }
+  );
 }

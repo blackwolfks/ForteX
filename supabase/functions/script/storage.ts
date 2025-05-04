@@ -1,185 +1,176 @@
 
-// Import necessary modules
-import { join } from "https://deno.land/std@0.131.0/path/mod.ts";
+import { createErrorResponse } from "./response.ts";
+import { corsHeaders } from "./cors.ts";
 
-// Interface for script file content
-interface ScriptFile {
-  name: string;
-  content: string;
-  isPublic?: boolean;
-}
-
-// Interface for script retrieval result
-interface ScriptResult {
-  content?: ScriptFile[];
-  error?: Error;
-}
-
-// Get all script files for a license
-export async function getAllScriptFiles(supabase: any, licenseId: string): Promise<ScriptResult> {
+export async function getScriptFile(supabase: any, licenseId: string) {
   try {
-    console.log(`Fetching script files for license ID: ${licenseId}`);
-    
-    // Get file access settings
-    const { data: accessSettings, error: accessError } = await supabase.rpc("get_file_access_for_license", {
-      p_license_id: licenseId
-    });
-    
-    if (accessError) {
-      console.error("Error fetching file access settings:", accessError);
-      
-      // Log error
-      try {
-        await supabase.rpc("add_script_log", {
-          p_license_id: licenseId,
-          p_level: "error",
-          p_message: "Failed to fetch file access settings",
-          p_source: "storage",
-          p_details: accessError.message,
-          p_error_code: accessError.code || null
-        });
-      } catch (logError) {
-        console.error("Failed to log file access error:", logError);
-      }
-      
-      return { error: new Error("Failed to fetch file access settings") };
+    if (!licenseId) {
+      console.error("No license ID provided");
+      return { content: null, error: "License ID is required" };
     }
+
+    console.log(`Searching for script in storage folder: ${licenseId}/`);
     
-    console.log(`Found ${accessSettings?.length || 0} file access settings`);
-    
-    // Create a map of file paths to their access settings
-    const accessMap = new Map();
-    if (accessSettings && accessSettings.length > 0) {
-      for (const setting of accessSettings) {
-        accessMap.set(setting.file_path, setting.is_public);
-      }
-    }
-    
-    // Get the list of files from storage
-    const folderPrefix = licenseId;
+    // List all files in the license folder
     const { data: files, error: listError } = await supabase.storage
-      .from('remot-script')
-      .list(folderPrefix);
+      .from('script')
+      .list(licenseId);
     
     if (listError) {
       console.error("Error listing files:", listError);
-      
-      // Log error
-      try {
-        await supabase.rpc("add_script_log", {
-          p_license_id: licenseId,
-          p_level: "error",
-          p_message: "Failed to list script files",
-          p_source: "storage",
-          p_details: listError.message,
-          p_error_code: listError.code || null
-        });
-      } catch (logError) {
-        console.error("Failed to log file listing error:", logError);
-      }
-      
-      return { error: listError };
+      return { content: null, error: "Error accessing storage" };
     }
     
     if (!files || files.length === 0) {
-      console.warn("No files found for license", licenseId);
-      
-      // Log warning
-      try {
-        await supabase.rpc("add_script_log", {
-          p_license_id: licenseId,
-          p_level: "warning",
-          p_message: "No script files found",
-          p_source: "storage",
-          p_details: "The license has no associated script files"
-        });
-      } catch (logError) {
-        console.error("Failed to log no files warning:", logError);
-      }
-      
-      return { content: [] };
+      console.warn("No files found in folder:", licenseId);
+      return { content: null, error: "No files found" };
     }
     
-    console.log(`Found ${files.length} files in storage`);
+    // Find the first .lua file
+    const luaFile = files.find(file => file.name.endsWith('.lua'));
     
-    // Filter only files (not folders)
-    const fileNames = files.filter(file => !file.id.endsWith('/')).map(file => file.name);
+    if (!luaFile) {
+      console.warn(`No .lua file found in folder ${licenseId}`);
+      return { content: null, error: "No .lua file found" };
+    }
     
-    // Download and process each file
-    const scriptFiles: ScriptFile[] = [];
+    const downloadPath = `${licenseId}/${luaFile.name}`;
+    console.log(`Found file: ${downloadPath}`);
     
-    for (const fileName of fileNames) {
-      try {
-        const filePath = join(folderPrefix, fileName);
-        const { data, error: downloadError } = await supabase.storage
-          .from('remot-script')
-          .download(filePath);
-        
-        if (downloadError) {
-          console.error(`Error downloading file ${fileName}:`, downloadError);
-          continue;
-        }
-        
-        // Convert blob to text
-        const content = await data.text();
-        const isPublic = accessMap.get(fileName) || false;
-        
-        scriptFiles.push({
-          name: fileName,
-          content,
-          isPublic
-        });
-        
-        console.log(`Successfully processed file: ${fileName}`);
-      } catch (fileError) {
-        console.error(`Error processing file ${fileName}:`, fileError);
-        
-        // Log file error
-        try {
-          await supabase.rpc("add_script_log", {
-            p_license_id: licenseId,
-            p_level: "error",
-            p_message: `Failed to process file: ${fileName}`,
-            p_source: "storage",
-            p_details: fileError instanceof Error ? fileError.message : String(fileError),
-            p_file_name: fileName
-          });
-        } catch (logError) {
-          console.error("Failed to log file processing error:", logError);
+    // Download the file
+    const { data: fileData, error: downloadError } = await supabase.storage
+      .from('script')
+      .download(downloadPath);
+    
+    if (downloadError) {
+      console.error("Error downloading file:", downloadError);
+      return { content: null, error: "Error downloading file" };
+    }
+    
+    // Convert blob to text
+    const rawText = await fileData.text();
+    
+    // Clean the text to remove any HTTP headers or boundary markers
+    let content = rawText;
+    
+    // Remove WebKit form boundaries and other HTTP headers if present
+    const luaContentMatch = rawText.match(/Content-Type: text\/x-lua\r?\n\r?\n([\s\S]*?)(?:\r?\n-{4,}WebKit|$)/i);
+    if (luaContentMatch && luaContentMatch[1]) {
+      content = luaContentMatch[1];
+    } else {
+      // Try another pattern that might match
+      const altMatch = rawText.match(/Content-Type: text\/.*?\r?\n\r?\n([\s\S]*?)(?:\r?\n-{4,}|$)/i);
+      if (altMatch && altMatch[1]) {
+        content = altMatch[1];
+      } else {
+        // If still can't match specific pattern, just try to remove obvious headers
+        const lines = rawText.split('\n');
+        const contentStartIndex = lines.findIndex(line => line.trim() === '');
+        if (contentStartIndex !== -1 && contentStartIndex < lines.length - 1) {
+          content = lines.slice(contentStartIndex + 1).join('\n');
         }
       }
     }
     
-    // Log success
-    try {
-      await supabase.rpc("add_script_log", {
-        p_license_id: licenseId,
-        p_level: "info",
-        p_message: "Script files retrieved successfully",
-        p_source: "storage",
-        p_details: `Retrieved ${scriptFiles.length} files`
-      });
-    } catch (logError) {
-      console.error("Failed to log successful file retrieval:", logError);
-    }
+    console.log(`Script file '${luaFile.name}' successfully loaded`);
     
-    return { content: scriptFiles };
+    return { content, error: null };
+    
   } catch (error) {
-    console.error("Error in getAllScriptFiles:", error);
+    console.error(`Exception in getScriptFile: ${error}`);
+    return { content: null, error: "Unexpected error getting file" };
+  }
+}
+
+export async function getAllScriptFiles(supabase: any, licenseId: string) {
+  try {
+    if (!licenseId) {
+      console.error("No license ID provided");
+      return { content: null, error: "License ID is required" };
+    }
+
+    console.log(`Searching for scripts in storage folder: ${licenseId}/`);
     
-    // Log the unexpected error
-    try {
-      await supabase.rpc("add_script_log", {
-        p_license_id: licenseId,
-        p_level: "error",
-        p_message: "Unexpected error retrieving script files",
-        p_source: "storage",
-        p_details: error instanceof Error ? error.message : String(error)
-      });
-    } catch (logError) {
-      console.error("Failed to log unexpected error:", logError);
+    // List all files in the license folder
+    const { data: files, error: listError } = await supabase.storage
+      .from('script')
+      .list(licenseId);
+    
+    if (listError) {
+      console.error("Error listing files:", listError);
+      return { content: null, error: "Error accessing storage" };
     }
     
-    return { error: error instanceof Error ? error : new Error(String(error)) };
+    if (!files || files.length === 0) {
+      console.warn("No files found in folder:", licenseId);
+      return { content: null, error: "No files found" };
+    }
+    
+    // Find both .lua and .json files
+    const validFiles = files.filter(file => 
+      file.name.endsWith('.lua') || file.name.endsWith('.json')
+    );
+    
+    if (validFiles.length === 0) {
+      console.warn(`No .lua or .json files found in folder ${licenseId}`);
+      return { content: null, error: "No .lua or .json files found" };
+    }
+    
+    const scripts: Record<string, string> = {};
+    
+    // Download each valid file
+    for (const file of validFiles) {
+      const downloadPath = `${licenseId}/${file.name}`;
+      console.log(`Processing file: ${downloadPath}`);
+      
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from('script')
+        .download(downloadPath);
+      
+      if (downloadError) {
+        console.error(`Error downloading file ${file.name}:`, downloadError);
+        continue;
+      }
+      
+      // Convert blob to text and clean it
+      const rawText = await fileData.text();
+      
+      // Clean the text depending on file type
+      let content = rawText;
+      
+      if (file.name.endsWith('.lua')) {
+        // Remove WebKit form boundaries and other HTTP headers if present for Lua files
+        const luaContentMatch = rawText.match(/Content-Type: text\/x-lua\r?\n\r?\n([\s\S]*?)(?:\r?\n-{4,}WebKit|$)/i);
+        if (luaContentMatch && luaContentMatch[1]) {
+          content = luaContentMatch[1];
+        } else {
+          // Try another pattern that might match
+          const altMatch = rawText.match(/Content-Type: text\/.*?\r?\n\r?\n([\s\S]*?)(?:\r?\n-{4,}|$)/i);
+          if (altMatch && altMatch[1]) {
+            content = altMatch[1];
+          }
+        }
+      } else if (file.name.endsWith('.json')) {
+        try {
+          // Just to validate JSON format, we parse it and don't modify the content
+          JSON.parse(content);
+          console.log(`JSON file '${file.name}' validated successfully`);
+        } catch (e) {
+          console.error(`Invalid JSON format in file ${file.name}:`, e);
+          console.error(`JSON content preview: ${content.substring(0, 100)}...`);
+          // We still include the file even if it's invalid JSON
+          // so that proper error messages can be shown on the client
+        }
+      }
+      
+      scripts[file.name] = content;
+      console.log(`File '${file.name}' successfully loaded`);
+    }
+    
+    return { content: scripts, error: null };
+    
+  } catch (error) {
+    console.error(`Exception in getAllScriptFiles: ${error}`);
+    return { content: null, error: "Unexpected error getting files" };
   }
 }
