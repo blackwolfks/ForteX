@@ -58,6 +58,15 @@ async function logToSystem(
   }
 }
 
+// New function to apply filter logic for license IDs
+function applyLicenseFilter(query: any, licenseId: string | null | undefined): any {
+  // Only apply the filter if licenseId exists and is not "all"
+  if (licenseId && licenseId !== "all") {
+    return query.eq("license_id", licenseId);
+  }
+  return query;
+}
+
 export async function handleRequest(req: Request): Promise<Response> {
     // Handle CORS preflight
     const corsResponse = handleCors(req);
