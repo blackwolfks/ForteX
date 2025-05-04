@@ -39,7 +39,7 @@ const LogsView = () => {
   const [filters, setFilters] = useState<LogsFilter>({
     level: 'all',
     search: '',
-    licenseId: null, // Use null to select all logs initially (not undefined or 'all')
+    licenseId: null, // Explicitly use null instead of "all" string to avoid UUID type issues
     source: 'all',
   });
   const [licenses, setLicenses] = useState<{id: string, name: string}[]>([]);
@@ -87,14 +87,10 @@ const LogsView = () => {
           ? filters.endDate.toISOString() 
           : filters.endDate;
         
-        // Pass null to query all logs, not a string value of 'all'
-        // This is a critical fix for the UUID validation error
-        const licenseIdParam = filters.licenseId;
-        
-        console.log("License ID param being sent to database:", licenseIdParam);
-        
+        // Pass null for querying all logs, not a string 'all'
+        // This prevents the UUID validation error
         const { data, error } = await supabase.rpc('get_script_logs', {
-          p_license_id: licenseIdParam,
+          p_license_id: filters.licenseId,
           p_level: filters.level === 'all' ? null : filters.level,
           p_source: filters.source === 'all' ? null : filters.source,
           p_search: filters.search || null,
@@ -123,7 +119,7 @@ const LogsView = () => {
             errorCode: log.error_code || undefined,
             clientIp: log.client_ip || undefined,
             fileName: log.file_name || undefined,
-            script_name: log.script_name || undefined // Add script name to logs
+            script_name: log.script_name || undefined
           }));
           
           setLogs(formattedLogs);
@@ -194,6 +190,7 @@ const LogsView = () => {
 
   // Handle license selection change
   const handleLicenseChange = (value: string) => {
+    // Use null for "all" licenses, avoiding the string "all" which causes UUID validation issues
     setFilters({
       ...filters, 
       licenseId: value === 'all' ? null : value
@@ -280,7 +277,7 @@ const LogsView = () => {
                 onClick={() => setFilters({ 
                   level: 'all', 
                   search: '', 
-                  licenseId: null,  // Reset to null to fetch all logs
+                  licenseId: null,
                   source: 'all' 
                 })}
               >

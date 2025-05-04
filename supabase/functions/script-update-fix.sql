@@ -101,3 +101,71 @@ BEGIN
   END IF;
 END;
 $$;
+
+-- Fix: Update the get_script_logs function to better handle the null license_id parameter
+CREATE OR REPLACE FUNCTION public.get_script_logs(
+  p_license_id uuid DEFAULT NULL, 
+  p_level text DEFAULT NULL, 
+  p_source text DEFAULT NULL, 
+  p_search text DEFAULT NULL, 
+  p_start_date timestamp with time zone DEFAULT NULL, 
+  p_end_date timestamp with time zone DEFAULT NULL, 
+  p_limit integer DEFAULT 100
+)
+RETURNS TABLE(
+  id uuid, 
+  license_id uuid, 
+  log_timestamp timestamp with time zone, 
+  level text, 
+  message text, 
+  source text, 
+  details text, 
+  error_code text, 
+  client_ip text, 
+  file_name text, 
+  script_name text
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    sl.id,
+    sl.license_id,
+    sl.log_timestamp,
+    sl.level,
+    sl.message,
+    sl.source,
+    sl.details,
+    sl.error_code,
+    sl.client_ip,
+    sl.file_name,
+    l.script_name
+  FROM 
+    public.script_logs sl
+  JOIN
+    public.server_licenses l ON sl.license_id = l.id
+  WHERE 
+    EXISTS (
+      SELECT 1 FROM public.server_licenses lic 
+      WHERE sl.license_id = lic.id AND lic.user_id = auth.uid()
+    )
+    AND (p_license_id IS NULL OR sl.license_id = p_license_id)
+    AND (p_level IS NULL OR sl.level = p_level)
+    AND (p_source IS NULL OR sl.source = p_source)
+    AND (
+      p_search IS NULL 
+      OR sl.message ILIKE '%' || p_search || '%' 
+      OR COALESCE(sl.details, '') ILIKE '%' || p_search || '%'
+      OR COALESCE(sl.error_code, '') ILIKE '%' || p_search || '%'
+      OR COALESCE(sl.file_name, '') ILIKE '%' || p_search || '%'
+    )
+    AND (p_start_date IS NULL OR sl.log_timestamp >= p_start_date)
+    AND (p_end_date IS NULL OR sl.log_timestamp <= p_end_date)
+  ORDER BY 
+    sl.log_timestamp DESC
+  LIMIT p_limit;
+END;
+$$;
