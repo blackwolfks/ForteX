@@ -123,44 +123,10 @@ async function handleRequest(req: Request): Promise<Response> {
     console.log("Calling add_script_log with parameters:", params);
     
     try {
-      // MODIFIED: Using the simpler version of add_script_log without user_id parameter
       const { data: logId, error: rpcError } = await supabase.rpc("add_script_log", params);
       
       if (rpcError) {
         console.error("Error calling add_script_log RPC:", rpcError);
-        
-        // Special handling for ambiguous function error
-        if (rpcError.message && rpcError.message.includes("Could not choose the best candidate function")) {
-          console.log("Detected ambiguous function error, trying alternative parameters");
-          
-          // Try with a modified set of parameters (without user_id)
-          const alternativeParams = {
-            p_license_id: license_id,
-            p_level: level,
-            p_message: message,
-            p_source: source || null,
-            p_details: details || null,
-            p_error_code: error_code || null,
-            p_client_ip: client_ip || null,
-            p_file_name: file_name || null
-          };
-          
-          const { data: altLogId, error: altError } = await supabase.rpc("add_script_log", alternativeParams);
-          
-          if (altError) {
-            console.error("Error with alternative parameters:", altError);
-            return new Response(JSON.stringify({ error: 'Failed to add log entry' }), {
-              status: 500,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            });
-          }
-          
-          return new Response(JSON.stringify({ id: altLogId, success: true }), {
-            status: 201,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          });
-        }
-        
         return new Response(JSON.stringify({ error: 'Failed to add log entry', details: rpcError.message }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }

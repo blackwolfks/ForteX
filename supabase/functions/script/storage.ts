@@ -43,8 +43,6 @@ export async function getAllScriptFiles(supabase: any, licenseId: string): Promi
         content[fileInfo.name] = text;
         
         console.log(`File '${fileInfo.name}' successfully loaded`);
-        
-        // We'll log this in the handler function now
       }
     }
     
