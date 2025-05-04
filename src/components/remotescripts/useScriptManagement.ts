@@ -1,9 +1,8 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { License, NewScriptFormData } from "./types";
 import { callRPC, supabase } from "@/lib/supabase";
 import { toast } from "sonner";
-import { ensureBucketExists, uploadFile } from "@/services/file-uploader";
+import { ensureBucketExists } from "@/services/file-uploader";
 
 export function useScriptManagement() {
   const [licenses, setLicenses] = useState<License[]>([]);
@@ -41,19 +40,7 @@ export function useScriptManagement() {
       return false;
     }
 
-    if (selectedFiles.length === 0) {
-      toast.error("Bitte wählen Sie mindestens eine Datei aus");
-      return false;
-    }
-
     try {
-      // First ensure bucket exists
-      const bucketReady = await ensureBucketExists('script');
-      if (!bucketReady) {
-        toast.error("Fehler: Storage-Bucket konnte nicht erstellt werden");
-        return false;
-      }
-      
       // Create the license first with explicit parameter names in the correct order
       const { data, error } = await callRPC('create_license', {
         p_script_name: newScript.name,
@@ -72,56 +59,6 @@ export function useScriptManagement() {
         toast.error("Fehler beim Erstellen des Scripts: Keine Lizenz-ID erhalten");
         return false;
       }
-      
-      const licenseId = data.id;
-      console.log(`Uploading ${selectedFiles.length} files to bucket 'script/${licenseId}'`);
-      
-      let uploadErrors = 0;
-      let uploadSuccesses = 0;
-      
-      // Process files in smaller batches to avoid overwhelming the API
-      const batchSize = 3;
-      const fileBatches = [];
-      
-      // Split files into batches
-      for (let i = 0; i < selectedFiles.length; i += batchSize) {
-        fileBatches.push(selectedFiles.slice(i, i + batchSize));
-      }
-      
-      // Process each batch sequentially
-      for (const batch of fileBatches) {
-        await Promise.all(batch.map(async (file) => {
-          let filePath = file.webkitRelativePath || file.name;
-          
-          try {
-            const { error: uploadError } = await uploadFile('script', `${licenseId}/${filePath}`, file);
-            
-            if (uploadError) {
-              console.error("Error uploading file:", uploadError);
-              uploadErrors++;
-            } else {
-              uploadSuccesses++;
-            }
-          } catch (error) {
-            console.error("Exception during upload:", error);
-            uploadErrors++;
-          }
-        }));
-      }
-      
-      if (uploadErrors > 0) {
-        toast.error(`${uploadErrors} Dateien konnten nicht hochgeladen werden`);
-      }
-      
-      if (uploadSuccesses > 0) {
-        toast.success(`${uploadSuccesses} Dateien erfolgreich hochgeladen`);
-      }
-      
-      // Mark this license as having file uploads
-      await callRPC('update_license', {
-        p_license_id: licenseId,
-        p_has_file_upload: true
-      });
       
       toast.success("Script erfolgreich erstellt");
       await fetchLicenses();
