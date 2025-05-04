@@ -1,9 +1,62 @@
 
 import { handleCors, corsHeaders } from "./cors.ts";
 import { extractKeys, getClientIp } from "./auth.ts";
-import { initSupabaseClient, verifyLicense, addScriptLog } from "./database.ts";
+import { initSupabaseClient, verifyLicense } from "./database.ts";
 import { getAllScriptFiles } from "./storage.ts";
 import { createErrorResponse } from "./response.ts";
+
+// Function to send logs to our centralized logging endpoint
+async function logToSystem(
+  supabase: any,
+  licenseId: string | null,
+  level: 'info' | 'warning' | 'error' | 'debug',
+  message: string,
+  source: string,
+  details?: string,
+  errorCode?: string,
+  clientIp?: string,
+  fileName?: string
+): Promise<boolean> {
+  try {
+    if (!licenseId) {
+      console.warn("Cannot log: Missing license ID");
+      return false;
+    }
+    
+    console.log(`Logging to system: [${level}] ${message}`);
+    
+    const logUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/log";
+    
+    const response = await fetch(logUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+      },
+      body: JSON.stringify({
+        license_id: licenseId,
+        level,
+        message,
+        source,
+        details,
+        error_code: errorCode,
+        client_ip: clientIp,
+        file_name: fileName
+      })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Error from logging service: ${response.status} ${errorText}`);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Exception while logging to system:", error);
+    return false;
+  }
+}
 
 export async function handleRequest(req: Request): Promise<Response> {
     // Handle CORS preflight
@@ -36,7 +89,7 @@ export async function handleRequest(req: Request): Promise<Response> {
             console.warn("Invalid license data");
             // Log the failed verification attempt, only if we have an ID
             if (licenseData.id) {
-                await addScriptLog(
+                await logToSystem(
                     supabase,
                     licenseData.id, 
                     'error',
@@ -51,7 +104,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         }
 
         // Log successful license verification
-        await addScriptLog(
+        await logToSystem(
             supabase,
             licenseData.id,
             'info',
@@ -69,7 +122,7 @@ export async function handleRequest(req: Request): Promise<Response> {
             console.warn("No script content found:", scriptResult?.error || "No content");
             
             // Log the error
-            await addScriptLog(
+            await logToSystem(
                 supabase,
                 licenseData.id,
                 'error',
@@ -87,7 +140,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         console.log(`Scripts successfully delivered for license ${licenseData.id}`);
         
         // Log the successful delivery
-        await addScriptLog(
+        await logToSystem(
             supabase,
             licenseData.id,
             'info',
@@ -113,7 +166,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         try {
             const { client: supabase } = initSupabaseClient();
             if (supabase) {
-                await addScriptLog(
+                await logToSystem(
                     supabase,
                     null, // We don't have license ID in this case
                     'error',

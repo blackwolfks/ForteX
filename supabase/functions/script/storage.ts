@@ -1,7 +1,60 @@
 
 import { createErrorResponse } from "./response.ts";
 import { corsHeaders } from "./cors.ts";
-import { addScriptLog } from "./database.ts";
+
+// Forward declaration for the logToSystem function
+// This is defined in handlers.ts but we need to declare it here to use it
+async function logToSystem(
+  supabase: any,
+  licenseId: string | null,
+  level: 'info' | 'warning' | 'error' | 'debug',
+  message: string,
+  source: string,
+  details?: string,
+  errorCode?: string,
+  clientIp?: string,
+  fileName?: string
+): Promise<boolean> {
+  try {
+    if (!licenseId) {
+      console.warn("Cannot log: Missing license ID");
+      return false;
+    }
+    
+    console.log(`Logging to system: [${level}] ${message}`);
+    
+    const logUrl = "https://fewcmtozntpedrsluawj.supabase.co/functions/v1/log";
+    
+    const response = await fetch(logUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+      },
+      body: JSON.stringify({
+        license_id: licenseId,
+        level,
+        message,
+        source,
+        details,
+        error_code: errorCode,
+        client_ip: clientIp,
+        file_name: fileName
+      })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Error from logging service: ${response.status} ${errorText}`);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Exception while logging to system:", error);
+    return false;
+  }
+}
 
 export async function getScriptFile(supabase: any, licenseId: string) {
   try {
@@ -19,7 +72,7 @@ export async function getScriptFile(supabase: any, licenseId: string) {
     
     if (listError) {
       console.error("Error listing files:", listError);
-      await addScriptLog(
+      await logToSystem(
         supabase,
         licenseId,
         'error',
@@ -33,7 +86,7 @@ export async function getScriptFile(supabase: any, licenseId: string) {
     
     if (!files || files.length === 0) {
       console.warn("No files found in folder:", licenseId);
-      await addScriptLog(
+      await logToSystem(
         supabase,
         licenseId,
         'warning',
@@ -50,7 +103,7 @@ export async function getScriptFile(supabase: any, licenseId: string) {
     
     if (!luaFile) {
       console.warn(`No .lua file found in folder ${licenseId}`);
-      await addScriptLog(
+      await logToSystem(
         supabase,
         licenseId,
         'warning',
@@ -72,7 +125,7 @@ export async function getScriptFile(supabase: any, licenseId: string) {
     
     if (downloadError) {
       console.error("Error downloading file:", downloadError);
-      await addScriptLog(
+      await logToSystem(
         supabase,
         licenseId,
         'error',
@@ -112,7 +165,7 @@ export async function getScriptFile(supabase: any, licenseId: string) {
     }
     
     console.log(`Script file '${luaFile.name}' successfully loaded`);
-    await addScriptLog(
+    await logToSystem(
       supabase,
       licenseId,
       'info',
@@ -128,7 +181,7 @@ export async function getScriptFile(supabase: any, licenseId: string) {
     
   } catch (error) {
     console.error(`Exception in getScriptFile: ${error}`);
-    await addScriptLog(
+    await logToSystem(
       supabase,
       licenseId,
       'error',
@@ -159,7 +212,7 @@ export async function getAllScriptFiles(supabase: any, licenseId: string) {
         
       if (accessError) {
         console.error("Error fetching file access settings:", accessError);
-        await addScriptLog(
+        await logToSystem(
           supabase,
           licenseId,
           'error',
@@ -178,7 +231,7 @@ export async function getAllScriptFiles(supabase: any, licenseId: string) {
       
       if (listError) {
         console.error("Error listing files:", listError);
-        await addScriptLog(
+        await logToSystem(
           supabase,
           licenseId,
           'error',
@@ -192,7 +245,7 @@ export async function getAllScriptFiles(supabase: any, licenseId: string) {
       
       if (!files || files.length === 0) {
         console.warn("No files found in folder:", licenseId);
-        await addScriptLog(
+        await logToSystem(
           supabase,
           licenseId,
           'warning',
@@ -211,7 +264,7 @@ export async function getAllScriptFiles(supabase: any, licenseId: string) {
       
       if (validFiles.length === 0) {
         console.warn(`No .lua or .json files found in folder ${licenseId}`);
-        await addScriptLog(
+        await logToSystem(
           supabase,
           licenseId,
           'warning',
@@ -236,7 +289,7 @@ export async function getAllScriptFiles(supabase: any, licenseId: string) {
         
         if (downloadError) {
           console.error(`Error downloading file ${file.name}:`, downloadError);
-          await addScriptLog(
+          await logToSystem(
             supabase,
             licenseId,
             'error',
@@ -276,7 +329,7 @@ export async function getAllScriptFiles(supabase: any, licenseId: string) {
           } catch (e) {
             console.error(`Invalid JSON format in file ${file.name}:`, e);
             console.error(`JSON content preview: ${content.substring(0, 100)}...`);
-            await addScriptLog(
+            await logToSystem(
               supabase,
               licenseId,
               'warning',
@@ -294,7 +347,7 @@ export async function getAllScriptFiles(supabase: any, licenseId: string) {
         
         scripts[file.name] = content;
         console.log(`File '${file.name}' successfully loaded`);
-        await addScriptLog(
+        await logToSystem(
           supabase,
           licenseId,
           'info',
@@ -310,7 +363,7 @@ export async function getAllScriptFiles(supabase: any, licenseId: string) {
       return { content: scripts, error: null };
     } catch (accessError) {
       console.error(`Error fetching file access settings: ${accessError}`);
-      await addScriptLog(
+      await logToSystem(
         supabase,
         licenseId,
         'error',
@@ -324,7 +377,7 @@ export async function getAllScriptFiles(supabase: any, licenseId: string) {
     
   } catch (error) {
     console.error(`Exception in getAllScriptFiles: ${error}`);
-    await addScriptLog(
+    await logToSystem(
       supabase,
       licenseId,
       'error',
