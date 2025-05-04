@@ -88,8 +88,7 @@ export async function addScriptLog(
     console.log(`Logging to database: [${level}] ${message}`);
     
     try {
-      const { data, error } = await supabase.rpc("add_script_log", {
-        p_license_id: licenseId,
+      const params: Record<string, any> = {
         p_level: level,
         p_message: message,
         p_source: source,
@@ -97,7 +96,16 @@ export async function addScriptLog(
         p_error_code: errorCode || null,
         p_client_ip: clientIp || null,
         p_file_name: fileName || null
-      });
+      };
+      
+      // Only add license_id if it's a valid UUID
+      if (licenseId) {
+        params.p_license_id = licenseId;
+      }
+      
+      console.log("RPC parameters for add_script_log:", params);
+      
+      const { data, error } = await supabase.rpc("add_script_log", params);
       
       if (error) {
         console.error("Error writing log to database:", error);
