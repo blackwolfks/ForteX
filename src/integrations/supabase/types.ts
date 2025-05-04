@@ -888,26 +888,15 @@ export type Database = {
         Returns: boolean
       }
       update_license: {
-        Args:
-          | {
-              p_license_id: string
-              p_script_name?: string
-              p_script_file?: string
-              p_server_ip?: string
-              p_aktiv?: boolean
-              p_has_file_upload?: boolean
-              p_regenerate_server_key?: boolean
-            }
-          | {
-              p_license_id: string
-              p_script_name?: string
-              p_script_file?: string
-              p_server_ip?: string
-              p_aktiv?: boolean
-              p_has_file_upload?: boolean
-              p_regenerate_server_key?: boolean
-              p_description?: string
-            }
+        Args: {
+          p_license_id: string
+          p_script_name?: string
+          p_script_file?: string
+          p_server_ip?: string
+          p_aktiv?: boolean
+          p_has_file_upload?: boolean
+          p_regenerate_server_key?: boolean
+        }
         Returns: {
           success: boolean
           server_key: string
