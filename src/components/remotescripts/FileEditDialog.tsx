@@ -16,7 +16,6 @@ interface FileEditDialogProps {
 const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditDialogProps) => {
   const [editedContent, setEditedContent] = useState<string>("");
   const [saving, setSaving] = useState(false);
-  const [hasErrors, setHasErrors] = useState(false);
 
   useEffect(() => {
     if (content !== null) {
@@ -56,66 +55,6 @@ const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditD
     return "plaintext";
   };
 
-  // Handle editor mounting and configuration
-  const handleEditorDidMount = (editor: any, monaco: any) => {
-    // Wenn die Sprache Lua ist, können wir spezielle Einstellungen vornehmen
-    if (getLanguage() === "lua") {
-      // Lua-spezifische Diagnoseeinstellungen
-      monaco.languages.registerDiagnosticsAdapter({
-        dispose: () => {},
-        onModelAdd: (model: any) => {
-          const validateModel = () => {
-            // Einfache Validierung für Lua-Code
-            const content = model.getValue();
-            const errors = [];
-            
-            // Überprüfen auf unvollständige Blöcke (fehlende end-Statements)
-            const startBlocks = (content.match(/\b(function|if|for|while|do)\b/g) || []).length;
-            const endBlocks = (content.match(/\bend\b/g) || []).length;
-            
-            if (startBlocks > endBlocks) {
-              errors.push({
-                startLineNumber: 1,
-                startColumn: 1,
-                endLineNumber: model.getLineCount(),
-                endColumn: model.getLineMaxColumn(model.getLineCount()),
-                message: `Unvollständiger Block: Es fehlen ${startBlocks - endBlocks} 'end' Statement(s)`,
-                severity: monaco.MarkerSeverity.Error
-              });
-            }
-
-            // Überprüfen auf unbalancierte Klammern
-            const openParens = (content.match(/\(/g) || []).length;
-            const closeParens = (content.match(/\)/g) || []).length;
-            
-            if (openParens !== closeParens) {
-              errors.push({
-                startLineNumber: 1,
-                startColumn: 1,
-                endLineNumber: model.getLineCount(),
-                endColumn: model.getLineMaxColumn(model.getLineCount()),
-                message: `Unbalancierte Klammern: ${openParens} öffnende vs. ${closeParens} schließende`,
-                severity: monaco.MarkerSeverity.Error
-              });
-            }
-
-            // Set markers for the model
-            monaco.editor.setModelMarkers(model, 'lua-validator', errors);
-            
-            // Update error state for save button
-            setHasErrors(errors.length > 0);
-          };
-
-          // Initial validation
-          validateModel();
-          
-          // Validate on content change
-          model.onDidChangeContent(() => validateModel());
-        }
-      });
-    }
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-4xl max-h-[90vh]">
@@ -132,27 +71,12 @@ const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditD
             language={getLanguage()}
             value={editedContent}
             onChange={(value) => setEditedContent(value || "")}
-            onMount={handleEditorDidMount}
             options={{
               minimap: { enabled: false },
               fontSize: 14,
               wordWrap: "on",
               automaticLayout: true,
-              scrollBeyondLastLine: false,
-              fontLigatures: true,
-              lineNumbers: "on",
-              renderLineHighlight: "all",
-              highlightActiveIndentGuide: true,
-              // Aktivieren von Linting-Hinweisen
-              formatOnType: true,
-              formatOnPaste: true,
-              // Verbesserte Fehlermarkierungen
-              renderValidationDecorations: "on",
-              // Aktivieren der Folding-Funktionalität
-              folding: true,
-              foldingHighlight: true,
-              // Bessere Sichtbarkeit für Fehlerlinien
-              glyphMargin: true
+              scrollBeyondLastLine: false
             }}
             theme="vs-dark"
           />
@@ -164,12 +88,9 @@ const FileEditDialog = ({ open, onOpenChange, file, content, onSave }: FileEditD
           </Button>
           <Button 
             onClick={handleSave}
-            disabled={saving || hasErrors}
-            className={hasErrors ? "bg-red-500 hover:bg-red-600" : ""}
+            disabled={saving}
           >
-            {hasErrors 
-              ? "Fehler beheben" 
-              : (saving ? "Wird gespeichert..." : "Speichern")}
+            {saving ? "Wird gespeichert..." : "Speichern"}
           </Button>
         </DialogFooter>
       </DialogContent>
