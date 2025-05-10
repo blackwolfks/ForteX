@@ -8,6 +8,7 @@ import { useScriptManagement } from "./useScriptManagement";
 import CreateScriptDialog from "./CreateScriptDialog";
 import ScriptCard from "./ScriptCard";
 import FiveMGuide from "./FiveMGuide";
+import { GameServerType, ScriptCategoryType } from "./types";
 import { 
   Select,
   SelectContent,
@@ -16,10 +17,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const RemoteScriptsView = () => {
+interface RemoteScriptsViewProps {
+  gameServer?: string;
+  category?: string;
+}
+
+const RemoteScriptsView = ({ gameServer = 'fivem', category = 'script' }: RemoteScriptsViewProps) => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  
+  // Konvertiere string zu GameServerType und ScriptCategoryType
+  const selectedServer = gameServer as GameServerType;
+  const selectedCategory = category as ScriptCategoryType;
   
   const { 
     licenses, 
@@ -40,10 +50,39 @@ const RemoteScriptsView = () => {
     return matchesSearch && matchesStatus;
   });
 
+  // Server-Typen für Header-Anzeige
+  const getServerDisplayName = (server: GameServerType): string => {
+    const serverNames: Record<GameServerType, string> = {
+      'ragemp': 'RageMP',
+      'fivem': 'FiveM',
+      'altv': 'AltV',
+      'minecraft': 'Minecraft'
+    };
+    return serverNames[server];
+  };
+
+  // Kategorie-Typ für Header-Anzeige
+  const getCategoryDisplayName = (category: ScriptCategoryType): string => {
+    const categoryNames: Record<ScriptCategoryType, string> = {
+      'script': 'Scripts',
+      'clothing': 'Kleidungen',
+      'vehicle': 'Fahrzeuge',
+      'mlo': 'MLOs',
+      'java': 'Java Edition',
+      'bedrock': 'Bedrock Edition'
+    };
+    return categoryNames[category];
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Remote Scripts</h2>
+        <div>
+          <h2 className="text-2xl font-bold">Remote Scripts</h2>
+          <p className="text-muted-foreground">
+            {getServerDisplayName(selectedServer)} &gt; {getCategoryDisplayName(selectedCategory)}
+          </p>
+        </div>
         <Button 
           className="bg-turquoise-500 hover:bg-turquoise-600"
           onClick={() => setDialogOpen(true)}
@@ -82,6 +121,8 @@ const RemoteScriptsView = () => {
       <CreateScriptDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
+        gameServer={selectedServer}
+        category={selectedCategory}
         onCreateScript={async (newScript, files) => {
           console.log("Creating script with data:", newScript);
           const success = await handleCreateScript(newScript, files);
@@ -120,7 +161,8 @@ const RemoteScriptsView = () => {
         </div>
       )}
       
-      <FiveMGuide />
+      {/* Spezifische Guide je nach Server-Typ anzeigen */}
+      {selectedServer === 'fivem' && <FiveMGuide />}
     </div>
   );
 };

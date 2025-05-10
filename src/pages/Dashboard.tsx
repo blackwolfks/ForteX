@@ -32,15 +32,26 @@ import ProductsView from "@/components/products/ProductsView";
 import WebsiteBuilderView from "@/components/website/WebsiteBuilderView";
 import RemoteScriptsView from "@/components/remotescripts/RemoteScriptsView";
 import LogsView from "@/components/remotescripts/LogsView";
+import GameServerSelection from "@/components/remotescripts/GameServerSelection";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const pathSegments = location.pathname.split('/');
   const activeTab = pathSegments[2] || "overview";
+  
+  // URL-Parameter auslesen für RemoteScriptsView
+  const urlParams = new URLSearchParams(location.search);
+  const serverParam = urlParams.get('server');
+  const categoryParam = urlParams.get('category');
 
   const navigateTo = (tab: string) => {
-    navigate(`/dashboard/${tab}`);
+    // Für Remote Scripts zur Server-Auswahl navigieren, nicht direkt zur Anzeige
+    if (tab === "remote-scripts" && !serverParam && !categoryParam) {
+      navigate(`/dashboard/server-selection`);
+    } else {
+      navigate(`/dashboard/${tab}`);
+    }
   };
 
   return (
@@ -80,7 +91,7 @@ const Dashboard = () => {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Remote Scripts" isActive={activeTab === "remote-scripts"}>
+                <SidebarMenuButton asChild tooltip="Remote Scripts" isActive={activeTab === "remote-scripts" || activeTab === "server-selection"}>
                   <a onClick={() => navigateTo("remote-scripts")}>
                     <Code />
                     <span>Remote Scripts</span>
@@ -147,6 +158,7 @@ const Dashboard = () => {
                     {activeTab === "products" && "Produkte"}
                     {activeTab === "website-builder" && "Website Builder"}
                     {activeTab === "remote-scripts" && "Remote Scripts"}
+                    {activeTab === "server-selection" && "Server Auswahl"}
                     {activeTab === "logs" && "System Logs"}
                     {activeTab === "payments" && "Zahlungen"}
                     {activeTab === "customers" && "Kunden"}
@@ -175,7 +187,12 @@ const Dashboard = () => {
               {activeTab === "overview" && <DashboardOverview />}
               {activeTab === "products" && <ProductsView />}
               {activeTab === "website-builder" && <WebsiteBuilderView />}
-              {activeTab === "remote-scripts" && <RemoteScriptsView />}
+              {activeTab === "server-selection" && <GameServerSelection />}
+              {activeTab === "remote-scripts" && (
+                serverParam && categoryParam ? 
+                <RemoteScriptsView gameServer={serverParam} category={categoryParam} /> : 
+                <GameServerSelection />
+              )}
               {activeTab === "logs" && <LogsView />}
               {activeTab === "payments" && <PaymentsView />}
               {activeTab === "customers" && <CustomersView />}

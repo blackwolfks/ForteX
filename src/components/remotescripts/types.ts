@@ -12,12 +12,16 @@ export interface License {
   created_at: string;
   updated_at?: string;
   description?: string | null;
+  game_server?: GameServerType; // Neu hinzugefügt
+  category?: ScriptCategoryType; // Neu hinzugefügt
 }
 
 export interface NewScriptFormData {
   name: string;
   serverIp?: string | null;
   description?: string | null;
+  game_server: GameServerType; // Neu hinzugefügt
+  category: ScriptCategoryType; // Neu hinzugefügt
 }
 
 export interface FileItem {
@@ -40,6 +44,20 @@ export interface FileItem {
   };
 }
 
+// Game Server Typen
+export type GameServerType = 'ragemp' | 'fivem' | 'altv' | 'minecraft';
+
+// Kategorien für die verschiedenen Game Server
+export type ScriptCategoryType = 
+  // Kategorien für RageMP, FiveM und AltV
+  | 'script' 
+  | 'clothing' 
+  | 'vehicle' 
+  | 'mlo'
+  // Kategorien für Minecraft
+  | 'java'
+  | 'bedrock';
+
 // ZIP-Datei Einstellungen
 export interface ZipFileSettings {
   allowDownload: boolean;
@@ -47,7 +65,7 @@ export interface ZipFileSettings {
   releaseNotes?: string;
 }
 
-// Wieder hinzugefügt, da diese in LogsView.tsx verwendet werden
+// Logs
 export interface LogEntry {
   id: string;
   licenseId: string;

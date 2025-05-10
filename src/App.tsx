@@ -21,6 +21,7 @@ import AuthGuard from "./components/AuthGuard";
 import WebsiteEditor from "./pages/WebsiteEditor";
 import CreateWebsite from "./pages/CreateWebsite";
 import LicenseManager from "./pages/LicenseManager";
+import ScriptFileBrowser from "./pages/ScriptFileBrowser";
 
 const queryClient = new QueryClient();
 
@@ -86,6 +87,16 @@ const App = () => (
               <>
                 <Navbar />
                 <LicenseManager />
+              </>
+            </AuthGuard>
+          } />
+          
+          {/* Script File Browser */}
+          <Route path="/script-file-browser" element={
+            <AuthGuard requireAuth={true}>
+              <>
+                <Navbar />
+                <ScriptFileBrowser />
               </>
             </AuthGuard>
           } />
