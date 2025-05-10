@@ -308,6 +308,7 @@ export type Database = {
         Row: {
           aktiv: boolean | null
           created_at: string | null
+          description: string | null
           has_file_upload: boolean | null
           id: string
           license_key: string
@@ -321,6 +322,7 @@ export type Database = {
         Insert: {
           aktiv?: boolean | null
           created_at?: string | null
+          description?: string | null
           has_file_upload?: boolean | null
           id?: string
           license_key: string
@@ -334,6 +336,7 @@ export type Database = {
         Update: {
           aktiv?: boolean | null
           created_at?: string | null
+          description?: string | null
           has_file_upload?: boolean | null
           id?: string
           license_key?: string
@@ -620,6 +623,7 @@ export type Database = {
           aktiv: boolean
           id: string
           has_file_upload: boolean
+          description: string
         }[]
       }
       check_license_by_server_key: {
@@ -635,6 +639,7 @@ export type Database = {
           aktiv: boolean
           id: string
           has_file_upload: boolean
+          description: string
         }[]
       }
       create_license: {
@@ -643,6 +648,12 @@ export type Database = {
               p_script_name: string
               p_script_file?: string
               p_server_ip?: string
+            }
+          | {
+              p_script_name: string
+              p_script_file?: string
+              p_server_ip?: string
+              p_description?: string
             }
           | { p_script_name: string; p_server_ip?: string }
         Returns: {
@@ -776,6 +787,7 @@ export type Database = {
           server_ip: string
           has_file_upload: boolean
           updated_at: string
+          description: string
         }[]
       }
       get_user_pro_status: {
@@ -885,15 +897,26 @@ export type Database = {
         Returns: boolean
       }
       update_license: {
-        Args: {
-          p_license_id: string
-          p_script_name?: string
-          p_script_file?: string
-          p_server_ip?: string
-          p_aktiv?: boolean
-          p_has_file_upload?: boolean
-          p_regenerate_server_key?: boolean
-        }
+        Args:
+          | {
+              p_license_id: string
+              p_script_name?: string
+              p_script_file?: string
+              p_server_ip?: string
+              p_aktiv?: boolean
+              p_has_file_upload?: boolean
+              p_regenerate_server_key?: boolean
+            }
+          | {
+              p_license_id: string
+              p_script_name?: string
+              p_script_file?: string
+              p_server_ip?: string
+              p_aktiv?: boolean
+              p_has_file_upload?: boolean
+              p_regenerate_server_key?: boolean
+              p_description?: string
+            }
         Returns: {
           success: boolean
           server_key: string

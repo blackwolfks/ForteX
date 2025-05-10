@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { License, NewScriptFormData } from "./types";
 import { callRPC, supabase } from "@/lib/supabase";

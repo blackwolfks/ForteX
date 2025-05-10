@@ -104,6 +104,7 @@ export type RpcParams = {
     p_script_name: string;
     p_script_file?: string | null;
     p_server_ip?: string | null;
+    p_description?: string | null;
   };
   'regenerate_server_key': {
     p_license_id: string;
@@ -116,6 +117,7 @@ export type RpcParams = {
     p_regenerate_server_key?: boolean;
     p_server_ip?: string | null;
     p_has_file_upload?: boolean;
+    p_description?: string | null;
   };
   'delete_license': {
     p_license_id: string;
