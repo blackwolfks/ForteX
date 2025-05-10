@@ -12,16 +12,16 @@ export interface License {
   created_at: string;
   updated_at?: string;
   description?: string | null;
-  game_server?: GameServerType; // Neu hinzugefügt
-  category?: ScriptCategoryType; // Neu hinzugefügt
+  game_server?: GameServerType;
+  category?: ScriptCategoryType;
 }
 
 export interface NewScriptFormData {
   name: string;
   serverIp?: string | null;
   description?: string | null;
-  game_server: GameServerType; // Neu hinzugefügt
-  category: ScriptCategoryType; // Neu hinzugefügt
+  game_server: GameServerType;
+  category: ScriptCategoryType;
 }
 
 export interface FileItem {

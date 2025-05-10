@@ -74,6 +74,22 @@ const RemoteScriptsView = ({ gameServer = 'fivem', category = 'script' }: Remote
     return categoryNames[category];
   };
 
+  // Create a ScriptCard component adapter for the handleUpdateScript function
+  const handleScriptCardUpdate = async (
+    licenseId: string, 
+    scriptName: string, 
+    scriptCode: string, 
+    serverIp: string, 
+    isActive: boolean
+  ) => {
+    // Map the parameters to what handleUpdateScript expects
+    return await handleUpdateScript(licenseId, {
+      name: scriptName,
+      description: scriptCode,  // Using scriptCode as description
+      is_active: isActive
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">

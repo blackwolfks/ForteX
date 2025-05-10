@@ -66,9 +66,18 @@ const CreateScriptDialog = ({
     setIsSubmitting(true);
     
     try {
+      // Make sure name is not empty (it should already be validated by zod)
+      if (!values.name || values.name.trim() === "") {
+        toast.error("Script Name ist erforderlich");
+        setIsSubmitting(false);
+        return;
+      }
+      
       // Füge gameServer und category zu den Formulardaten hinzu
       const scriptData: NewScriptFormData = {
-        ...values,
+        name: values.name.trim(), // Ensure name is provided and trimmed
+        serverIp: values.serverIp,
+        description: values.description,
         game_server: gameServer,
         category: category,
       };
