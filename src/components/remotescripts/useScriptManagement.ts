@@ -39,22 +39,21 @@ export const useScriptManagement = () => {
       const serverKey = generateRandomString(32);
       const licenseKey = generateRandomString(16);
 
+      // Create description JSON
+      const descriptionJson = JSON.stringify({
+        text: scriptData.description || null,
+        game_server: scriptData.game_server,
+        category: scriptData.category
+      });
+
       // Insert the script data into Supabase
-      // We need to explicitly define the columns that exist in the database
       const { data, error } = await supabase.from("server_licenses").insert({
         script_name: scriptData.name,
         server_ip: scriptData.serverIp || null,
         server_key: serverKey,
         license_key: licenseKey,
-        description: scriptData.description || null,
-        has_file_upload: files.length > 0,
-        // Store game_server and category as JSON in description field if needed
-        // We'll use a special format that we can parse later
-        description: JSON.stringify({
-          text: scriptData.description || null,
-          game_server: scriptData.game_server,
-          category: scriptData.category
-        })
+        description: descriptionJson,
+        has_file_upload: files.length > 0
       }).select();
 
       if (error) throw error;
