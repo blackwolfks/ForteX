@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { NewScriptFormData } from "./types";
 import { toast } from "sonner";
+import { Textarea } from "@/components/ui/textarea";
 
 interface CreateScriptDialogProps {
   open: boolean;
@@ -17,6 +18,7 @@ const CreateScriptDialog = ({ open, onOpenChange, onCreateScript }: CreateScript
   const [newScript, setNewScript] = useState<NewScriptFormData>({
     name: "",
     serverIp: "",
+    description: "",
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -32,7 +34,7 @@ const CreateScriptDialog = ({ open, onOpenChange, onCreateScript }: CreateScript
       // Pass empty files array as files are no longer required
       await onCreateScript(newScript, []);
       // Reset form
-      setNewScript({ name: "", serverIp: "" });
+      setNewScript({ name: "", serverIp: "", description: "" });
       onOpenChange(false);
     } catch (error) {
       console.error("Error in form submission:", error);
@@ -59,6 +61,17 @@ const CreateScriptDialog = ({ open, onOpenChange, onCreateScript }: CreateScript
               value={newScript.name} 
               onChange={(e) => setNewScript({...newScript, name: e.target.value})} 
               placeholder="Mein Script" 
+            />
+          </div>
+          
+          <div className="grid gap-2">
+            <Label htmlFor="script-description">Beschreibung (Optional)</Label>
+            <Textarea
+              id="script-description"
+              value={newScript.description}
+              onChange={(e) => setNewScript({...newScript, description: e.target.value})}
+              placeholder="Beschreibung des Scripts..."
+              rows={3}
             />
           </div>
           

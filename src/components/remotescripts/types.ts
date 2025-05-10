@@ -1,4 +1,3 @@
-
 export interface License {
   id: string;
   script_name: string;
@@ -10,11 +9,13 @@ export interface License {
   created_at: string;
   has_file_upload: boolean;
   script_file: string | null;
+  description?: string;
 }
 
 export interface NewScriptFormData {
   name: string;
   serverIp?: string;
+  description?: string;
 }
 
 export interface LogEntry {
