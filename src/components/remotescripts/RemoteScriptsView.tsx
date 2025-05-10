@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -88,6 +87,11 @@ const RemoteScriptsView = ({ gameServer = 'fivem', category = 'script' }: Remote
       description: scriptCode,  // Using scriptCode as description
       is_active: isActive
     });
+  };
+
+  // In your component, find the onUpdate function and update it to match the interface:
+  const handleUpdateScript = (licenseId: string, updates: { name?: string; description?: string; is_active?: boolean }) => {
+    return scriptManagement.handleUpdateScript(licenseId, updates);
   };
 
   return (

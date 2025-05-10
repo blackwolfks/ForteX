@@ -23,7 +23,6 @@ import {
 } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Upload, X } from "lucide-react";
 import { GameServerType, ScriptCategoryType, NewScriptFormData } from "./types";
 
 interface CreateScriptDialogProps {
@@ -50,7 +49,6 @@ const CreateScriptDialog = ({
   gameServer,
   category,
 }: CreateScriptDialogProps) => {
-  const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -82,10 +80,10 @@ const CreateScriptDialog = ({
         category: category,
       };
       
-      await onCreateScript(scriptData, files);
+      // Pass empty array for files since we've removed the upload functionality
+      await onCreateScript(scriptData, []);
       
       form.reset();
-      setFiles([]);
       toast.success("Script erfolgreich erstellt");
     } catch (error) {
       console.error("Fehler beim Erstellen des Scripts:", error);
@@ -93,28 +91,6 @@ const CreateScriptDialog = ({
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const selectedFiles = Array.from(e.target.files);
-      
-      // Prüfe, ob die ausgewählte Datei eine ZIP-Datei ist
-      const invalidFiles = selectedFiles.filter(file => 
-        !(file.type === "application/zip" || file.name.toLowerCase().endsWith(".zip"))
-      );
-      
-      if (invalidFiles.length > 0) {
-        toast.error("Es sind nur ZIP-Dateien erlaubt");
-        return;
-      }
-      
-      setFiles(prev => [...prev, ...selectedFiles]);
-    }
-  };
-
-  const removeFile = (index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const getServerTitle = (): string => {
@@ -198,55 +174,6 @@ const CreateScriptDialog = ({
                 </FormItem>
               )}
             />
-
-            {/* Datei-Upload-Bereich */}
-            <div className="space-y-2">
-              <FormLabel>Dateien (optional, nur ZIP-Dateien)</FormLabel>
-              <div className="border border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-muted/50 transition-colors">
-                <input
-                  type="file"
-                  id="file-upload"
-                  className="hidden"
-                  onChange={handleFileChange}
-                  accept=".zip"
-                  multiple
-                />
-                <label htmlFor="file-upload" className="cursor-pointer">
-                  <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                  <p>Klicken Sie hier, um Dateien hochzuladen</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Nur ZIP-Dateien erlaubt
-                  </p>
-                </label>
-              </div>
-
-              {/* Liste der hochgeladenen Dateien */}
-              {files.length > 0 && (
-                <ul className="mt-3 space-y-2">
-                  {files.map((file, index) => (
-                    <li
-                      key={index}
-                      className="flex items-center justify-between p-2 bg-muted rounded"
-                    >
-                      <div className="overflow-hidden">
-                        <p className="truncate text-sm">{file.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {(file.size / 1024 / 1024).toFixed(2)} MB
-                        </p>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeFile(index)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
 
             <DialogFooter>
               <Button

@@ -24,7 +24,33 @@ export const useScriptManagement = () => {
 
       if (error) throw error;
       
-      setLicenses(data || []);
+      // Parse description JSON for each license to get game_server and category
+      const parsedLicenses = (data || []).map(license => {
+        let description = license.description;
+        let gameServer = undefined;
+        let category = undefined;
+        
+        try {
+          if (license.description) {
+            const parsed = JSON.parse(license.description);
+            description = parsed.text;
+            gameServer = parsed.game_server;
+            category = parsed.category;
+          }
+        } catch (e) {
+          // If parsing fails, use the description as is
+          console.warn("Could not parse description JSON for license:", license.id);
+        }
+        
+        return {
+          ...license,
+          description,
+          game_server: gameServer,
+          category: category
+        };
+      });
+      
+      setLicenses(parsedLicenses);
     } catch (error) {
       console.error("Error fetching licenses:", error);
       toast.error("Fehler beim Laden der Lizenzen");
@@ -53,41 +79,12 @@ export const useScriptManagement = () => {
         server_key: serverKey,
         license_key: licenseKey,
         description: descriptionJson,
-        has_file_upload: files.length > 0
+        has_file_upload: false // Always false since we removed file upload functionality
       }).select();
 
       if (error) throw error;
 
       const newLicense = data[0];
-      
-      // Handle file uploads if there are any
-      if (files.length > 0 && newLicense) {
-        for (const file of files) {
-          const filePath = `scripts/${newLicense.id}/${file.name}`;
-          
-          const { error: uploadError } = await supabase.storage
-            .from("script")
-            .upload(filePath, file);
-
-          if (uploadError) {
-            console.error("Error uploading file:", uploadError);
-            throw uploadError;
-          }
-
-          // Create file access record
-          const { error: accessError } = await supabase
-            .from("script_file_access")
-            .insert({
-              license_id: newLicense.id,
-              file_path: filePath,
-              is_public: false
-            });
-
-          if (accessError) {
-            console.error("Error creating file access record:", accessError);
-          }
-        }
-      }
 
       // Parse the description from JSON to get our custom fields
       let parsedDescription;
