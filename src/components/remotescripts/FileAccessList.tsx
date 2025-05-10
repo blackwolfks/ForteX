@@ -37,7 +37,7 @@ const FileAccessList = ({
       <TableBody>
         {files.map((file, index) => (
           <FileAccessItem
-            key={file.fullPath}
+            key={file.id || `${file.name}-${index}`}
             file={file}
             index={index}
             formatFileSize={formatFileSize}

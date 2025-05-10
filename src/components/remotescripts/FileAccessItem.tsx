@@ -25,6 +25,9 @@ const FileAccessItem = ({
   onEdit,
   onDelete
 }: FileAccessItemProps) => {
+  // Use is_public with isPublic as fallback for backwards compatibility
+  const isPublic = file.is_public ?? file.isPublic ?? false;
+  
   return (
     <TableRow>
       <TableCell>
@@ -34,12 +37,12 @@ const FileAccessItem = ({
       <TableCell>
         <div className="flex items-center space-x-3">
           <Switch
-            checked={file.isPublic}
+            checked={isPublic}
             onCheckedChange={() => toggleFileVisibility(index)}
             id={`file-visibility-${index}`}
           />
           <Label htmlFor={`file-visibility-${index}`} className="flex items-center">
-            {file.isPublic ? (
+            {isPublic ? (
               <>
                 <Eye className="mr-2 h-4 w-4 text-green-500" />
                 <span>Öffentlich</span>

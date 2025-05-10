@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { callRPC, supabase, checkStorageBucket } from "@/lib/supabase";
@@ -81,9 +80,11 @@ export const useFileAccess = (licenseId: string) => {
         return {
           name: file.name,
           id: file.id || "",
-          size: file.metadata?.size || 0,
-          isPublic: accessEntry ? accessEntry.is_public : false,
+          path: file.name,  // Use name as path
           fullPath: `${licenseId}/${file.name}`,
+          size: file.metadata?.size || 0,
+          is_public: accessEntry ? accessEntry.is_public : false,
+          isPublic: accessEntry ? accessEntry.is_public : false,  // For compatibility
           lastModified: file.metadata?.lastModified || new Date().toISOString(),
           type: file.metadata?.mimetype || "application/octet-stream",
           metadata: {
@@ -118,6 +119,7 @@ export const useFileAccess = (licenseId: string) => {
       const newFiles = [...prevFiles];
       newFiles[index] = {
         ...newFiles[index],
+        is_public: !newFiles[index].is_public,
         isPublic: !newFiles[index].isPublic
       };
       return newFiles;
@@ -135,7 +137,7 @@ export const useFileAccess = (licenseId: string) => {
         callRPC('update_file_access', {
           p_license_id: licenseId,
           p_file_path: file.name,
-          p_is_public: file.isPublic
+          p_is_public: file.is_public
         })
       );
       
@@ -166,11 +168,11 @@ export const useFileAccess = (licenseId: string) => {
   
   const downloadFile = async (file: FileItem) => {
     try {
-      console.log(`Downloading file: ${file.fullPath}`);
+      console.log(`Downloading file: ${file.fullPath || `${licenseId}/${file.name}`}`);
       
       const { data, error } = await supabase.storage
         .from('script')
-        .download(file.fullPath);
+        .download(file.fullPath || `${licenseId}/${file.name}`);
         
       if (error) {
         console.error("Error downloading file:", error);
@@ -251,11 +253,11 @@ export const useFileAccess = (licenseId: string) => {
   
   const fetchFileContent = async (file: FileItem) => {
     try {
-      console.log(`Fetching content for file: ${file.fullPath}`);
+      console.log(`Fetching content for file: ${file.fullPath || `${licenseId}/${file.name}`}`);
       
       const { data, error } = await supabase.storage
         .from('script')
-        .download(file.fullPath);
+        .download(file.fullPath || `${licenseId}/${file.name}`);
         
       if (error) {
         console.error("Error downloading file for editing:", error);
@@ -311,14 +313,14 @@ export const useFileAccess = (licenseId: string) => {
     if (!currentFile) return false;
     
     try {
-      console.log(`Saving edited file: ${currentFile.fullPath}`);
+      console.log(`Saving edited file: ${currentFile.fullPath || `${licenseId}/${currentFile.name}`}`);
       
       // Convert string to blob
       const blob = new Blob([newContent], { type: 'text/plain' });
       
       const { error } = await supabase.storage
         .from('script')
-        .update(currentFile.fullPath, blob);
+        .update(currentFile.fullPath || `${licenseId}/${currentFile.name}`, blob);
         
       if (error) {
         console.error("Error updating file:", error);
@@ -353,11 +355,11 @@ export const useFileAccess = (licenseId: string) => {
     }
     
     try {
-      console.log(`Deleting file: ${file.fullPath}`);
+      console.log(`Deleting file: ${file.fullPath || `${licenseId}/${file.name}`}`);
       
       const { error } = await supabase.storage
         .from('script')
-        .remove([file.fullPath]);
+        .remove([file.fullPath || `${licenseId}/${file.name}`]);
         
       if (error) {
         console.error("Error deleting file:", error);
@@ -446,12 +448,12 @@ export const useFileAccess = (licenseId: string) => {
         case "name_desc":
           return b.name.localeCompare(a.name);
         case "size_asc":
-          const sizeA = a.metadata?.size || a.size || 0;
-          const sizeB = b.metadata?.size || b.size || 0;
+          const sizeA = (a.size || a.metadata?.size || 0);
+          const sizeB = (b.size || b.metadata?.size || 0);
           return sizeA - sizeB;
         case "size_desc":
-          const sizeBDesc = b.metadata?.size || b.size || 0;
-          const sizeADesc = a.metadata?.size || a.size || 0;
+          const sizeBDesc = (b.size || b.metadata?.size || 0);
+          const sizeADesc = (a.size || a.metadata?.size || 0);
           return sizeBDesc - sizeADesc;
         case "updated_asc":
           const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
