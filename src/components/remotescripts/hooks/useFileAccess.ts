@@ -70,12 +70,16 @@ export const useFileAccess = (licenseId: string) => {
         });
         toast.error("Fehler beim Laden der Dateizugriffsrechte");
       }
-      
+
       // Combine storage files with access permissions
       const filesList: FileItem[] = (storageFiles || []).map(file => {
         const accessEntry = accessData?.find((access: any) => 
           access.file_path === file.name
         );
+        
+        // Determine file type
+        const isZipFile = file.name.toLowerCase().endsWith('.zip');
+        const mimeType = isZipFile ? 'application/zip' : 'text/x-lua';
         
         return {
           name: file.name,
@@ -86,10 +90,10 @@ export const useFileAccess = (licenseId: string) => {
           is_public: accessEntry ? accessEntry.is_public : false,
           isPublic: accessEntry ? accessEntry.is_public : false,  // For compatibility
           lastModified: file.metadata?.lastModified || new Date().toISOString(),
-          type: file.metadata?.mimetype || "application/octet-stream",
+          type: file.metadata?.mimetype || mimeType,
           metadata: {
             size: file.metadata?.size || 0,
-            mimetype: file.metadata?.mimetype || "application/octet-stream",
+            mimetype: file.metadata?.mimetype || mimeType,
             cacheControl: file.metadata?.cacheControl,
             lastModified: file.metadata?.lastModified
           },
@@ -120,7 +124,7 @@ export const useFileAccess = (licenseId: string) => {
       newFiles[index] = {
         ...newFiles[index],
         is_public: !newFiles[index].is_public,
-        isPublic: !newFiles[index].isPublic
+        isPublic: !newFiles[index].is_public
       };
       return newFiles;
     });
@@ -197,7 +201,8 @@ export const useFileAccess = (licenseId: string) => {
       URL.revokeObjectURL(url);
       document.body.removeChild(a);
       
-      toast.success(`Datei "${file.name}" erfolgreich heruntergeladen`);
+      const fileType = file.name.toLowerCase().endsWith('.zip') ? 'ZIP-Archiv' : 'Lua-Datei';
+      toast.success(`${fileType} "${file.name}" erfolgreich heruntergeladen`);
     } catch (error) {
       console.error("Error in downloadFile:", error);
       await logError(licenseId, `Exception downloading file ${file.name}: ${error instanceof Error ? error.message : String(error)}`, {
@@ -253,6 +258,12 @@ export const useFileAccess = (licenseId: string) => {
   
   const fetchFileContent = async (file: FileItem) => {
     try {
+      // Skip editing for ZIP files
+      if (file.name.toLowerCase().endsWith('.zip')) {
+        toast.info("ZIP-Dateien können nicht direkt bearbeitet werden");
+        return null;
+      }
+      
       console.log(`Fetching content for file: ${file.fullPath || `${licenseId}/${file.name}`}`);
       
       const { data, error } = await supabase.storage
@@ -292,6 +303,12 @@ export const useFileAccess = (licenseId: string) => {
   
   const editFile = async (file: FileItem) => {
     try {
+      // Check if it's a ZIP file
+      if (file.name.toLowerCase().endsWith('.zip')) {
+        toast.info("ZIP-Dateien können nicht direkt bearbeitet werden");
+        return;
+      }
+      
       setCurrentFile(file);
       const content = await fetchFileContent(file);
       if (content !== null) {
@@ -425,15 +442,18 @@ export const useFileAccess = (licenseId: string) => {
     // Apply file type filter if not "all"
     if (fileTypeFilter !== "all") {
       filteredFiles = filteredFiles.filter(file => {
+        const fileName = file.name.toLowerCase();
         switch (fileTypeFilter) {
           case "lua":
-            return file.name.toLowerCase().endsWith(".lua");
+            return fileName.endsWith(".lua");
+          case "zip":
+            return fileName.endsWith(".zip");
           case "js":
-            return file.name.toLowerCase().endsWith(".js");
+            return fileName.endsWith(".js");
           case "json":
-            return file.name.toLowerCase().endsWith(".json");
+            return fileName.endsWith(".json");
           case "config":
-            return file.name.toLowerCase().includes("config");
+            return fileName.includes("config");
           default:
             return true;
         }
@@ -463,6 +483,11 @@ export const useFileAccess = (licenseId: string) => {
           const dateBDesc = b.updated_at ? new Date(b.updated_at).getTime() : 0;
           const dateADesc = a.updated_at ? new Date(a.updated_at).getTime() : 0;
           return dateBDesc - dateADesc;
+        case "type":
+          // Sort by file type - zip files first, then lua, then others
+          const typeA = a.name.toLowerCase().endsWith('.zip') ? 0 : (a.name.toLowerCase().endsWith('.lua') ? 1 : 2);
+          const typeB = b.name.toLowerCase().endsWith('.zip') ? 0 : (b.name.toLowerCase().endsWith('.lua') ? 1 : 2);
+          return typeA - typeB;
         default:
           return 0;
       }
@@ -490,6 +515,8 @@ export const useFileAccess = (licenseId: string) => {
     setSortOrder,
     fileTypeFilter,
     setFileTypeFilter,
-    getFilteredAndSortedFiles
+    getFilteredAndSortedFiles,
+    cleanFileContent,
+    fetchFiles
   };
 };

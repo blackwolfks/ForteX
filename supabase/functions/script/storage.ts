@@ -1,6 +1,6 @@
 
 // Function to get all script files for a license
-export async function getAllScriptFiles(supabase: any, licenseId: string): Promise<{ content?: Record<string, string>, error?: string }> {
+export async function getAllScriptFiles(supabase: any, licenseId: string): Promise<{ content?: Record<string, string>, error?: string, zipFiles?: string[] }> {
   try {
     console.log(`Fetching script files for license ID: ${licenseId}`);
     
@@ -19,11 +19,12 @@ export async function getAllScriptFiles(supabase: any, licenseId: string): Promi
     }
     
     const content: Record<string, string> = {};
+    const zipFiles: string[] = [];
     
     // Process each file
     for (const fileInfo of data) {
       if (fileInfo.name.endsWith(".lua")) {
-        console.log(`Processing file: ${licenseId}/${fileInfo.name}`);
+        console.log(`Processing Lua file: ${licenseId}/${fileInfo.name}`);
         
         const { data: fileData, error: fileError } = await supabase.storage
           .from("script")
@@ -49,10 +50,14 @@ export async function getAllScriptFiles(supabase: any, licenseId: string): Promi
         content[fileInfo.name] = text;
         
         console.log(`File '${fileInfo.name}' successfully loaded`);
+      } else if (fileInfo.name.endsWith(".zip")) {
+        // Track ZIP files for information purposes
+        console.log(`Found ZIP file: ${licenseId}/${fileInfo.name}`);
+        zipFiles.push(fileInfo.name);
       }
     }
     
-    return { content };
+    return { content, zipFiles };
     
   } catch (error) {
     console.error("Error fetching script files:", error);

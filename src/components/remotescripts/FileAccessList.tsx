@@ -24,6 +24,16 @@ const FileAccessList = ({
     return <div className="text-center py-4">Keine Dateien vorhanden</div>;
   }
 
+  // Sortiere die Dateien so, dass ZIP-Dateien zuerst angezeigt werden
+  const sortedFiles = [...files].sort((a, b) => {
+    const aIsZip = a.name.toLowerCase().endsWith('.zip');
+    const bIsZip = b.name.toLowerCase().endsWith('.zip');
+    
+    if (aIsZip && !bIsZip) return -1;
+    if (!aIsZip && bIsZip) return 1;
+    return a.name.localeCompare(b.name);
+  });
+
   return (
     <Table>
       <TableHeader>
@@ -35,7 +45,7 @@ const FileAccessList = ({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {files.map((file, index) => (
+        {sortedFiles.map((file, index) => (
           <FileAccessItem
             key={file.id || `${file.name}-${index}`}
             file={file}

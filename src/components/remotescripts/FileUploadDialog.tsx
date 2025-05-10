@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, FileArchive } from "lucide-react";
 import { callRPC } from "@/lib/supabase";
 import { uploadFileWithProgress } from "@/services/file-uploader";
 import { toast } from "sonner";
@@ -34,10 +34,10 @@ export default function FileUploadDialog({
       const file = e.target.files[0];
       console.log("Selected file:", file.name, "Type:", file.type);
       
-      // Überprüfe, ob es sich um eine .lua-Datei handelt
+      // Prüft, ob es sich um eine .lua oder .zip Datei handelt
       const fileExtension = file.name.split('.').pop()?.toLowerCase();
-      if (fileExtension !== 'lua') {
-        setUploadError("Nur .lua-Dateien sind erlaubt.");
+      if (fileExtension !== 'lua' && fileExtension !== 'zip') {
+        setUploadError("Nur .lua oder .zip Dateien sind erlaubt.");
         setSelectedFile(null);
         return;
       }
@@ -72,10 +72,18 @@ export default function FileUploadDialog({
       const filePath = `${licenseId}/${selectedFile.name}`;
       console.log("Uploading to path:", filePath);
       
-      // Convert to array buffer and create a text blob with explicit text/x-lua MIME type
+      // Bestimmen des korrekten MIME-Typs
+      const fileExtension = selectedFile.name.split('.').pop()?.toLowerCase();
+      let mimeType = 'text/x-lua';
+      
+      if (fileExtension === 'zip') {
+        mimeType = 'application/zip';
+      }
+      
+      // Convert to array buffer and create a blob with correct MIME type
       const fileArrayBuffer = await selectedFile.arrayBuffer();
-      const fileBlob = new Blob([fileArrayBuffer], { type: 'text/x-lua' });
-      const modifiedFile = new File([fileBlob], selectedFile.name, { type: 'text/x-lua' });
+      const fileBlob = new Blob([fileArrayBuffer], { type: mimeType });
+      const modifiedFile = new File([fileBlob], selectedFile.name, { type: mimeType });
       
       // Upload the file - Using 'script' bucket
       const success = await uploadFileWithProgress(
@@ -120,7 +128,7 @@ export default function FileUploadDialog({
         <DialogHeader>
           <DialogTitle>Datei hochladen</DialogTitle>
           <DialogDescription>
-            Wählen Sie eine Lua-Datei aus, die Sie für dieses Script hochladen möchten.
+            Wählen Sie eine Lua- oder ZIP-Datei aus, die Sie für dieses Script hochladen möchten.
           </DialogDescription>
         </DialogHeader>
         
@@ -131,7 +139,7 @@ export default function FileUploadDialog({
             type="file" 
             onChange={handleFileChange}
             disabled={uploading}
-            accept=".lua"
+            accept=".lua,.zip"
           />
           
           {selectedFile && (
@@ -141,7 +149,7 @@ export default function FileUploadDialog({
                 {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
               </p>
               <p className="text-xs text-muted-foreground">
-                Typ: Lua-Datei
+                Typ: {selectedFile.name.endsWith('.zip') ? 'ZIP-Archiv' : 'Lua-Datei'}
               </p>
             </div>
           )}
@@ -168,7 +176,8 @@ export default function FileUploadDialog({
           )}
           
           <div className="text-xs text-muted-foreground">
-            <p>Unterstützte Dateitypen: nur .lua Dateien</p>
+            <p>Unterstützte Dateitypen: .lua und .zip Dateien</p>
+            <p>Hinweis: ZIP-Dateien können von Käufern des Scripts heruntergeladen werden.</p>
             <p>Maximale Dateigröße: 10MB</p>
           </div>
         </div>

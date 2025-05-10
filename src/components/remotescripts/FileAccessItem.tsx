@@ -1,10 +1,11 @@
 
-import { Download, Edit, Eye, EyeOff, Trash2 } from "lucide-react";
+import { Download, Edit, Eye, EyeOff, Trash2, FileArchive } from "lucide-react";
 import { TableRow, TableCell } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { FileItem } from "./types";
+import { Badge } from "@/components/ui/badge";
 
 interface FileAccessItemProps {
   file: FileItem;
@@ -27,11 +28,20 @@ const FileAccessItem = ({
 }: FileAccessItemProps) => {
   // Use is_public with isPublic as fallback for backwards compatibility
   const isPublic = file.is_public ?? file.isPublic ?? false;
+  const isZipFile = file.name.toLowerCase().endsWith('.zip');
   
   return (
     <TableRow>
       <TableCell>
-        <div className="font-medium">{file.name}</div>
+        <div className="font-medium flex items-center">
+          {isZipFile ? (
+            <FileArchive className="h-4 w-4 mr-2 text-blue-500" />
+          ) : null}
+          <span>{file.name}</span>
+          {isZipFile && (
+            <Badge variant="outline" className="ml-2">Downloadbar</Badge>
+          )}
+        </div>
       </TableCell>
       <TableCell>{formatFileSize(file.size || 0)}</TableCell>
       <TableCell>
@@ -69,6 +79,7 @@ const FileAccessItem = ({
             variant="ghost" 
             size="sm" 
             onClick={() => onEdit(file)}
+            disabled={isZipFile}
           >
             <Edit className="h-4 w-4" />
           </Button>

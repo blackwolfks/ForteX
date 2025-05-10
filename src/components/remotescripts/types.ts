@@ -40,6 +40,13 @@ export interface FileItem {
   };
 }
 
+// ZIP-Datei Einstellungen
+export interface ZipFileSettings {
+  allowDownload: boolean;
+  version?: string;
+  releaseNotes?: string;
+}
+
 // Wieder hinzugefügt, da diese in LogsView.tsx verwendet werden
 export interface LogEntry {
   id: string;

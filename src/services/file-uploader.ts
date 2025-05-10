@@ -1,3 +1,4 @@
+
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
@@ -10,12 +11,16 @@ interface UploadResult {
  * Utility to determine MIME type from file extension
  */
 export const getMimeType = (filename: string): string => {
-  // For Lua files, always use text/plain which is more widely accepted
-  if (filename.toLowerCase().endsWith('.lua')) {
-    return 'text/plain';
-  }
+  const extension = filename.toLowerCase().split('.').pop();
   
-  return 'application/octet-stream';
+  switch (extension) {
+    case 'lua':
+      return 'text/plain';
+    case 'zip':
+      return 'application/zip';
+    default:
+      return 'application/octet-stream';
+  }
 };
 
 /**
@@ -104,6 +109,11 @@ export const uploadFile = async (
     onProgress?.(20);
     console.log(`Uploading ${file.name} to ${bucketName}/${filePath} (size: ${file.size} bytes)`);
     
+    // Determine the appropriate MIME type
+    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+    const isZipFile = fileExtension === 'zip';
+    const defaultMimeType = isZipFile ? 'application/zip' : 'text/plain';
+    
     // Try multiple upload strategies
     let uploadSuccess = false;
     let uploadAttempt = 0;
@@ -126,21 +136,22 @@ export const uploadFile = async (
         
         let fileBlob: Blob;
         
-        // Different strategies for each attempt, prioritizing text/x-lua
+        // Different strategies for each attempt
         if (uploadAttempt === 1) {
-          // First attempt: Use text/x-lua MIME type
-          uploadOptions.contentType = 'text/x-lua';
-          fileBlob = new Blob([fileArrayBuffer], { type: 'text/x-lua' });
-          console.log(`Attempt ${uploadAttempt}: Using text/x-lua content type`);
+          // First attempt: Use the default MIME type for the file type
+          uploadOptions.contentType = defaultMimeType;
+          fileBlob = new Blob([fileArrayBuffer], { type: defaultMimeType });
+          console.log(`Attempt ${uploadAttempt}: Using ${defaultMimeType} content type`);
         } 
         else if (uploadAttempt === 2) {
-          // Second attempt: Use text/plain MIME type
-          uploadOptions.contentType = 'text/plain';
-          fileBlob = new Blob([fileArrayBuffer], { type: 'text/plain' });
-          console.log(`Attempt ${uploadAttempt}: Using text/plain content type`);
+          // Second attempt: If it's a zip file, try application/octet-stream, otherwise text/plain
+          const mimeType = isZipFile ? 'application/octet-stream' : 'text/plain';
+          uploadOptions.contentType = mimeType;
+          fileBlob = new Blob([fileArrayBuffer], { type: mimeType });
+          console.log(`Attempt ${uploadAttempt}: Using ${mimeType} content type`);
         }
         else if (uploadAttempt === 3) {
-          // Third attempt: Use application/octet-stream MIME type
+          // Third attempt: Use application/octet-stream for both types
           uploadOptions.contentType = 'application/octet-stream';
           fileBlob = new Blob([fileArrayBuffer], { type: 'application/octet-stream' });
           console.log(`Attempt ${uploadAttempt}: Using application/octet-stream content type`);
