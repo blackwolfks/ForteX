@@ -137,6 +137,16 @@ export default function ScriptCard({
                 </div>
               )}
               
+              {/* Description - Neu hinzugefügt */}
+              {license.description && (
+                <div>
+                  <Label className="text-xs">Beschreibung</Label>
+                  <div className="mt-1 p-3 bg-muted rounded text-sm">
+                    {license.description}
+                  </div>
+                </div>
+              )}
+              
               {/* Actions */}
               <div className="flex justify-end pt-4 space-x-2">
                 <Button 

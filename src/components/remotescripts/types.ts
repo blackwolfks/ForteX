@@ -1,59 +1,31 @@
+
+// Wenn diese Datei nicht existiert, erstelle ich sie mit den grundlegenden Typen
 export interface License {
   id: string;
-  script_name: string;
   license_key: string;
   server_key: string;
+  script_name: string;
+  script_file: string | null;
   server_ip: string | null;
   aktiv: boolean;
-  user_id: string;
-  created_at: string;
   has_file_upload: boolean;
-  script_file: string | null;
-  description?: string;
+  created_at: string;
+  updated_at?: string;
+  description?: string | null;
 }
 
 export interface NewScriptFormData {
   name: string;
-  serverIp?: string;
-  description?: string;
-}
-
-export interface LogEntry {
-  id: string;
-  licenseId: string;
-  timestamp: string;
-  level: string;
-  message: string;
-  source?: string;
-  details?: string;
-  errorCode?: string;
-  clientIp?: string;
-  fileName?: string;
-  scriptName: string;
-}
-
-export interface LogsFilter {
-  level: 'all' | 'error' | 'warning' | 'info' | 'debug';
-  search?: string;
-  source?: string;
-  licenseId: string | null;
-  startDate?: Date;
-  endDate?: Date;
+  serverIp?: string | null;
+  description?: string | null;
 }
 
 export interface FileItem {
+  id?: string;
   name: string;
-  size: number;
-  isPublic: boolean;
-  lastModified: string;
-  type: string;
-  fullPath: string;
-  metadata: {
-    size: number;
-    mimetype?: string;
-    cacheControl?: string;
-    lastModified?: string;
-  };
+  path: string;
+  size?: number;
+  is_public?: boolean;
+  created_at?: string;
   updated_at?: string;
-  id: string;
 }
