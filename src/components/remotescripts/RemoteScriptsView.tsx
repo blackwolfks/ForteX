@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -77,8 +78,8 @@ const RemoteScriptsView = ({ gameServer = 'fivem', category = 'script' }: Remote
   const handleScriptCardUpdate = async (
     licenseId: string, 
     scriptName: string, 
-    scriptCode: string, 
-    serverIp: string, 
+    scriptCode: string | null, 
+    serverIp: string | null, 
     isActive: boolean
   ) => {
     // Map the parameters to what handleUpdateScript expects
@@ -87,11 +88,6 @@ const RemoteScriptsView = ({ gameServer = 'fivem', category = 'script' }: Remote
       description: scriptCode,  // Using scriptCode as description
       is_active: isActive
     });
-  };
-
-  // In your component, find the onUpdate function and update it to match the interface:
-  const handleUpdateScript = (licenseId: string, updates: { name?: string; description?: string; is_active?: boolean }) => {
-    return scriptManagement.handleUpdateScript(licenseId, updates);
   };
 
   return (
@@ -173,7 +169,7 @@ const RemoteScriptsView = ({ gameServer = 'fivem', category = 'script' }: Remote
             <ScriptCard
               key={license.id}
               license={license}
-              onUpdateScript={handleUpdateScript}
+              onUpdateScript={handleScriptCardUpdate}
               onRegenerateServerKey={handleRegenerateServerKey}
               onDeleteScript={handleDeleteScript}
             />

@@ -72,6 +72,14 @@ export const useScriptManagement = () => {
         category: scriptData.category
       });
 
+      // Get the user ID from the authenticated session
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
+      
+      if (!userId) {
+        throw new Error("User not authenticated");
+      }
+
       // Insert the script data into Supabase
       const { data, error } = await supabase.from("server_licenses").insert({
         script_name: scriptData.name,
@@ -79,7 +87,8 @@ export const useScriptManagement = () => {
         server_key: serverKey,
         license_key: licenseKey,
         description: descriptionJson,
-        has_file_upload: false // Always false since we removed file upload functionality
+        has_file_upload: false, // Always false since we removed file upload functionality
+        user_id: userId // Include the user_id in the insert
       }).select();
 
       if (error) throw error;
@@ -137,9 +146,9 @@ export const useScriptManagement = () => {
       const { error } = await supabase
         .from("server_licenses")
         .update({
-          script_name: updates.name,
+          script_name: updates.name || existingLicense.script_name,
           description: JSON.stringify(descriptionObject),
-          aktiv: updates.is_active
+          aktiv: updates.is_active !== undefined ? updates.is_active : existingLicense.aktiv
         })
         .eq("id", id);
 
